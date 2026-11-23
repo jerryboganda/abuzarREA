@@ -1,0 +1,227 @@
+release 12.5;
+datawindow ( units=2 timer_interval=0 processing=0 color=16777215 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.printername=""  print.documentname=""  print.orientation=2 print.margin.left=0 print.margin.right=0 print.margin.top=250 print.margin.bottom=250 print.paper.size=1 print.paper.source=0 print.canusedefaultprinter=yes selected.mouse=no hidegrayline=no showbackcoloronxp=no)
+header(height=4177 color="536870912" )
+summary(height=0 color="536870912" )
+footer(height=197 color="536870912" )
+detail(height=208 color="536870912" )
+table(column=(type=long updatewhereclause=yes name=invtype dbname="InvType"  )
+column=(type=char(60) updatewhereclause=yes name=itemname dbname="itemname"  )
+column=(type=datetime updatewhereclause=yes name=reprintdate dbname="reprintdate"  )
+column=(type=char(60) updatewhereclause=yes name=users_username dbname="Users.username"  )
+column=(type=long updatewhereclause=yes name=serviceheader_serviceinvcode dbname="ServiceHeader.serviceinvcode"  )
+column=(type=char(60) updatewhereclause=yes name=doctor dbname="doctor"  )
+column=(type=datetime updatewhereclause=yes name=serviceheader_date dbname="ServiceHeader.date"  )
+column=(type=long updatewhereclause=yes name=headerno dbname="ServiceHeader.headerno"  )
+column=(type=decimal(2) updatewhereclause=yes name=serviceheader_discperc dbname="ServiceHeader.discperc"  )
+column=(type=decimal(2) updatewhereclause=yes name=serviceheader_misccharges dbname="ServiceHeader.misccharges"  )
+column=(type=long updatewhereclause=yes name=serviceheader_custcode dbname="ServiceHeader.custcode"  )
+column=(type=char(100) updatewhereclause=yes name=serviceheader_remarks dbname="ServiceHeader.remarks"  )
+column=(type=decimal(2) updatewhereclause=yes name=flatdisc dbname="ServiceHeader.flatdisc"  )
+column=(type=long updatewhereclause=yes name=reprintcounter dbname="reprintcounter"  )
+column=(type=long updatewhereclause=yes name=service_servicecode dbname="Service.servicecode"  )
+column=(type=decimal(2) updatewhereclause=yes name=price dbname="price"  )
+column=(type=decimal(2) updatewhereclause=yes name=serviceflatdisc dbname="serviceflatdisc"  )
+column=(type=decimal(2) updatewhereclause=yes name=qty dbname="Qty"  )
+column=(type=decimal(2) updatewhereclause=yes name=servicedetail_discperc dbname="servicedetail_discperc"  )
+column=(type=char(60) updatewhereclause=yes name=customername dbname="customername"  )
+column=(type=char(50) updatewhereclause=yes name=regno dbname="Patient.regno"  )
+column=(type=char(60) updatewhereclause=yes name=patient dbname="patient"  )
+column=(type=long updatewhereclause=yes name=ageyears dbname="ageyears"  )
+column=(type=long updatewhereclause=yes name=agemonths dbname="agemonths"  )
+column=(type=long updatewhereclause=yes name=agedays dbname="agedays"  )
+column=(type=char(1) updatewhereclause=yes name=sex dbname="sex" 
+ values="Male	M/Female	F/"  )
+column=(type=char(100) updatewhereclause=yes name=mobile dbname="mobile"  )
+column=(type=char(35) updatewhereclause=yes name=email dbname="email"  )
+column=(type=long updatewhereclause=yes name=saleinvcode dbname="ServiceHeader.saleinvcode"  )
+column=(type=long updatewhereclause=yes name=servicecatcode dbname="ServiceHeader.servicecatcode"  )
+column=(type=long updatewhereclause=yes name=tokenno dbname="tokenno"  )
+column=(type=datetime updatewhereclause=yes name=deliverydate dbname="deliverydate"  )
+column=(type=char(100) updatewhereclause=yes name=remarks dbname="remarks"  )
+column=(type=char(1) updatewhereclause=yes name=printamtonserviceinv dbname="PrintAmtOnServiceInv"  )
+column=(type=long identity=yes updatewhereclause=yes name=rowid dbname="RowID"  )
+column=(type=decimal(2) updatewhereclause=yes name=receivedamt dbname="ReceivedAmt"  )
+ retrieve="SELECT 
+	InvType=1,
+	itemname = service.name,
+	reprintdate = getDate(),
+	users.username,  
+	dbo.serviceheader.serviceinvcode,
+	doctor=(select name from doctors where doctors.doctcode=serviceheader.doctcode),   
+	dbo.serviceheader.date,  
+	dbo.serviceheader.headerno,
+	dbo.serviceheader.discperc,   
+	dbo.serviceheader.misccharges,   
+	dbo.serviceheader.custcode,   
+	dbo.serviceheader.remarks,
+	dbo.serviceheader.flatdisc,
+	reprintcounter = dbo.serviceheader.reprintingcounter,
+	dbo.service.servicecode,   
+	price = dbo.servicedetail.price, 
+	serviceflatdisc = dbo.servicedetail.serviceflatdisc, 
+	Qty = dbo.servicedetail.qty,
+	servicedetail_discperc = servicedetail.discperc, 
+	customername=(SELECT Accounts.Name FROM Accounts WHERE Accounts.AccCode  = serviceheader.Custcode),
+	patient.regno,
+	patient=patient.name,
+	ageyears = patient.ageyears,
+	agemonths = patient.agemonths,
+	agedays = patient.agedays,
+	sex=patient.gender,
+	mobile = patient.mobileno1,
+	email = patient.email,
+	dbo.serviceheader.saleinvcode,
+	dbo.serviceheader.servicecatcode,
+	tokenno = dbo.serviceheader.tokenno,
+	deliverydate= dbo.servicedetail.deliverydate,
+	remarks = dbo.servicedetail.remarks,
+	PrintAmtOnServiceInv=Customer.PrintAmtOnServiceInv,
+	RowID = servicedetail.srvrowid,
+	ReceivedAmt = serviceheader.CashCharged + 
+		ISNULL((SELECT SUM(MC.Amount) 
+					FROM MasterCashWin MC
+					WHERE MC.DocumentCode=:ra_InvCode AND MC.DocumentType='RS'), 0)
+FROM 
+	dbo.serviceheader LEFT OUTER JOIN Patient ON (dbo.serviceheader.patientcode = patient.patientcode),   
+	Customer,
+	dbo.servicedetail,  
+	service, 
+	users
+WHERE 
+	( dbo.serviceheader.serviceinvcode = :ra_InvCode ) AND
+	( dbo.serviceheader.serviceinvcode = dbo.servicedetail.serviceinvcode ) AND 
+	( dbo.serviceheader.custcode = dbo.customer.custcode ) AND 
+	( dbo.serviceheader.salesmancode = dbo.users.usercode ) AND
+	( servicedetail.servicecode = service.servicecode )
+UNION ALL
+SELECT 
+	InvType=2,
+	itemname = service.name,
+	reprintdate = getDate(),
+	users.username,  
+	dbo.serviceheader.serviceinvcode,
+	doctor=(select name from doctors where doctors.doctcode=serviceheader.doctcode),   
+	dbo.serviceheader.date,  
+	dbo.serviceheader.headerno,
+	dbo.serviceheader.discperc,   
+	dbo.serviceheader.misccharges,   
+	dbo.serviceheader.custcode,   
+	dbo.serviceheader.remarks,
+	dbo.serviceheader.flatdisc,
+	reprintcounter = dbo.serviceheader.reprintingcounter,
+	dbo.service.servicecode,   
+	price = dbo.servicedetail.price, 
+	serviceflatdisc = dbo.servicedetail.serviceflatdisc, 
+	Qty = dbo.servicedetail.qty,
+	servicedetail_discperc = servicedetail.discperc, 
+	customername=(SELECT Accounts.Name FROM Accounts WHERE Accounts.AccCode  = serviceheader.Custcode),
+	patient.regno,
+	patient=patient.name,
+	ageyears = patient.ageyears,
+	agemonths = patient.agemonths,
+	agedays = patient.agedays,
+	sex=patient.gender,
+	mobile = patient.mobileno1,
+	email = patient.email,
+	dbo.serviceheader.saleinvcode,
+	dbo.serviceheader.servicecatcode,
+	tokenno = dbo.serviceheader.tokenno,
+	deliverydate= dbo.servicedetail.deliverydate,
+	remarks = dbo.servicedetail.remarks,
+	PrintAmtOnServiceInv=Customer.PrintAmtOnServiceInv,
+	RowID = servicedetail.srvrowid,
+	ReceivedAmt = serviceheader.CashCharged + 
+		ISNULL((SELECT SUM(MC.Amount) 
+					FROM MasterCashWin MC
+					WHERE MC.DocumentCode=:ra_InvCode AND MC.DocumentType='RS'), 0)
+FROM 
+	dbo.serviceheader LEFT OUTER JOIN Patient ON (dbo.serviceheader.patientcode = patient.patientcode),   
+	Customer,
+	dbo.servicedetail,  
+	service, 
+	users
+WHERE 
+	( dbo.serviceheader.serviceinvcode = :ra_InvCode ) AND
+	( dbo.serviceheader.serviceinvcode = dbo.servicedetail.serviceinvcode ) AND 
+	( dbo.serviceheader.custcode = dbo.customer.custcode ) AND 
+	( dbo.serviceheader.salesmancode = dbo.users.usercode ) AND
+	( servicedetail.servicecode = service.servicecode )
+ORDER BY 
+	InvType,
+	RowID"
+  arguments=(("ra_InvCode", number))
+)
+group(level=1 header.height=0 trailer.height=1645 by=("invtype"  ) header.color="536870912" trailer.color="536870912" newpage=yes resetpagecount=yes )
+bitmap(name=p_1 visible="1" band=header filename="logo1.bmp" x="104" y="31" height="1489" width="7395" border="0"  originalsize=no )
+compute(name=compute_1 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="6218" y="1552" height="187" width="1270" format="[general]" expression="'Page ' + page() + ' of ' + pageCount()" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_title visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" alignment="2" border="0" x="104" y="1552" height="187" width="7395" text="Receipt" html.valueishtml="0" )
+line(name=l_1 visible="1" band=header background.mode="1" background.color="553648127" pen.style="0" pen.width="10" pen.color="0" x1="93" y1="4156" x2="7489" y2="4156" )
+text(name=t_5 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="156" y="3937" height="187" width="1302" text="Test(s)  Description" html.valueishtml="0" )
+text(name=t_15 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="2" border="0" x="6114" y="3937" height="187" width="1322" text="Report Date/Time" html.valueishtml="0" )
+line(name=l_6 visible="1" band=header background.mode="1" background.color="553648127" pen.style="0" pen.width="10" pen.color="0" x1="93" y1="3885" x2="93" y2="4166" )
+text(name=t_3 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="2" border="0" x="3385" y="3937" height="187" width="1125" text="Remarks" html.valueishtml="0" )
+line(name=l_2 visible="1" band=header background.mode="1" background.color="553648127" pen.style="0" pen.width="10" pen.color="0" x1="93" y1="3885" x2="7489" y2="3885" )
+line(name=l_7 visible="1" band=header background.mode="1" background.color="553648127" pen.style="0" pen.width="10" pen.color="0" x1="7489" y1="3885" x2="7489" y2="4166" )
+text(name=t_24 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="0" border="0" x="3729" y="2427" height="187" width="395" text="Email:" html.valueishtml="0" )
+text(name=t_title2 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="2" border="0" x="104" y="1770" height="187" width="7395" text="	if( invtype =1, ~"(Customer's Copy)~", ~"(Office Copy)~")" html.valueishtml="0" )
+column(name=serviceheader_date_1 visible="1" band=header id=7 x="6260" y="2208" height="187" width="1239" color="0" border="0" alignment="0" format="hh:mm AM/PM" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-11" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=serviceheader_date visible="1" band=header id=7 x="6260" y="1989" height="187" width="1239" color="0" border="0" alignment="0" format="ddd dd-mmm-yyyy" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-11" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=email visible="1" band=header id=28 x="4156" y="2427" height="187" width="3343" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-11" font.pitch="2" font.weight="400" tabsequence=0 )
+text(name=t_16 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="400" background.mode="1" background.color="553648127" color="0" alignment="0" border="0" x="5843" y="2208" height="187" width="375" text="Time:" html.valueishtml="0" )
+text(name=saleledger_date_t visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="400" background.mode="1" background.color="553648127" color="0" alignment="0" border="0" x="5843" y="1989" height="187" width="375" text="Date:" html.valueishtml="0" )
+column(name=serviceheader_serviceinvcode visible="1" band=header id=5 x="1083" y="1989" height="187" width="1343" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-11" font.pitch="2" font.weight="700" tabsequence=0 )
+column(name=patient visible="1" band=header id=22 x="1083" y="2208" height="187" width="4729" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-11" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=mobile visible="1" band=header id=27 x="1083" y="2427" height="187" width="2593" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-11" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=sex visible="1" band=header id=26 x="1083" y="2645" height="187" width="2593" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" ddlb.allowedit=no ddlb.autohscroll=no ddlb.imemode=0 ddlb.limit=0 ddlb.showlist=no ddlb.sorted=no ddlb.useasborder=no ddlb.vscrollbar=no ddlb.nilisnull=no ddlb.required=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-11" font.pitch="2" font.weight="400" tabsequence=0 )
+compute(name=compute_3 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="1083" y="2864" height="187" width="6437" format="[GENERAL]" expression="IF(ISNULL(AgeYears) OR AgeYears=0, '', trim(string( ageyears )) + ' Years ') + IF(ISNULL(AgeMonths) OR AgeMonths=0, '', trim(string( ageMonths )) + ' Months ') + IF(ISNULL(AgeDays) OR AgeDays=0, '', trim(string( agedays )) + ' Days ')" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_invno visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="700" background.mode="2" background.color="16777215" color="0" alignment="0" border="0" x="104" y="1989" height="187" width="937" text="Receipt No.:" html.valueishtml="0" )
+text(name=t_20 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="0" border="0" x="104" y="2208" height="187" width="937" text="Patient:" html.valueishtml="0" )
+text(name=t_23 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="400" background.mode="1" background.color="553648127" color="0" alignment="0" border="0" x="104" y="2427" height="187" width="937" text="Contact No.:" html.valueishtml="0" )
+text(name=t_22 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="400" background.mode="1" background.color="553648127" color="0" alignment="0" border="0" x="104" y="2645" height="187" width="937" text="Sex:" html.valueishtml="0" )
+text(name=t_4 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="400" background.mode="1" background.color="553648127" color="0" alignment="0" border="0" x="104" y="2864" height="187" width="937" text="Age(yrs):" html.valueishtml="0" )
+column(name=doctor visible="1" band=header id=6 x="1083" y="3229" height="187" width="6437" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-11" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=customername visible="1" band=header id=20 x="1083" y="3447" height="187" width="6437" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=serviceheader_remarks visible="1" band=header id=12 x="1083" y="3666" height="187" width="6437" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-11" font.pitch="2" font.weight="400" tabsequence=0 )
+text(name=t_doctor visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="0" border="0" x="104" y="3229" height="187" width="937" text="Ref. Physician:" html.valueishtml="0" )
+text(name=t_17 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="0" border="0" x="104" y="3447" height="187" width="937" text="Ref. Panel:" html.valueishtml="0" )
+text(name=accounts_name_t visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="104" y="3666" height="187" width="937" text="Remarks:" html.valueishtml="0" )
+text(name=t_7 visible="1	if(printamtonserviceinv='Y', 1, 0)" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="1" border="0" x="5156" y="3937" height="187" width="833" text="Rate" html.valueishtml="0" )
+text(name=t_18 visible="1" band=footer font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="0" border="0" x="93" y="10" height="187" width="7395" text="	f_saleinvfooter()" html.valueishtml="0" )
+column(name=deliverydate visible="1" band=detail id=32 x="6135" y="11" height="177" width="1302" color="0" border="0" alignment="0" format="dd-mmm-yyyy hh:mm AM/PM" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=itemname visible="1" band=detail id=2 x="375" y="11" height="187" width="2895" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+compute(name=c_netamount visible="1	0" band=detail font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="2854" y="11" height="187" width="416" format="##########0.00" expression="c_amount *  ( 1 -   serviceheader_discperc   * .01 ) " alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+column(name=remarks visible="1" band=detail id=33 x="3364" y="11" height="187" width="1708" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+compute(name=c_amount visible="1	if(printamtonserviceinv='Y', 1, 0)" band=detail font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="400" background.mode="1" background.color="553648127" color="0" x="5104" y="11" height="187" width="885" format="###,###,##0.00" expression="( price - serviceflatdisc) *  qty *  ( 1 -  (   servicedetail_discperc   * .01 )  )" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_2 visible="1" band=trailer.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="718" y="979" height="187" width="750" format="[General]" expression=" ~"(~" + TRIM(String (cumulativeSum( 1 for group 1 )))  + ~")~"" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_13 visible="1	if(printamtonserviceinv='Y', if( serviceheader_discperc =0, 0, 1), 0)" band=trailer.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="3395" y="271" height="187" width="895" text="Less Disc(%):" html.valueishtml="0" )
+line(name=l_3 visible="1	if(printamtonserviceinv='Y', 1, 0)" band=trailer.1 background.mode="1" background.color="536870912" pen.style="0" pen.width="10" pen.color="0" x1="3375" y1="10" x2="6000" y2="10" )
+text(name=t_8 visible="1	if(printamtonserviceinv='Y', if( serviceheader_discperc =0, 0, 1), 0)" band=trailer.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="1" border="0" x="4885" y="271" height="187" width="62" text=":" html.valueishtml="0" )
+column(name=serviceheader_discperc visible="1	if(printamtonserviceinv='Y', if( serviceheader_discperc =0, 0, 1), 0)" band=trailer.1 id=9 x="4322" y="271" height="187" width="531" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-11" font.pitch="2" font.weight="400" tabsequence=0 )
+text(name=t_12 visible="1	if(printamtonserviceinv='Y', 1, 0)" band=trailer.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="3395" y="52" height="187" width="1562" text="Total:" html.valueishtml="0" )
+text(name=t_9 visible="1	if(printamtonserviceinv='Y', if ( flatdisc = 0 , 0 , 1), 0)" band=trailer.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="0" border="0" x="3395" y="489" height="187" width="1562" text="Flat Disc:" html.valueishtml="0" )
+text(name=t_11 visible="1	if(printamtonserviceinv='Y', if(serviceheader_misccharges=0, 0, 1), 0)" band=trailer.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="3395" y="708" height="187" width="1562" text="Add Misc Charges:" html.valueishtml="0" )
+compute(name=c_grosstotal visible="1	if(printamtonserviceinv='Y', 1, 0)" band=trailer.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="5000" y="52" height="187" width="989" format="###,###,##0.00" expression="Sum ( c_amount for group 1)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=c_invdiscount visible="1	if(printamtonserviceinv='Y', if( serviceheader_discperc =0, 0, 1), 0)" band=trailer.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="5000" y="271" height="187" width="989" format="###,###,##0.00" expression="Sum (  c_amount  for group 1)  * (serviceheader_discperc  * .01)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+column(name=serviceheader_misccharges visible="1	if(printamtonserviceinv='Y', if(serviceheader_misccharges=0, 0, 1), 0)" band=trailer.1 id=10 x="5000" y="708" height="187" width="989" color="0" border="0" alignment="1" format="###,###,##0.00" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-11" font.pitch="2" font.weight="400" tabsequence=0 )
+text(name=t_6 visible="1" band=trailer.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="0" border="0" x="93" y="979" height="187" width="583" text="Services:" html.valueishtml="0" )
+column(name=flatdisc visible="1	if(printamtonserviceinv='Y', if ( flatdisc = 0 , 0 , 1), 0)" band=trailer.1 id=13 x="5000" y="489" height="187" width="989" color="0" border="0" alignment="1" format="###,###,##0.00" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-11" font.pitch="2" font.weight="400" tabsequence=0 )
+compute(name=compute_4 visible="1	if(printamtonserviceinv='Y', 1, 0)" band=trailer.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" x="4635" y="1406" height="187" width="1354" format="###,###,##0" expression="Round(Sum (c_netamount for group 1) - flatdisc + serviceheader_misccharges, 0) -  receivedamt " alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+column(name=receivedamt visible="1	if(printamtonserviceinv='Y', 1, 0)" band=trailer.1 id=36 x="4635" y="1187" height="187" width="1354" color="0" border="0" alignment="1" format="###,###,##0" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-11" font.pitch="2" font.weight="400" tabsequence=0 )
+compute(name=c_nettotal visible="1	if(printamtonserviceinv='Y', 1, 0)" band=trailer.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" x="4635" y="968" height="187" width="1354" format="###,###,##0" expression="Round(Sum (c_netamount for group 1) - flatdisc + serviceheader_misccharges, 0)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+column(name=users_username visible="1" band=trailer.1 id=4 x="1010" y="1416" height="187" width="1385" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-11" font.pitch="2" font.weight="400" tabsequence=0 )
+text(name=t_14 visible="1" band=trailer.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="1" border="0" x="93" y="1416" height="187" width="854" text="Prepared By: " html.valueishtml="0" )
+line(name=l_4 visible="1" band=trailer.1 background.mode="1" background.color="553648127" pen.style="0" pen.width="10" pen.color="0" x1="93" y1="927" x2="7489" y2="927" )
+line(name=l_5 visible="1" band=trailer.1 background.mode="1" background.color="553648127" pen.style="0" pen.width="10" pen.color="0" x1="93" y1="1635" x2="7489" y2="1635" )
+text(name=t_2 visible="1	if(printamtonserviceinv='Y', 1, 0)" band=trailer.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="3395" y="1416" height="187" width="1197" text="Balance Amount:" html.valueishtml="0" )
+text(name=t_10 visible="1	if(printamtonserviceinv='Y', 1, 0)" band=trailer.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="3395" y="979" height="187" width="1197" text="Net Total:" html.valueishtml="0" )
+text(name=t_1 visible="1	if(printamtonserviceinv='Y', 1, 0)" band=trailer.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="3395" y="1198" height="187" width="1197" text="Received Amount:" html.valueishtml="0" )
+htmltable(border="0" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" encodeSelfLinkArgs="1" generateJavaScript="1" netscapeLayers="0" pagingMethod=0 )
+xhtmlgen() cssgen(sessionSpecific="0" )
+xmlgen(inline="0" )
+xsltgen()
+jsgen()
+export.xml(headGroups="1" includewhitespace="0" metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 distill.customPostScript="0" xslfop.print="0" )
+export.xhtml()

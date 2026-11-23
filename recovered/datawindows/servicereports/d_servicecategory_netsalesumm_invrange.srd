@@ -1,0 +1,172 @@
+release 12.5;
+datawindow ( units=0 timer_interval=60000 processing=0 color=1073741824 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.printername=""  print.documentname=""  print.orientation=0 print.margin.left=110 print.margin.right=110 print.margin.top=96 print.margin.bottom=96 print.paper.size=0 print.paper.source=0 print.canusedefaultprinter=yes selected.mouse=no hidegrayline=no showbackcoloronxp=no)
+header(height=412 color="536870912" )
+summary(height=424 color="536870912" )
+footer(height=0 color="536870912" )
+detail(height=76 color="536870912" )
+table(column=(type=long updatewhereclause=yes name=summary dbname="Summary"  )
+column=(type=long updatewhereclause=yes name=catcode dbname="CatCode"  )
+column=(type=char(60) updatewhereclause=yes name=category dbname="Category"  )
+column=(type=decimal(6) updatewhereclause=yes name=servicevalue dbname="ServiceValue"  )
+column=(type=decimal(6) updatewhereclause=yes name=rounddiff dbname="RoundDiff"  )
+column=(type=decimal(2) updatewhereclause=yes name=flatdisc dbname="FlatDisc"  )
+column=(type=decimal(2) updatewhereclause=yes name=misccharges dbname="MiscCharges"  )
+column=(type=decimal(4) updatewhereclause=yes name=tax dbname="Tax"  )
+ retrieve="SELECT
+	Summary=0,
+	CatCode=SC.ServiceCatCode, 
+	Category=SC.Name,
+	ServiceValue=ROUND(SUM(P.ServiceValue), 2),
+	RoundDiff=0,
+	FlatDisc=0,
+	MiscCharges=0,
+	Tax = 0.00
+FROM 
+	(SELECT
+		S.ServiceCatCode,
+		D.ServiceCode,
+		H.ServiceInvCode,
+		ServiceValue=ROUND(SUM(D.qty * (D.price - D.ServiceFlatDisc) * (1 - (.01 * D.discperc)) * (1 - H.discperc * .01)), 2)
+	FROM
+		ServiceHeader H,	 
+		ServiceDetail D,
+		Service S
+	WHERE
+		( H.ServiceInvCode between :ar_StartInv and :ar_EndInv ) and
+		( H.ServiceCatCode IN (:ar_retailtype, :ar_cashtype, :ar_credittype ) ) and
+		( H.ServiceInvCode = D.ServiceInvCode ) and  
+		( D.ServiceCode = S.ServiceCode )
+	GROUP BY 
+		S.ServiceCatCode,
+		H.ServiceInvCode,
+		D.ServiceCode
+	UNION ALL
+	SELECT
+		S.ServiceCatCode,
+		D.ServiceCode,
+		H.ServiceRInvCode,
+		ServiceValue= - ROUND(SUM(D.qty * (D.serviceprice - D.ServiceFlatDisc) * (1 - (.01 * D.discperc)) * (1 - H.discperc * .01)), 2)
+	FROM
+		ServiceRHeader H,	 
+		ServiceRDetail D,
+		Service S
+	WHERE
+		( H.ServiceRInvCode between :ar_StartRInv and :ar_EndRInv ) and
+		( H.ServiceRCatCode IN (:ar_retailrtype, :ar_cashrtype, :ar_creditrtype ) ) and
+		( H.ServiceRInvCode = D.ServiceRInvCode ) and  
+		( D.ServiceCode = S.ServiceCode )
+	GROUP BY 
+		S.ServiceCatCode,
+		H.ServiceRInvCode,
+		D.ServiceCode) P, 
+	Service S, 
+	ServiceCategory SC
+WHERE
+	P.ServiceCode = S.ServiceCode AND 
+	S.ServiceCatCode = SC.ServiceCatCode
+GROUP BY 
+	SC.ServiceCatCode,
+	SC.Name
+UNION ALL
+SELECT
+	Summary=1,
+	ServiceCatCode=NULL, 
+	Category=NULL,
+	ServiceValue=0,
+	RoundDiff=SUM(Value),
+	FlatDisc=SUM(FlatDisc),
+	MiscCharges=SUM(MiscCharges),
+	Tax = SUM(Tax)
+FROM
+	(SELECT
+		H.ServiceInvCode,
+		Value=ROUND(SUM(D.qty * (D.price - D.ServiceFlatDisc) * (1 - (.01 * D.discperc)) * (1 - H.discperc * .01)) - H.FlatDisc + H.MiscCharges, 0) -
+		(ROUND(SUM(D.qty * (D.price - D.ServiceFlatDisc) * (1 - (.01 * D.discperc)) * (1 - H.discperc * .01)) - H.FlatDisc + H.MiscCharges, 2)),
+		FlatDisc = - H.FlatDisc,
+		MiscCharges = H.MiscCharges,
+		Tax = Round(Sum((D.qty * (D.price - D.ServiceFlatDisc) * (1 - D.discperc * 0.01)) * 0.01 * D.servicegstPerc ) +
+			Sum(D.qty * D.serviceflattax) +
+			Round((Sum(D.qty * (D.price - D.ServiceFlatDisc) * (1 - D.discperc * 0.01) * (1 - H.discperc * 0.01)) - H.flatdisc ) * 0.01 * H.serviceinvgstperc,2), 0)
+	FROM
+		ServiceHeader H,	 
+		ServiceDetail D,
+		Service S
+	WHERE
+		( H.ServiceInvCode between :ar_StartInv and :ar_EndInv ) and
+		( H.ServiceCatCode IN (:ar_retailtype, :ar_cashtype, :ar_credittype ) ) and
+		( H.ServiceInvCode = D.ServiceInvCode ) and  
+		( D.ServiceCode = S.ServiceCode )
+	GROUP BY 
+		S.ServiceCatCode,
+		H.ServiceInvCode,
+		H.FlatDisc,
+		H.MiscCharges,
+		H.serviceinvgstperc
+	UNION ALL
+	SELECT
+		H.ServiceRInvCode,
+		Value= - (ROUND(SUM(D.qty * (D.serviceprice - D.ServiceFlatDisc) * (1 - (.01 * D.discperc)) * (1 - H.discperc * .01)) - H.FlatDisc + H.MiscCharges, 0) -
+		(ROUND(SUM(D.qty * (D.serviceprice - D.ServiceFlatDisc) * (1 - (.01 * D.discperc)) * (1 - H.discperc * .01)) - H.FlatDisc + H.MiscCharges, 2))),
+		FlatDisc = H.FlatDisc,
+		MiscCharges = - H.MiscCharges,
+		Tax = Round(Sum((D.qty * (D.serviceprice - D.ServiceFlatDisc) * (1 - D.discperc * 0.01)) * 0.01 * D.servicegstPerc ) +
+			Sum(D.qty * D.serviceflattax) +
+			Round((Sum(D.qty * (D.serviceprice - D.ServiceFlatDisc) * (1 - D.discperc * 0.01) * (1 - H.discperc * 0.01)) - H.flatdisc ) * 0.01 * H.serviceinvgstperc,2), 0)
+	FROM
+		ServiceRHeader H,	 
+		ServiceRDetail D,
+		Service S
+	WHERE
+		( H.ServiceRInvCode between :ar_StartRInv and :ar_EndRInv ) and
+		( H.ServiceRCatCode IN (:ar_retailrtype, :ar_cashrtype, :ar_creditrtype ) ) and
+		( H.ServiceRInvCode = D.ServiceRInvCode ) and  
+		( D.ServiceCode = S.ServiceCode )
+	GROUP BY 
+		S.ServiceCatCode,
+		H.ServiceRInvCode,
+		H.FlatDisc,
+		H.MiscCharges,
+		H.serviceinvgstperc) T
+ORDER BY 
+	Summary,
+	Category, 
+	CatCode
+"
+  arguments=(("ar_StartInv", number), ("ar_EndInv", number), ("ar_RetailType", number), ("ar_CashType", number), ("ar_CreditType", number), ("ar_StartRInv", number), ("ar_EndRInv", number), ("ar_RetailRType", number), ("ar_CashRType", number), ("ar_CreditRType", number))
+ sort="summary A, category A, catcode A"
+)
+text(name=t_6 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" background.mode="2" background.color="16777215" color="0" alignment="2" border="0" x="41" y="16" height="64" width="3246" text="Net Service Category Summary Report" html.valueishtml="0" )
+compute(name=compute_6 visible="1" band=header font.charset="0" font.face="Arial Narrow" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="2715" y="20" height="60" width="571" format="[general]" expression="'Page ' + page() + ' of ' + pageCount()" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=c_address1 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="41" y="164" height="60" width="3246" format="[general]" expression="f_ReportHeaderInfo('address1')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=c_address2 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="41" y="236" height="60" width="3246" format="[general]" expression="f_ReportHeaderInfo('address2')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_7 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="41" y="20" height="60" width="151" text="Date: " html.valueishtml="0" )
+compute(name=c_companyname visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" x="41" y="92" height="60" width="3246" format="[general]" expression="f_ReportHeaderInfo('clientname')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_5 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="210" y="20" height="60" width="654" format="dd/mm/yyyy hh:mm" expression="today()" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+line(name=l_1 visible="1" band=header background.mode="2" background.color="16777215" pen.style="2" pen.width="5" pen.color="0" x1="41" y1="308" x2="3287" y2="308" )
+line(name=l_2 visible="1" band=header background.mode="2" background.color="16777215" pen.style="2" pen.width="5" pen.color="0" x1="41" y1="400" x2="3287" y2="400" )
+text(name=t_1 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="2" border="0" x="91" y="324" height="64" width="233" text="Serial No." html.valueishtml="0" )
+text(name=category_t visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="2" border="0" x="411" y="324" height="64" width="1673" text="Category" html.valueishtml="0" )
+text(name=servicevalue_t visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="1" border="0" x="2107" y="324" height="64" width="535" text="Value" html.valueishtml="0" )
+text(name=rounddiff_t visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="0" border="0" x="1563" y="8" height="64" width="521" text="Rounding Difference:" html.valueishtml="0" )
+text(name=flatdisc_t visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="0" border="0" x="1563" y="92" height="64" width="521" text="Flat Discount:" html.valueishtml="0" )
+text(name=misccharges_t visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="0" border="0" x="1563" y="176" height="64" width="521" text="Misc Charges:" html.valueishtml="0" )
+column(name=rounddiff visible="1" band=summary id=5 x="2107" y="8" height="64" width="535" color="33554432" border="0" alignment="1" format="###,###,###0.00" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=flatdisc visible="1" band=summary id=6 x="2107" y="92" height="64" width="535" color="33554432" border="0" alignment="1" format="###,###,###0.00" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+text(name=t_3 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="0" border="0" x="1563" y="260" height="64" width="521" text="Total Tax:" html.valueishtml="0" )
+column(name=misccharges visible="1" band=summary id=7 x="2107" y="176" height="64" width="535" color="33554432" border="0" alignment="1" format="###,###,###0.00" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=tax visible="1" band=summary id=8 x="2107" y="260" height="64" width="535" color="33554432" border="0" alignment="1" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+compute(name=compute_2 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" x="2107" y="344" height="64" width="535" format="###,###,###0.00" expression="sum( servicevalue  +  rounddiff + flatdisc + misccharges )" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_2 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="2" background.color="16777215" color="0" alignment="0" border="0" x="1563" y="344" height="64" width="521" text="Grand Total:" html.valueishtml="0" )
+compute(name=compute_1 visible="1" band=detail font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" x="91" y="4" height="64" width="233" format="[GENERAL]" expression="getrow()" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+column(name=category visible="1" band=detail id=3 x="411" y="4" height="64" width="1673" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=60 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=servicevalue visible="1	if( servicevalue =0,0,1)" band=detail id=4 x="2107" y="4" height="64" width="535" color="33554432" border="0" alignment="1" format="###,###,###0.00" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+htmltable(border="1" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" encodeSelfLinkArgs="1" generateJavaScript="1" netscapeLayers="0" pagingMethod=0 )
+xhtmlgen() cssgen(sessionSpecific="0" )
+xmlgen(inline="0" )
+xsltgen()
+jsgen()
+export.xml(headGroups="1" includewhitespace="0" metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 distill.customPostScript="0" xslfop.print="0" )
+export.xhtml()

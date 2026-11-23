@@ -1,0 +1,155 @@
+release 12.5;
+datawindow ( units=0 timer_interval=0 processing=1 color=16777215 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.printername=""  print.documentname=""  print.orientation=0 print.margin.left=110 print.margin.right=110 print.margin.top=96 print.margin.bottom=96 print.paper.size=0 print.paper.source=0 print.canusedefaultprinter=yes grid.lines=0 selected.mouse=yes hidegrayline=no showbackcoloronxp=no)
+header(height=80 color="536870912" )
+summary(height=0 color="536870912" )
+footer(height=0 color="536870912" )
+detail(height=93 color="536870912" )
+table(column=(type=char(8000) updatewhereclause=yes name=dscode dbname="DSCode"  )
+column=(type=char(8000) updatewhereclause=yes name=date dbname="Date"  )
+column=(type=char(75) updatewhereclause=yes name=itemcode dbname="ItemCode"  )
+column=(type=char(12) updatewhereclause=yes name=transferin dbname="TransferIn"  )
+column=(type=char(12) updatewhereclause=yes name=marketsale dbname="MarketSale"  )
+column=(type=char(12) updatewhereclause=yes name=instsale dbname="InstSale"  )
+column=(type=char(12) updatewhereclause=yes name=transferout dbname="TransferOut"  )
+column=(type=char(12) updatewhereclause=yes name=otherout dbname="OtherOut"  )
+column=(type=char(100) updatewhereclause=yes name=batch dbname="Batch"  )
+ retrieve="SELECT
+	DSCode=:as_distcode + REPLICATE(' ', 6 - LEN(:as_distcode)),
+	Date=LTRIM(RTRIM(UPPER(REPLACE(Convert(VARCHAR(100), ST.Date, 106), ' ', '-')))),
+	ItemCode=LTRIM(RTRIM(I.CustomICode)),
+	TransferIn = LTRIM(RTRIM(STR(SUM(CASE WHEN ST.type='PV' THEN ST.qty + ST.bonus ELSE 0 END), 12))),
+	MarketSale = LTRIM(RTRIM(STR(SUM(CASE WHEN ST.type='MAS' THEN ST.qty + ST.bonus ELSE 0 END), 12))),
+	InstSale = LTRIM(RTRIM(STR(SUM(CASE WHEN ST.type='INS' THEN ST.qty + ST.bonus ELSE 0 END), 12))),
+	TransferOut = LTRIM(RTRIM(STR(SUM(CASE WHEN ST.type='PR' THEN ST.qty + ST.bonus ELSE 0 END), 12))),
+	OtherOut = LTRIM(RTRIM(STR(0, 12))),
+	Batch = ST.Batch
+FROM
+	(SELECT 
+		type='MAS',
+		Date=SL.Date,
+		sd.icode,
+		sd.batch,
+		qty = sum(sd.looseqty + sd.packqty * sd.packunits),
+		bonus = sum(sd.bonusqty)
+	FROM saleledger sl, saledetail sd, item i, customer c, customercategory cc
+	WHERE sl.posted = 'Y' AND sl.saleinvcode = sd.saleinvcode AND SD.Due IS NULL AND
+		sl.date >= :ar_startdate and sl.date <= :ar_enddate AND
+		sl.custcode = c.custcode and c.custcatcode = cc.custcatcode AND
+		UPPER(LEFT(cc.name, 1)) <> 'I' AND
+		sd.icode=i.icode AND
+		I.ManfCode IN (:ai_manfcode)
+	Group By sl.date, sd.icode, sd.batch
+	UNION ALL
+	SELECT 
+		type='MAS',
+		Date=SL.Date,
+		sd.icode,
+		sd.batch,
+		qty = - sum(sd.looseqty),
+		bonus = - sum(sd.bonusqty)
+	FROM SRledger sl, SRDetail sd, item i, customer c, customercategory cc
+	WHERE sl.posted = 'Y' AND sl.SRinvcode = sd.SRinvcode AND 
+		sl.date >= :ar_startdate and sl.date <= :ar_enddate AND
+		sl.custcode = c.custcode and c.custcatcode = cc.custcatcode AND
+		UPPER(LEFT(cc.name, 1)) <> 'I' AND
+		sd.icode=i.icode AND
+		I.ManfCode IN (:ai_manfcode)
+	Group By sl.date, sd.icode, sd.batch
+	UNION ALL
+	SELECT 
+		type='INS',
+		Date=SL.Date,
+		sd.icode,
+		sd.batch,
+		qty = sum(sd.looseqty + sd.packqty * sd.packunits),
+		bonus = sum(sd.bonusqty)
+	FROM saleledger sl, saledetail sd, item i, customer c, customercategory cc
+	WHERE sl.posted = 'Y' AND sl.saleinvcode = sd.saleinvcode AND SD.Due IS NULL AND
+		sl.date >= :ar_startdate and sl.date <= :ar_enddate AND
+		sl.custcode = c.custcode and c.custcatcode = cc.custcatcode AND
+		UPPER(LEFT(cc.name, 1)) = 'I' AND
+		sd.icode=i.icode AND
+		I.ManfCode IN (:ai_manfcode)
+	Group By SL.Date, sd.icode, sd.batch
+	UNION ALL
+	SELECT 
+		type='INS',
+		Date=SL.Date,
+		sd.icode,
+		sd.batch,
+		qty = - sum(sd.looseqty),
+		bonus = - sum(sd.bonusqty)
+	FROM SRLedger sl, SRDetail sd, item i, customer c, customercategory cc
+	WHERE sl.posted = 'Y' AND sl.SRInvcode = sd.SRInvcode AND 
+		sl.date >= :ar_startdate and sl.date <= :ar_enddate AND
+		sl.custcode = c.custcode and c.custcatcode = cc.custcatcode AND
+		UPPER(LEFT(cc.name, 1)) = 'I' AND
+		sd.icode=i.icode AND
+		I.ManfCode IN (:ai_manfcode)
+	Group By SL.Date, sd.icode, sd.batch
+	UNION ALL
+	select	
+		type='PV',
+		Date=PL.Date,
+		pd.icode,
+		pd.batch,
+		qty = sum((pd.packqty * pd.packunits) + pd.looseqty),
+		bonus = sum(pd.bonusqty * pd.packunits)
+	FROM PurLedger pl, PurDetail pd, item i
+	WHERE pl.posted = 'Y' AND pl.PurInvCode = pd.PurInvCode AND
+	    pl.date BETWEEN :ar_startdate and :ar_enddate AND
+		pd.icode=i.icode AND
+		I.ManfCode IN (:ai_manfcode)
+	Group By PL.Date, pd.icode, pd.batch
+	UNION ALL
+	select	
+		type='PR',
+		Date=PL.Date,
+		pd.icode,
+		pd.batch,
+		qty = sum(pd.looseqty),
+		bonus = sum(pd.bonusqty)
+	FROM PRLedger pl, PRDetail pd, item i
+	WHERE pl.posted = 'Y' AND pl.PRInvCode = pd.PRInvCode AND
+	    pl.date BETWEEN :ar_startdate and :ar_enddate AND
+		pd.icode=i.icode AND
+		I.ManfCode IN (:ai_manfcode)
+	Group By PL.Date, pd.icode, pd.batch
+/*	UNION ALL
+	SELECT type='OP', Date=:ar_startdate, icode, qty = 0, bonus = 0
+	FROM ITEM WHERE Item.ManfCode IN (:ai_manfcode)*/) St, 
+	Item i
+WHERE st.icode = i.icode
+GROUP BY LTRIM(RTRIM(UPPER(REPLACE(Convert(VARCHAR(100), ST.Date, 106), ' ', '-')))), i.name, i.customicode, ST.Batch
+ORDER BY i.customicode, ST.Batch, Date
+"
+  arguments=(("as_distcode", string), ("ai_manfcode", numberlist), ("ar_startdate", datetime), ("ar_enddate", datetime))
+)
+text(name=dscode_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="2" border="0" x="9" y="10" height="64" width="233" text="Dscode" html.valueishtml="0" )
+text(name=itemcode_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="2" border="0" x="251" y="10" height="64" width="521" text="Itemcode" html.valueishtml="0" )
+text(name=otherout_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="2" border="0" x="782" y="10" height="64" width="265" text="Otherout" html.valueishtml="0" )
+text(name=date_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="2" border="0" x="1056" y="10" height="64" width="512" text="Date" html.valueishtml="0" )
+text(name=transferin_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="2" border="0" x="1577" y="10" height="64" width="448" text="Transferin" html.valueishtml="0" )
+text(name=marketsale_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="2" border="0" x="2034" y="10" height="64" width="315" text="Marketsale" html.valueishtml="0" )
+text(name=instsale_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="2" border="0" x="2359" y="10" height="64" width="315" text="Instsale" html.valueishtml="0" )
+text(name=transferout_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="2" border="0" x="2683" y="10" height="64" width="315" text="Transferout" html.valueishtml="0" )
+text(name=batch_t visible="1" band=header font.charset="0" font.face="Tahoma" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="0" border="0" x="3008" y="3" height="61" width="2894" text="Batch" html.valueishtml="0" )
+column(name=dscode visible="1" band=detail id=1 x="9" y="10" height="74" width="234" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=8000 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=itemcode visible="1" band=detail id=3 x="251" y="10" height="74" width="523" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=75 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=otherout visible="1" band=detail id=8 x="782" y="10" height="74" width="263" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=12 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=date visible="1" band=detail id=2 x="1056" y="10" height="74" width="512" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=transferin visible="1" band=detail id=4 x="1577" y="10" height="74" width="446" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=marketsale visible="1" band=detail id=5 x="2034" y="10" height="74" width="315" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=instsale visible="1" band=detail id=6 x="2359" y="10" height="74" width="315" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=transferout visible="1" band=detail id=7 x="2683" y="10" height="74" width="315" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=batch visible="1" band=detail id=9 x="3008" y="0" height="64" width="2893" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+htmltable(border="1" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" encodeSelfLinkArgs="1" generateJavaScript="1" netscapeLayers="0" pagingMethod=0 )
+xhtmlgen() cssgen(sessionSpecific="0" )
+xmlgen(inline="0" )
+xsltgen()
+jsgen()
+export.xml(headGroups="1" includewhitespace="0" metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 distill.customPostScript="0" xslfop.print="0" )
+export.xhtml()

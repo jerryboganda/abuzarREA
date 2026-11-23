@@ -1,0 +1,502 @@
+{
+ "release": "12.5",
+ "datawindow": {
+  "units": "2",
+  "timer_interval": "0",
+  "processing": "0",
+  "color": "16777215",
+  "brushmode": "0",
+  "transparency": "0",
+  "gradient.color": "8421504",
+  "gradient.transparency": "0",
+  "gradient.angle": "0",
+  "gradient.repetition.mode": "0",
+  "gradient.repetition.count": "0",
+  "gradient.repetition.length": "100",
+  "gradient.focus": "0",
+  "gradient.scale": "100",
+  "gradient.spread": "100",
+  "picture.mode": "0",
+  "picture.scale.x": "100",
+  "picture.scale.y": "100",
+  "picture.clip.left": "0",
+  "picture.clip.right": "0",
+  "picture.clip.top": "0",
+  "picture.clip.bottom": "0",
+  "picture.blur": "0",
+  "picture.transparency": "0",
+  "print.printername": "",
+  "print.documentname": "",
+  "print.orientation": "0",
+  "print.margin.left": "250",
+  "print.margin.right": "250",
+  "print.margin.top": "250",
+  "print.margin.bottom": "250",
+  "print.paper.size": "1",
+  "print.paper.source": "0",
+  "print.canusedefaultprinter": "yes",
+  "selected.mouse": "no",
+  "hidegrayline": "no",
+  "showbackcoloronxp": "no"
+ },
+ "bands": {
+  "header": {
+   "height": "0"
+  },
+  "summary": {
+   "height": "0",
+   "color": "536870912"
+  },
+  "footer": {
+   "height": "0",
+   "color": "536870912"
+  },
+  "detail": {
+   "height": "187",
+   "color": "536870912"
+  }
+ },
+ "table": {
+  "columns": [
+   {
+    "type": "long",
+    "updatewhereclause": "yes",
+    "name": "custcodelen",
+    "dbname": "CustCodeLen"
+   },
+   {
+    "type": "char(10)",
+    "updatewhereclause": "yes",
+    "name": "custcode",
+    "dbname": "CustCode"
+   },
+   {
+    "type": "long",
+    "updatewhereclause": "yes",
+    "name": "prodcodelen",
+    "dbname": "ProdCodeLen"
+   },
+   {
+    "type": "char(10)",
+    "updatewhereclause": "yes",
+    "name": "prodcode",
+    "dbname": "ProdCode"
+   },
+   {
+    "type": "long",
+    "updatewhereclause": "yes",
+    "name": "qtylen",
+    "dbname": "QtyLen"
+   },
+   {
+    "type": "char(10)",
+    "updatewhereclause": "yes",
+    "name": "qty",
+    "dbname": "Qty"
+   },
+   {
+    "type": "long",
+    "updatewhereclause": "yes",
+    "name": "tplen",
+    "dbname": "TPLen"
+   },
+   {
+    "type": "char(12)",
+    "updatewhereclause": "yes",
+    "name": "tp",
+    "dbname": "Tp"
+   },
+   {
+    "type": "long",
+    "updatewhereclause": "yes",
+    "name": "valuelen",
+    "dbname": "ValueLen"
+   },
+   {
+    "type": "char(15)",
+    "updatewhereclause": "yes",
+    "name": "value",
+    "dbname": "Value"
+   },
+   {
+    "type": "long",
+    "updatewhereclause": "yes",
+    "name": "datelen",
+    "dbname": "DATELEN"
+   },
+   {
+    "type": "char(10)",
+    "updatewhereclause": "yes",
+    "name": "date",
+    "dbname": "DATE"
+   }
+  ],
+  "retrieve": "SELECT\n\tCustCodeLen=10,\n\tCustCode=STR(S.CustCode, 10), \n\tProdCodeLen=10, \n\tProdCode=STR(SD.ICode, 10),\n\tQtyLen=10,\n\tQty=STR(CAST(Sum(SD.BonusQty) / (CASE WHEN :ai_loosepack = 0 THEN 1 ELSE CASE WHEN I.PackUnits > 0 THEN I.PackUnits ELSE 1 END END) AS INT), 10),\n\tTPLen=12, \n\tTp=STR(CASE WHEN :ai_loosepack = 0 THEN ROUND((I.SalePrice / CASE WHEN I.PackUnits > 0 THEN I.PackUnits ELSE 1 END), 2) ELSE I.SalePrice END, 12, 2),\n\tValueLen=15,\n\tValue=STR(CAST(Sum(SD.BonusQty) / (CASE WHEN :ai_loosepack = 0 THEN 1 ELSE CASE WHEN I.PackUnits > 0 THEN I.PackUnits ELSE 1 END END) AS INT) * (CASE WHEN :ai_loosepack = 0 THEN ROUND((I.SalePrice / CASE WHEN I.PackUnits > 0 THEN I.PackUnits ELSE 1 END), 2) ELSE I.SalePrice END), 15, 2),\n\tDATELEN=10,\n\tDATE=Convert(varchar(10), S.DATE, 103)\nFROM\n\tSaleLedger S, SaleDetail SD, Item I\nWHERE\n\tS.Date BETWEEN :ar_startdate AND :ar_enddate AND\n\tS.SaleInvCode = SD.SaleInvCode AND SD.BonusQty > 0 AND\n\tSD.ICode = I.ICode AND I.ManfCode IN (:ai_manfcode) AND\n\t:ai_scope=1\nGROUP BY\n\tS.CustCode, \n\tSD.ICode,\n\tS.Date,\n\tI.SalePrice,\n\tI.PackUnits\nUNION ALL\nSELECT\n\tCustCodeLen=10,\n\tCustCode=STR(S.CustCode, 10), \n\tProdCodeLen=10, \n\tProdCode=STR(SD.ICode, 10),\n\tQtyLen=10,\n\tQty=STR(CAST(Sum(SD.BonusQty) / (CASE WHEN :ai_loosepack = 0 THEN 1 ELSE CASE WHEN I.PackUnits > 0 THEN I.PackUnits ELSE 1 END END) AS INT), 10),\n\tTPLen=12, \n\tTp=STR(CASE WHEN :ai_loosepack = 0 THEN ROUND((I.SalePrice / CASE WHEN I.PackUnits > 0 THEN I.PackUnits ELSE 1 END), 2) ELSE I.SalePrice END, 12, 2),\n\tValueLen=15,\n\tValue=STR(CAST(Sum(SD.BonusQty) / (CASE WHEN :ai_loosepack = 0 THEN 1 ELSE CASE WHEN I.PackUnits > 0 THEN I.PackUnits ELSE 1 END END) AS INT) * (CASE WHEN :ai_loosepack = 0 THEN ROUND((I.SalePrice / CASE WHEN I.PackUnits > 0 THEN I.PackUnits ELSE 1 END), 2) ELSE I.SalePrice END), 15, 2),\n\tDATELEN=10,\n\tDATE=Convert(varchar(10), S.DATE, 103)\nFROM\n\tCRS_ClientInstance CI, \n\tCRS_ClientList CL,\n\tCRS_SaleLedger S, CRS_SaleDetail SD, Item I\nWHERE\n\tCL.ClientID = CI.ClientID AND CI.ClientInstanceID = S.ClientInstanceID AND\n\tS.ClientInstanceID = SD.ClientInstanceID AND\n\tS.Date BETWEEN :ar_startdate AND :ar_enddate AND\n\tS.SaleInvCode = SD.SaleInvCode AND SD.BonusQty > 0 AND\n\tSD.ICode = I.ICode AND I.ManfCode IN (:ai_manfcode) AND\n\t:ai_scope=2\nGROUP BY\n\tS.CustCode, \n\tSD.ICode,\n\tS.Date,\n\tI.SalePrice,\n\tI.PackUnits\nORDER BY\n\tCustCode,\n\tProdCode\n",
+  "arguments": {
+   "_items": [
+    {
+     "_items": [
+      "ai_manfcode",
+      "numberlist"
+     ]
+    },
+    {
+     "_items": [
+      "ar_startdate",
+      "datetime"
+     ]
+    },
+    {
+     "_items": [
+      "ar_enddate",
+      "datetime"
+     ]
+    },
+    {
+     "_items": [
+      "ai_loosepack",
+      "number"
+     ]
+    },
+    {
+     "_items": [
+      "ai_scope",
+      "number"
+     ]
+    }
+   ]
+  }
+ },
+ "objects": [
+  {
+   "name": "custcode",
+   "visible": "1",
+   "band": "detail",
+   "id": "2",
+   "x": "62",
+   "y": "10",
+   "height": "166",
+   "width": "437",
+   "color": "0",
+   "border": "0",
+   "alignment": "0",
+   "format": "[general]",
+   "html.valueishtml": "0",
+   "edit.autohscroll": "yes",
+   "edit.autoselect": "yes",
+   "edit.autovscroll": "no",
+   "edit.case": "any",
+   "edit.codetable": "no",
+   "edit.displayonly": "no",
+   "edit.hscrollbar": "no",
+   "edit.imemode": "0",
+   "edit.limit": "255",
+   "edit.password": "no",
+   "edit.vscrollbar": "no",
+   "edit.validatecode": "no",
+   "edit.nilisnull": "no",
+   "edit.required": "no",
+   "edit.useellipsis": "no",
+   "criteria.required": "no",
+   "criteria.override_edit": "no",
+   "crosstab.repeat": "no",
+   "background.mode": "1",
+   "background.color": "536870912",
+   "font.charset": "0",
+   "font.face": "Times New Roman",
+   "font.family": "2",
+   "font.height": "-10",
+   "font.pitch": "2",
+   "font.weight": "400",
+   "tabsequence": "0",
+   "type": "column"
+  },
+  {
+   "name": "prodcode",
+   "visible": "1",
+   "band": "detail",
+   "id": "4",
+   "x": "583",
+   "y": "10",
+   "height": "166",
+   "width": "489",
+   "color": "0",
+   "border": "0",
+   "alignment": "0",
+   "format": "[general]",
+   "html.valueishtml": "0",
+   "edit.autohscroll": "yes",
+   "edit.autoselect": "yes",
+   "edit.autovscroll": "no",
+   "edit.case": "any",
+   "edit.codetable": "no",
+   "edit.displayonly": "no",
+   "edit.hscrollbar": "no",
+   "edit.imemode": "0",
+   "edit.limit": "255",
+   "edit.password": "no",
+   "edit.vscrollbar": "no",
+   "edit.validatecode": "no",
+   "edit.nilisnull": "no",
+   "edit.required": "no",
+   "edit.useellipsis": "no",
+   "criteria.required": "no",
+   "criteria.override_edit": "no",
+   "crosstab.repeat": "no",
+   "background.mode": "1",
+   "background.color": "536870912",
+   "font.charset": "0",
+   "font.face": "Times New Roman",
+   "font.family": "2",
+   "font.height": "-10",
+   "font.pitch": "2",
+   "font.weight": "400",
+   "tabsequence": "0",
+   "type": "column"
+  },
+  {
+   "name": "qty",
+   "visible": "1",
+   "band": "detail",
+   "id": "6",
+   "x": "1156",
+   "y": "10",
+   "height": "166",
+   "width": "437",
+   "color": "0",
+   "border": "0",
+   "alignment": "1",
+   "format": "[general]",
+   "html.valueishtml": "0",
+   "edit.autohscroll": "yes",
+   "edit.autoselect": "yes",
+   "edit.autovscroll": "no",
+   "edit.case": "any",
+   "edit.codetable": "no",
+   "edit.displayonly": "no",
+   "edit.hscrollbar": "no",
+   "edit.imemode": "0",
+   "edit.limit": "0",
+   "edit.password": "no",
+   "edit.vscrollbar": "no",
+   "edit.validatecode": "no",
+   "edit.nilisnull": "no",
+   "edit.required": "no",
+   "edit.useellipsis": "no",
+   "criteria.required": "no",
+   "criteria.override_edit": "no",
+   "crosstab.repeat": "no",
+   "background.mode": "1",
+   "background.color": "536870912",
+   "font.charset": "0",
+   "font.face": "Times New Roman",
+   "font.family": "2",
+   "font.height": "-10",
+   "font.pitch": "2",
+   "font.weight": "400",
+   "tabsequence": "0",
+   "type": "column"
+  },
+  {
+   "name": "tp",
+   "visible": "1",
+   "band": "detail",
+   "id": "8",
+   "x": "1677",
+   "y": "10",
+   "height": "166",
+   "width": "604",
+   "color": "0",
+   "border": "0",
+   "alignment": "1",
+   "format": "[general]",
+   "html.valueishtml": "0",
+   "edit.autohscroll": "yes",
+   "edit.autoselect": "yes",
+   "edit.autovscroll": "no",
+   "edit.case": "any",
+   "edit.codetable": "no",
+   "edit.displayonly": "no",
+   "edit.hscrollbar": "no",
+   "edit.imemode": "0",
+   "edit.limit": "0",
+   "edit.password": "no",
+   "edit.vscrollbar": "no",
+   "edit.validatecode": "no",
+   "edit.nilisnull": "no",
+   "edit.required": "no",
+   "edit.useellipsis": "no",
+   "criteria.required": "no",
+   "criteria.override_edit": "no",
+   "crosstab.repeat": "no",
+   "background.mode": "1",
+   "background.color": "536870912",
+   "font.charset": "0",
+   "font.face": "Times New Roman",
+   "font.family": "2",
+   "font.height": "-10",
+   "font.pitch": "2",
+   "font.weight": "400",
+   "tabsequence": "0",
+   "type": "column"
+  },
+  {
+   "name": "value",
+   "visible": "1",
+   "band": "detail",
+   "id": "10",
+   "x": "2364",
+   "y": "10",
+   "height": "166",
+   "width": "750",
+   "color": "0",
+   "border": "0",
+   "alignment": "1",
+   "format": "[general]",
+   "html.valueishtml": "0",
+   "edit.autohscroll": "yes",
+   "edit.autoselect": "yes",
+   "edit.autovscroll": "no",
+   "edit.case": "any",
+   "edit.codetable": "no",
+   "edit.displayonly": "no",
+   "edit.hscrollbar": "no",
+   "edit.imemode": "0",
+   "edit.limit": "0",
+   "edit.password": "no",
+   "edit.vscrollbar": "no",
+   "edit.validatecode": "no",
+   "edit.nilisnull": "no",
+   "edit.required": "no",
+   "edit.useellipsis": "no",
+   "criteria.required": "no",
+   "criteria.override_edit": "no",
+   "crosstab.repeat": "no",
+   "background.mode": "1",
+   "background.color": "536870912",
+   "font.charset": "0",
+   "font.face": "Times New Roman",
+   "font.family": "2",
+   "font.height": "-10",
+   "font.pitch": "2",
+   "font.weight": "400",
+   "tabsequence": "0",
+   "type": "column"
+  },
+  {
+   "name": "date",
+   "visible": "1",
+   "band": "detail",
+   "id": "12",
+   "x": "3166",
+   "y": "10",
+   "height": "166",
+   "width": "520",
+   "color": "0",
+   "border": "0",
+   "alignment": "0",
+   "format": "[general]",
+   "html.valueishtml": "0",
+   "edit.focusrectangle": "no",
+   "edit.autohscroll": "no",
+   "edit.autoselect": "no",
+   "edit.autovscroll": "no",
+   "edit.case": "any",
+   "edit.codetable": "no",
+   "edit.displayonly": "no",
+   "edit.hscrollbar": "no",
+   "edit.imemode": "0",
+   "edit.limit": "0",
+   "edit.password": "no",
+   "edit.vscrollbar": "no",
+   "edit.validatecode": "no",
+   "edit.nilisnull": "no",
+   "edit.required": "no",
+   "edit.useellipsis": "no",
+   "criteria.required": "no",
+   "criteria.override_edit": "no",
+   "crosstab.repeat": "no",
+   "background.mode": "1",
+   "background.color": "536870912",
+   "font.charset": "0",
+   "font.face": "Times New Roman",
+   "font.family": "2",
+   "font.height": "-10",
+   "font.pitch": "2",
+   "font.weight": "400",
+   "tabsequence": "0",
+   "type": "column"
+  }
+ ],
+ "extras": [
+  {
+   "type": "htmltable",
+   "props": {
+    "border": "1"
+   }
+  },
+  {
+   "type": "htmlgen",
+   "props": {
+    "clientComputedFields": "1",
+    "clientEvents": "1",
+    "clientFormatting": "0",
+    "clientScriptable": "0",
+    "clientValidation": "1",
+    "encodeSelfLinkArgs": "1",
+    "generateJavaScript": "1",
+    "netscapeLayers": "0",
+    "pagingMethod": "0"
+   }
+  },
+  {
+   "type": "xhtmlgen",
+   "props": {}
+  },
+  {
+   "type": "cssgen",
+   "props": {
+    "sessionSpecific": "0"
+   }
+  },
+  {
+   "type": "xmlgen",
+   "props": {
+    "inline": "0"
+   }
+  },
+  {
+   "type": "xsltgen",
+   "props": {}
+  },
+  {
+   "type": "jsgen",
+   "props": {}
+  },
+  {
+   "type": "export.xml",
+   "props": {
+    "headGroups": "1",
+    "includewhitespace": "0",
+    "metadatatype": "0",
+    "savemetadata": "0"
+   }
+  },
+  {
+   "type": "import.xml",
+   "props": {}
+  },
+  {
+   "type": "export.pdf",
+   "props": {
+    "method": "0",
+    "distill.customPostScript": "0",
+    "xslfop.print": "0"
+   }
+  },
+  {
+   "type": "export.xhtml",
+   "props": {}
+  }
+ ]
+}

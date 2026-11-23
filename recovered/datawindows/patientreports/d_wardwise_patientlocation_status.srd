@@ -1,0 +1,145 @@
+release 12.5;
+datawindow ( units=2 timer_interval=60000 processing=0 color=16777215 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.printername=""  print.documentname=""  print.orientation=1 print.margin.left=250 print.margin.right=250 print.margin.top=250 print.margin.bottom=250 print.paper.size=1 print.paper.source=0 print.canusedefaultprinter=yes selected.mouse=no hidegrayline=no showbackcoloronxp=no)
+header(height=1114 color="536870912" )
+summary(height=187 color="536870912" )
+footer(height=0 color="536870912" )
+detail(height=187 color="536870912" )
+table(column=(type=long updatewhereclause=yes name=admissioncode dbname="AdmissionCode"  )
+column=(type=long updatewhereclause=yes name=patientcode dbname="PatientCode"  )
+column=(type=char(50) updatewhereclause=yes name=patientregno dbname="PatientRegNo"  )
+column=(type=char(60) updatewhereclause=yes name=patientname dbname="PatientName"  )
+column=(type=datetime updatewhereclause=yes name=date dbname="Date"  )
+column=(type=char(60) updatewhereclause=yes name=admittedby dbname="AdmittedBy"  )
+column=(type=char(100) updatewhereclause=yes name=diagnosis dbname="Diagnosis"  )
+column=(type=char(60) updatewhereclause=yes name=doctor dbname="Doctor"  )
+column=(type=char(60) updatewhereclause=yes name=disease dbname="Disease"  )
+column=(type=char(1) updatewhereclause=yes name=discharged dbname="Discharged"  )
+column=(type=char(60) updatewhereclause=yes name=location dbname="Location"  )
+column=(type=long updatewhereclause=yes name=floorcode dbname="WardCode"  )
+column=(type=char(60) updatewhereclause=yes name=floor dbname="WardName"  )
+column=(type=char(1) updatewhereclause=yes name=occupied dbname="Occupied"  )
+ retrieve="SELECT
+	PA.AdmissionCode,
+	PA.PatientCode,
+	PatientRegNo=P.RegNo, 
+	PatientName=P.Name, 
+	PA.Date,
+	AdmittedBy=(SELECT Users.UserName FROM Users WHERE Users.UserCode = PA.UserCode),
+	PA.Diagnosis, 
+	Doctor=(SELECT Doctors.Name FROM Doctors WHERE Doctors.DoctCode = PA.DoctorCode), 
+	Disease=(SELECT Disease.Name FROM Disease WHERE Disease.DiseaseCode = PA.DiseaseCode), 
+	PA.Discharged,
+	Location = L.Name,
+	WardCode=L.WardCode,
+	WardName=W.Name,
+	Occupied='Y'
+FROM 
+	PatientAdmission PA, 
+	Patient P, 
+	PatientLocation L,
+	Ward W,
+	(SELECT 
+		PA.AdmissionCode, 
+		LocationCode= 					ISNULL((SELECT TargetLocation FROM PatientTransfer 
+									WHERE PatientTransfer.TransferCode = 
+											(SELECT Max(PatientTransfer.TransferCode) 
+											FROM PatientTransfer 
+											WHERE PatientTransfer.AdmissionCode = PA.AdmissionCode)), (SELECT A.LocationCode FROM PatientAdmission A WHERE A.AdmissionCode = PA.AdmissionCode))
+	FROM PatientAdmission PA
+	WHERE PA.Discharged = 'N') PAL
+WHERE 
+	L.WardCode IN (:ai_wardcode) AND
+	PA.Discharged = 'N' AND
+	PA.PatientCode = P.PatientCode AND
+	PA.AdmissionCode = PAL.AdmissionCode AND
+	PAL.LocationCode = L.LocationCode AND
+	L.WardCode = W.WardCode
+UNION ALL
+SELECT 
+	AdmissionCode=NULL,
+	PatientCode=NULL,
+	PatientRegNo=NULL, 
+	PatientName=NULL, 
+	Date=NULL,
+	AdmittedBy=NULL,
+	Diagnosis=NULL, 
+	Doctor=NULL, 
+	Disease=NULL, 
+	Discharged=NULL,
+	Location = L.Name,
+	WardCode=L.WardCode,
+	WardName=W.Name,
+	Occupied='N'
+FROM 
+	PatientLocation L,
+	Ward W
+WHERE 
+	L.WardCode IN (:ai_wardcode) AND
+	L.LocationCode NOT IN 
+	 	(SELECT DISTINCT LocationCode= ISNULL(
+				(SELECT TargetLocation FROM PatientTransfer 
+				WHERE PatientTransfer.TransferCode = 
+						(SELECT Max(PatientTransfer.TransferCode) 
+						FROM PatientTransfer 
+						WHERE PatientTransfer.AdmissionCode = PA.AdmissionCode)), 
+			(SELECT A.LocationCode 
+			FROM PatientAdmission A 
+			WHERE A.AdmissionCode = PA.AdmissionCode))
+		FROM PatientAdmission PA
+		WHERE PA.Discharged = 'N') AND
+	L.WardCode = W.WardCode
+ORDER BY
+	W.Name,
+	L.Name,
+	Occupied,
+	PatientName"
+  arguments=(("ai_wardcode", numberlist))
+)
+group(level=1 header.height=197 trailer.height=0 by=("floor"  ) header.color="536870912" trailer.color="536870912" )
+text(name=t_3 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" background.mode="2" background.color="16777215" color="0" alignment="2" border="0" x="1625" y="41" height="166" width="6895" text="Ward/Floor Wise Patient Location Status" html.valueishtml="0" )
+compute(name=compute_4 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="395" y="52" height="156" width="1187" format="dd/mm/yyyy" expression="today()" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_6 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="62" y="52" height="166" width="291" text="Date: " html.valueishtml="0" )
+compute(name=c_companyname visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" x="62" y="239" height="156" width="9937" format="[general]" expression="f_ReportHeaderInfo('clientname')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=c_address1 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="62" y="427" height="156" width="9937" format="[general]" expression="f_ReportHeaderInfo('address1')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_5 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="8593" y="52" height="156" width="1406" format="[general]" expression="'Page ' + page() + ' of ' + pageCount()" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+line(name=l_1 visible="1" band=header background.mode="2" background.color="16777215" pen.style="2" pen.width="10" pen.color="0" x1="62" y1="812" x2="10000" y2="812" )
+line(name=l_2 visible="1" band=header background.mode="2" background.color="16777215" pen.style="2" pen.width="10" pen.color="0" x1="62" y1="1062" x2="10000" y2="1062" )
+compute(name=c_address2 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="62" y="614" height="156" width="9937" format="[general]" expression="f_ReportHeaderInfo('address2')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_location visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="72" y="864" height="166" width="1354" text="Location" html.valueishtml="0" )
+text(name=t_occupied visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="2" border="0" x="1500" y="864" height="166" width="572" text="Occupied" html.valueishtml="0" )
+text(name=t_disease visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="5677" y="864" height="166" width="2229" text="Disease" html.valueishtml="0" )
+text(name=t_doctor visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="7979" y="864" height="166" width="2020" text="Doctor" html.valueishtml="0" )
+text(name=t_patientname visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="2989" y="864" height="166" width="2614" text="Patient Name" html.valueishtml="0" )
+text(name=t_patientregno visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="0" border="0" x="2145" y="864" height="166" width="760" text="Reg. No." html.valueishtml="0" )
+text(name=t_8 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="2" background.color="16777215" color="0" alignment="0" border="0" x="72" y="10" height="166" width="1052" text="Report Summary:" html.valueishtml="0" )
+compute(name=compute_6 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="2458" y="10" height="166" width="572" format="[GENERAL]" expression="count( location for all)" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_7 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="0" border="0" x="1187" y="10" height="166" width="1239" text="Total Location/Beds:" html.valueishtml="0" )
+text(name=t_9 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="0" border="0" x="3416" y="10" height="166" width="677" text="Occupied:" html.valueishtml="0" )
+compute(name=compute_7 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="4135" y="10" height="166" width="572" format="[GENERAL]" expression="sum( if( occupied ='Y', 1, 0) for all)" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_10 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="0" border="0" x="5083" y="10" height="166" width="927" text="Un-Occupied :" html.valueishtml="0" )
+compute(name=compute_8 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="6052" y="10" height="166" width="572" format="[GENERAL]" expression="sum( if( occupied ='Y', 0, 1) for all)" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+column(name=disease visible="1" band=detail id=9 x="5677" y="10" height="166" width="2229" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=doctor visible="1" band=detail id=8 x="7979" y="10" height="166" width="2020" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=60 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=patientname visible="1" band=detail id=4 x="2989" y="10" height="166" width="2614" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=60 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=patientregno visible="1" band=detail id=3 x="2145" y="10" height="166" width="760" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=occupied visible="1" band=detail id=14 x="1500" y="10" height="166" width="572" color="0" border="0" alignment="2" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=1 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=location visible="1" band=detail id=11 x="72" y="10" height="166" width="1354" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=60 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=floor visible="1" band=header.1 id=13 x="864" y="11" height="166" width="3135" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=60 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="700" tabsequence=0 )
+text(name=wardname_t visible="1" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="72" y="11" height="166" width="739" text="Ward/Floor:" html.valueishtml="0" )
+text(name=t_5 visible="1" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="0" border="0" x="8552" y="11" height="166" width="802" text="Un-Occupied:" html.valueishtml="0" )
+compute(name=compute_3 visible="1" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="9385" y="11" height="166" width="572" format="[GENERAL]" expression="sum( if( occupied ='Y', 0, 1) for group 1)" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_2 visible="1" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="7864" y="11" height="166" width="572" format="[GENERAL]" expression="sum( if( occupied ='Y', 1, 0) for group 1)" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_4 visible="1" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="0" border="0" x="7187" y="11" height="166" width="625" text="Occupied:" html.valueishtml="0" )
+text(name=t_1 visible="1" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="2" background.color="16777215" color="0" alignment="0" border="0" x="4052" y="11" height="166" width="1187" text="Summary Statistics:" html.valueishtml="0" )
+text(name=t_2 visible="1" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="0" border="0" x="5281" y="11" height="166" width="1239" text="Total Location/Beds:" html.valueishtml="0" )
+compute(name=compute_1 visible="1" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="6552" y="11" height="166" width="572" format="[GENERAL]" expression="count( location for group 1)" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+htmltable(border="1" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" encodeSelfLinkArgs="1" generateJavaScript="1" netscapeLayers="0" pagingMethod=0 )
+xhtmlgen() cssgen(sessionSpecific="0" )
+xmlgen(inline="0" )
+xsltgen()
+jsgen()
+export.xml(headGroups="1" includewhitespace="0" metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 distill.customPostScript="0" xslfop.print="0" )
+export.xhtml()

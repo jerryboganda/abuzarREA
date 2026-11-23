@@ -1,0 +1,71 @@
+release 12.5;
+datawindow ( units=0 timer_interval=0 processing=1 color=80269524 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.printername=""  print.documentname=""  print.orientation=0 print.margin.left=110 print.margin.right=110 print.margin.top=96 print.margin.bottom=96 print.paper.size=0 print.paper.source=0 print.canusedefaultprinter=yes grid.lines=0 selected.mouse=yes hidegrayline=no showbackcoloronxp=no)
+header(height=132 color="536870912" )
+summary(height=0 color="536870912" )
+footer(height=76 color="536870912" )
+detail(height=72 color="536870912" )
+table(column=(type=long key=yes update=yes updatewhereclause=yes name=code dbname="SRAllocationDetail.SRAllocationCode"  )
+column=(type=long key=yes update=yes updatewhereclause=yes name=saleinvcode dbname="SRAllocationDetail.SaleInvCode" 
+ values=""  )
+column=(type=datetime updatewhereclause=yes name=saledate dbname="SaleLedger.Date"  )
+column=(type=decimal(2) updatewhereclause=yes initial="0" name=netamt dbname="SaleLedger.InvTotal"  )
+column=(type=decimal(2) update=yes updatewhereclause=yes initial="0" name=outstandingamt dbname="SRAllocationDetail.OutstandingAmt"  )
+column=(type=long identity=yes updatewhereclause=yes name=srallocationrowid dbname="SRAllocationDetail.SRAllocationRowID"  )
+column=(type=decimal(0) update=yes updatewhereclause=yes name=srallocationutn dbname="SRAllocationDetail.SRAllocationUTN"  )
+column=(type=decimal(2) update=yes updatewhereclause=yes validation="Real(GetText()) > 0" name=amt dbname="SRAllocationDetail.Amt"  )
+ retrieve="SELECT
+	SRAllocationDetail.SRAllocationCode,
+	SRAllocationDetail.SaleInvCode,
+	SaleLedger.Date,
+	SaleLedger.InvTotal,
+	SRAllocationDetail.OutstandingAmt,
+	SRAllocationDetail.IDENTITYCOL,
+	SRAllocationDetail.SRAllocationUTN,
+	SRAllocationDetail.Amt
+FROM
+	SRAllocationDetail,
+	SRAllocationHeader,
+	SaleLedger
+WHERE
+	( SRAllocationHeader.SRAllocationCode = :Code ) AND
+	( SRAllocationHeader.SRAllocationCode = SRAllocationDetail.SRAllocationCode ) and  
+	( SRAllocationDetail.SaleInvCode = SaleLedger.SaleInvCode )
+ORDER BY
+	SRAllocationDetail.SRAllocationCode,   
+	SRAllocationDetail.IDENTITYCOL,
+	SRAllocationDetail.SaleInvCode
+"
+  update="SRAllocationDetail" updatewhere=1 updatekeyinplace=yes
+  arguments=(("Code", number))
+)
+text(name=serialno_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80269524" color="0" alignment="2" border="6" x="9" y="8" height="120" width="251" text="Serial
+No." html.valueishtml="0" )
+text(name=saleinvcode_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80269524" color="0" alignment="2" border="6" x="270" y="8" height="120" width="297" text="Sale
+Inv. Code" html.valueishtml="0" )
+text(name=saledate_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80269524" color="0" alignment="2" border="6" x="576" y="8" height="120" width="503" text="Sale
+Date" html.valueishtml="0" )
+text(name=netamount_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80269524" color="0" alignment="2" border="6" x="1088" y="8" height="120" width="443" text="Net
+Amount" html.valueishtml="0" )
+text(name=outstandingamt_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80269524" color="0" alignment="2" border="6" x="1541" y="8" height="120" width="466" text="Balance
+Amount" html.valueishtml="0" )
+text(name=amt_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80269524" color="0" alignment="2" border="6" x="2016" y="8" height="120" width="453" text="Amount" html.valueishtml="0" )
+compute(name=c_outstandingamt visible="1" band=footer font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="1541" y="4" height="64" width="466" format="###,###,###0.00" expression="sum( outstandingamt for all) " alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=c_netamt visible="1" band=footer font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="1088" y="4" height="64" width="443" format="###,###,###0.00" expression="sum(netamt for all)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_1 visible="1" band=footer font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80269524" color="0" alignment="1" border="0" x="576" y="4" height="64" width="503" text="Total:" html.valueishtml="0" )
+compute(name=c_amt visible="1" band=footer font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80269524" color="0" x="2016" y="4" height="64" width="453" format="###,###,###0.00" expression="sum( amt for all)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+column(name=netamt visible="1" band=detail id=4 x="1088" y="4" height="64" width="443" color="0" border="0" alignment="1" format="###,###,###0.00" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=saledate visible="1" band=detail id=3 x="576" y="4" height="64" width="503" color="0" border="0" alignment="0" format="dd/mm/yyyy hh:mm:ss" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=saleinvcode visible="1" band=detail id=2 x="270" y="4" height="64" width="297" color="0" border="0" alignment="1" format="[general]" html.valueishtml="0" dddw.allowedit=yes dddw.autohscroll=yes dddw.autoretrieve=yes dddw.useasborder=yes dddw.datacolumn=saleinvcode dddw.displaycolumn=saleinvcode dddw.hscrollbar=yes dddw.hsplitscroll=no dddw.imemode=0 dddw.limit=0 dddw.name=ddd_unpaidsaleinvoices dddw.nilisnull=yes dddw.percentwidth=800 dddw.required=yes dddw.showlist=no dddw.vscrollbar=yes criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=10 )
+column(name=outstandingamt visible="1" band=detail id=5 x="1541" y="4" height="64" width="466" color="0" border="0" alignment="1" format="###,###,###0.00" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=amt visible="1" band=detail id=8 x="2016" y="4" height="64" width="453" color="0" border="0" alignment="1" format="###,###,###0.00" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=yes edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=20 )
+compute(name=c_serialno visible="1" band=detail font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80269524" color="0" x="9" y="4" height="64" width="251" format="[GENERAL]" expression="getrow()" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+htmltable(border="1" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" encodeSelfLinkArgs="1" generateJavaScript="1" netscapeLayers="0" pagingMethod=0 )
+xhtmlgen() cssgen(sessionSpecific="0" )
+xmlgen(inline="0" )
+xsltgen()
+jsgen()
+export.xml(headGroups="1" includewhitespace="0" metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 distill.customPostScript="0" xslfop.print="0" )
+export.xhtml()

@@ -1,0 +1,147 @@
+release 12.5;
+datawindow ( units=0 timer_interval=0 processing=0 color=16777215 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.printername=""  print.documentname=""  print.orientation=0 print.margin.left=110 print.margin.right=110 print.margin.top=96 print.margin.bottom=96 print.paper.size=0 print.paper.source=0 print.canusedefaultprinter=yes selected.mouse=no hidegrayline=no showbackcoloronxp=no)
+header(height=72 color="536870912" )
+summary(height=0 color="536870912" )
+footer(height=0 color="536870912" )
+detail(height=84 color="536870912" )
+table(column=(type=char(75) updatewhereclause=yes name=aliasname dbname="aliasname"  )
+column=(type=long updatewhereclause=yes name=icode dbname="Item.icode"  )
+column=(type=long updatewhereclause=yes name=manfcode dbname="Item.ManfCode"  )
+column=(type=char(60) updatewhereclause=yes name=item dbname="Item"  )
+column=(type=char(60) updatewhereclause=yes name=manufacturer dbname="Manufacturer"  )
+column=(type=char(60) updatewhereclause=yes name=itemcategory dbname="ItemCategory"  )
+column=(type=char(60) updatewhereclause=yes name=itemclass dbname="ItemClass"  )
+column=(type=long updatewhereclause=yes name=packunits dbname="Item.packunits"  )
+column=(type=decimal(2) updatewhereclause=yes name=purprice dbname="Item.purPrice"  )
+column=(type=long updatewhereclause=yes name=minqty dbname="Item.minqty"  )
+column=(type=decimal(4) updatewhereclause=yes name=soldqty dbname="SoldQty"  )
+column=(type=decimal(4) updatewhereclause=yes name=returnqty dbname="ReturnQty"  )
+column=(type=decimal(4) updatewhereclause=yes name=stock dbname="Stock"  )
+column=(type=decimal(4) updatewhereclause=yes name=transitstock dbname="TransitStock"  )
+column=(type=decimal(2) updatewhereclause=yes name=purprice dbname="purprice"  )
+column=(type=decimal(2) updatewhereclause=yes name=saleprice dbname="saleprice"  )
+column=(type=decimal(2) updatewhereclause=yes name=rpp dbname="rpp"  )
+column=(type=decimal(5) updatewhereclause=yes name=packavgprice dbname="packavgprice"  )
+ retrieve="SELECT
+	aliasname=item.customicode,
+	item.icode, 
+	item.ManfCode,
+	Item=item.name,
+	Manufacturer=Manufacturer.name,
+	ItemCategory=ItemCategory.name,
+	ItemClass=ItemClass.name,
+	item.packunits,
+	item.purPrice,  
+	item.minqty,
+	SoldQty = ISNULL(SUM(SL.SoldQty), 0),
+	ReturnQty = ISNULL(SUM(SL.ReturnQty), 0),
+	Stock = ISNULL((select SUM(currqty) from godowndetail where godowndetail.icode = Item.icode AND GodownDetail.GCode IN (SELECT G.Gcode FROM Godown G WHERE G.ConsiderStockInPO='Y')), 0),
+	TransitStock = ISNULL(dbo.item.transitstock, 0),
+	purprice=dbo.item.purprice,
+	saleprice=dbo.item.saleprice,
+	rpp=dbo.item.recentpurprice,
+	packavgprice=ROUND(dbo.item.avgprice * dbo.item.packunits, 2)
+FROM 
+	Manufacturer,
+	ItemCategory,
+	ItemClass,
+	Item
+	LEFT OUTER JOIN
+	(SELECT
+		Saledetail.icode,
+		soldqty   = SUM(Saledetail.LooseQty),
+		ReturnQty = 0
+	FROM 	Saledetail, SaleLedger
+	WHERE	( SaleLedger.date >= :ar_StartDate ) and
+        	( SaleLedger.date <= :ar_EndDate ) and
+	        ( SaleLedger.SaleInvCode = Saledetail.SaleInvcode ) and  
+        	( Saledetail.ICode IN 
+				(SELECT Icode FROM Item WHERE Item.ManfCode IN (:ar_manfcode) OR 
+					dbo.item.icatcode in (:ar_icatcode) OR 
+					dbo.item.iccode in (:ar_iccode) OR dbo.item.NAME LIKE (:ar_itemlike)))
+	GROUP BY Saledetail.icode
+	UNION ALL
+	SELECT
+		Srdetail.icode,
+		soldqty   = 0,
+		ReturnQty = SUM(Srdetail.LooseQty)
+	FROM 	Srdetail, SrLedger
+	WHERE	( SrLedger.date >= :ar_StartDate ) and
+        	( SrLedger.date <= :ar_EndDate ) and
+	      	( SrLedger.SrInvCode = Srdetail.SrInvcode ) and  
+        	( Srdetail.ICode IN 
+				(SELECT Icode FROM Item WHERE Item.ManfCode IN (:ar_manfcode) OR dbo.item.icatcode in (:ar_icatcode) OR 
+					dbo.item.iccode in (:ar_iccode) OR 
+					dbo.item.NAME LIKE (:ar_itemlike)))
+	GROUP BY	Srdetail.icode) AS SL ON (dbo.Item.ICode = SL.ICode)
+WHERE	
+	(dbo.item.manfcode in (:ar_manfcode) OR dbo.item.icatcode in (:ar_icatcode) OR 
+		dbo.item.iccode in (:ar_iccode) OR dbo.item.NAME LIKE (:ar_itemlike)) AND
+	( dbo.item.manfcode = dbo.manufacturer.manfcode ) AND
+	( dbo.Item.ICatCode = dbo.itemcategory.icatcode ) AND
+	( dbo.Item.ICCode = dbo.itemclass.iccode ) AND
+	( dbo.Item.Active = 1 )
+GROUP BY
+	item.icode,
+	Item.ManfCode,
+	Item.Name,
+	item.customicode,
+	Manufacturer.Name,
+	ItemCategory.name,
+	ItemClass.name,
+	Item.PackUnits,
+	item.purprice,
+	item.minqty,
+	item.transitstock,
+	item.saleprice,
+	item.recentpurprice,
+	item.avgprice
+
+ORDER BY
+	Manufacturer.Name,
+	ItemCategory.name,
+	ItemClass.name,
+	Item.Name
+"
+  arguments=(("ar_manfcode", numberlist), ("ar_icatcode", numberlist), ("ar_iccode", numberlist), ("ar_itemlike", string), ("ar_startdate", datetime), ("ar_enddate", datetime))
+)
+text(name=aliasname_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="2" border="0" x="5" y="4" height="64" width="2085" text="Aliasname" html.valueishtml="0" )
+text(name=icode_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="2" border="0" x="2094" y="4" height="64" width="329" text="Icode" html.valueishtml="0" )
+text(name=manfcode_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="2" border="0" x="2427" y="4" height="64" width="329" text="Manfcode" html.valueishtml="0" )
+text(name=item_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="2" border="0" x="2761" y="4" height="64" width="1673" text="Item" html.valueishtml="0" )
+text(name=manufacturer_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="2" border="0" x="4439" y="4" height="64" width="1673" text="Manufacturer" html.valueishtml="0" )
+text(name=itemcategory_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="2" border="0" x="6121" y="4" height="64" width="1673" text="Itemcategory" html.valueishtml="0" )
+text(name=itemclass_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="2" border="0" x="7799" y="4" height="64" width="1673" text="Itemclass" html.valueishtml="0" )
+text(name=packunits_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="2" border="0" x="9477" y="4" height="64" width="329" text="Packunits" html.valueishtml="0" )
+text(name=purprice_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="2" border="0" x="9810" y="4" height="64" width="329" text="Purprice" html.valueishtml="0" )
+text(name=minqty_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="2" border="0" x="10144" y="4" height="64" width="329" text="Minqty" html.valueishtml="0" )
+text(name=soldqty_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="2" border="0" x="10478" y="4" height="64" width="329" text="Soldqty" html.valueishtml="0" )
+text(name=returnqty_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="2" border="0" x="10811" y="4" height="64" width="329" text="Returnqty" html.valueishtml="0" )
+text(name=stock_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="2" border="0" x="11145" y="4" height="64" width="329" text="Stock" html.valueishtml="0" )
+column(name=aliasname visible="1" band=detail id=1 x="5" y="4" height="76" width="2085" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=75 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=icode visible="1" band=detail id=2 x="2094" y="4" height="76" width="329" color="0" border="0" alignment="1" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=manfcode visible="1" band=detail id=3 x="2427" y="4" height="76" width="329" color="0" border="0" alignment="1" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=item visible="1" band=detail id=4 x="2761" y="4" height="76" width="1673" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=60 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=manufacturer visible="1" band=detail id=5 x="4439" y="4" height="76" width="1673" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=60 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=itemcategory visible="1" band=detail id=6 x="6121" y="4" height="76" width="1673" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=60 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=itemclass visible="1" band=detail id=7 x="7799" y="4" height="76" width="1673" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=60 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=packunits visible="1" band=detail id=8 x="9477" y="4" height="76" width="329" color="0" border="0" alignment="1" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=purprice visible="1" band=detail id=9 x="9810" y="4" height="76" width="329" color="0" border="0" alignment="1" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=minqty visible="1" band=detail id=10 x="10144" y="4" height="76" width="329" color="0" border="0" alignment="1" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=soldqty visible="1" band=detail id=11 x="10478" y="4" height="76" width="329" color="0" border="0" alignment="1" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=returnqty visible="1" band=detail id=12 x="10811" y="4" height="76" width="329" color="0" border="0" alignment="1" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=stock visible="1" band=detail id=13 x="11145" y="4" height="76" width="329" color="0" border="0" alignment="1" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=purprice_1 visible="1" band=detail id=15 x="11474" y="0" height="64" width="2350" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=saleprice visible="1" band=detail id=16 x="13824" y="0" height="64" width="2350" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=rpp visible="1" band=detail id=17 x="16174" y="0" height="64" width="2350" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=packavgprice visible="1" band=detail id=18 x="18523" y="0" height="64" width="2350" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+htmltable(border="1" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" encodeSelfLinkArgs="1" generateJavaScript="1" netscapeLayers="0" pagingMethod=0 )
+xhtmlgen() cssgen(sessionSpecific="0" )
+xmlgen(inline="0" )
+xsltgen()
+jsgen()
+export.xml(headGroups="1" includewhitespace="0" metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 distill.customPostScript="0" xslfop.print="0" )
+export.xhtml()

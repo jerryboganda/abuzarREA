@@ -1,0 +1,158 @@
+release 12.5;
+datawindow ( units=0 timer_interval=0 processing=0 color=16777215 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.printername=""  print.documentname=""  print.orientation=0 print.margin.left=110 print.margin.right=110 print.margin.top=96 print.margin.bottom=96 print.paper.size=0 print.paper.source=0 print.canusedefaultprinter=yes selected.mouse=no hidegrayline=no showbackcoloronxp=no)
+header(height=72 color="536870912" )
+summary(height=0 color="536870912" )
+footer(height=0 color="536870912" )
+detail(height=84 color="536870912" )
+table(column=(type=long updatewhereclause=yes name=dstbidlen dbname="DSTBIDLEN"  )
+column=(type=char(6) updatewhereclause=yes name=dstbid dbname="DSTBID"  )
+column=(type=long updatewhereclause=yes name=docnolen dbname="DOCNOLEN"  )
+column=(type=char(10) updatewhereclause=yes name=docno dbname="DOCNO"  )
+column=(type=long updatewhereclause=yes name=docdatelen dbname="DOCDateLEN"  )
+column=(type=char(10) updatewhereclause=yes name=docdate dbname="DOCDate"  )
+column=(type=long updatewhereclause=yes name=custidlen dbname="CUSTIDLEN"  )
+column=(type=char(6) updatewhereclause=yes name=custid dbname="CUSTID"  )
+column=(type=long updatewhereclause=yes name=prdidlen dbname="PRDIDLEN"  )
+column=(type=char(6) updatewhereclause=yes name=prdid dbname="PRDID"  )
+column=(type=long updatewhereclause=yes name=batchlen dbname="BatchLEN"  )
+column=(type=char(10) updatewhereclause=yes name=batch dbname="Batch"  )
+column=(type=long updatewhereclause=yes name=expdatelen dbname="EXPDATELEN"  )
+column=(type=char(10) updatewhereclause=yes name=expdate dbname="EXPDATE"  )
+column=(type=long updatewhereclause=yes name=actuallen dbname="ACTUALLEN"  )
+column=(type=char(12) updatewhereclause=yes name=actual dbname="ACTUAL"  )
+column=(type=long updatewhereclause=yes name=ratelen dbname="RateLEN"  )
+column=(type=char(12) updatewhereclause=yes name=rate dbname="Rate"  )
+column=(type=long updatewhereclause=yes name=discountlen dbname="DISCOUNTLEN"  )
+column=(type=char(12) updatewhereclause=yes name=discount dbname="DISCOUNT"  )
+column=(type=long updatewhereclause=yes name=bonuslen dbname="BonusLEN"  )
+column=(type=char(12) updatewhereclause=yes name=bonus dbname="Bonus"  )
+column=(type=long updatewhereclause=yes name=returnslen dbname="ReturnsLEN"  )
+column=(type=char(12) updatewhereclause=yes name=returns dbname="Returns"  )
+column=(type=long updatewhereclause=yes name=expiredlen dbname="EXPIREDLEN"  )
+column=(type=char(12) updatewhereclause=yes name=expired dbname="EXPIRED"  )
+ retrieve="SELECT
+	DSTBIDLEN=6, 
+	DSTBID=LEFT(LTRIM(RTRIM(AR.TAG)), 6),
+	DOCNOLEN=10, 
+	DOCNO = STR(SL.SaleInvCode, 10),
+	DOCDateLEN=10,
+	DOCDate=Convert(varchar(10), SL.DATE, 103), 
+	CUSTIDLEN=6,
+	CUSTID = STR(SL.CustCode, 6),
+	PRDIDLEN=6,
+	PRDID=STR(SD.ICode, 6),
+	BatchLEN=10,
+	Batch=SUBSTRING(SD.Batch, 1, 10),
+	EXPDATELEN=10,
+	EXPDATE=Convert(varchar(10), SD.Expiry, 103),
+	ACTUALLEN=12,
+	ACTUAL=STR(SD.LooseQty, 12),
+	RateLEN=12,
+	Rate=STR(SD.SalePrice, 12, 2),
+	DISCOUNTLEN=12,
+	DISCOUNT=STR(Round((SD.LooseQty * SD.SalePrice * (SD.DiscPerc * 0.01)), 2), 12, 2),
+	BonusLEN=12,
+	Bonus=STR(SD.BonusQty, 12),
+	ReturnsLEN=12,
+	Returns=STR(0, 12),
+	EXPIREDLEN=12,
+	EXPIRED=STR(0, 12)
+FROM
+	SaleLedger SL,
+	SaleDetail SD,
+	Customer C,
+	CustomerCategory CC,
+	Item I,
+	Area Ar
+WHERE
+	SL.SaleInvCode = SD.SaleInvCode AND
+	SL.POSTED = 'Y' AND
+	SL.DATE >= :ar_startdate AND SL.DATE <= :ar_enddate AND
+	SD.ICode = I.ICode AND
+	I.ManfCode = :manfcode AND
+	SL.CustCode = C.CustCode AND
+	C.CustCatCode = CC.CustCatCode AND
+	C.AreaCode = Ar.AreaCode
+UNION ALL
+SELECT 
+	DSTBIDLEN=6,
+	DSTBID=LEFT(LTRIM(RTRIM(AR.TAG)), 6),
+	DOCNOLEN=10,
+	DOCNO = STR(SL.SRInvCode, 10),
+	DOCDateLEN=10,
+	DOCDate=Convert(varchar(10), SL.DATE, 103), 
+	CUSTIDLEN=6,
+	CUSTID = STR(SL.CustCode, 6),
+	PRDIDLEN=6,
+	PRDID=STR(SD.ICode, 6),
+	BatchLEN=10,
+	Batch=SUBSTRING(SD.Batch, 1, 10),
+	EXPDATELEN=10,
+	EXPDATE=Convert(varchar(10), SD.Expiry, 103),
+	ACTUALLEN=12,
+	ACTUAL=STR(0, 12),
+	RateLEN=12,
+	Rate=STR(SD.SRPrice, 12, 2),
+	DISCOUNTLEN=12,
+	DISCOUNT=STR(Round((SD.LooseQty * SD.SRPrice * (SD.DiscPerc * 0.01)), 2), 12, 2),
+	BonusLEN=12,
+	Bonus=STR(SD.BonusQty, 12),
+	ReturnsLEN=12,
+	Returns=STR(SD.LooseQty, 12),
+	EXPIREDLEN=12,
+	EXPIRED=STR(0, 12)
+FROM
+	SRLedger SL,
+	SRDetail SD,
+	Customer C,
+	CustomerCategory CC,
+	Item I,
+	Area AR
+
+WHERE
+	SL.SRInvCode = SD.SRInvCode AND
+	SL.POSTED = 'Y' AND
+	SL.DATE >= :ar_startdate AND SL.DATE <= :ar_enddate AND
+	SD.ICode = I.ICode AND
+	I.ManfCode = :manfcode AND
+	SL.CustCode = C.CustCode AND
+	C.CustCatCode = CC.CustCatCode AND
+	C.AreaCode = AR.AreaCode"
+  arguments=(("manfcode", number), ("ar_startdate", datetime), ("ar_enddate", datetime))
+)
+text(name=dstbid_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="2" border="0" x="5" y="4" height="64" width="192" text="Dstbid" html.valueishtml="0" )
+text(name=dayofsale_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="2" border="0" x="201" y="4" height="64" width="603" text="Doc Date" html.valueishtml="0" )
+text(name=docno_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="2" border="0" x="809" y="4" height="64" width="302" text="Docno" html.valueishtml="0" )
+text(name=custid_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="2" border="0" x="1115" y="4" height="64" width="192" text="Custid" html.valueishtml="0" )
+text(name=nrv_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="2" border="0" x="2857" y="8" height="64" width="357" text="rate" html.valueishtml="0" )
+text(name=prdid_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="2" border="0" x="1321" y="4" height="64" width="274" text="Prdid" html.valueishtml="0" )
+text(name=batch_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="2" border="0" x="1600" y="4" height="64" width="302" text="Batch" html.valueishtml="0" )
+text(name=expdate_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="2" border="0" x="1906" y="4" height="64" width="603" text="Expdate" html.valueishtml="0" )
+text(name=actual_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="2" border="0" x="2514" y="4" height="64" width="329" text="Actual" html.valueishtml="0" )
+text(name=bonus_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="2" border="0" x="3227" y="4" height="64" width="357" text="Bonus" html.valueishtml="0" )
+text(name=returns_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="2" border="0" x="3589" y="4" height="64" width="357" text="Returns" html.valueishtml="0" )
+text(name=expired_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="2" border="0" x="3950" y="4" height="64" width="361" text="Expired" html.valueishtml="0" )
+text(name=discount_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="2" border="0" x="4315" y="4" height="64" width="357" text="Discount" html.valueishtml="0" )
+column(name=dstbid visible="1" band=detail id=2 x="5" y="4" height="76" width="192" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=6 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=docno visible="1" band=detail id=4 x="809" y="4" height="76" width="302" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=10 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=custid visible="1" band=detail id=8 x="1115" y="4" height="76" width="192" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=6 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=rate visible="1" band=detail id=18 x="2857" y="8" height="64" width="347" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=prdid visible="1" band=detail id=10 x="1321" y="4" height="76" width="274" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=9 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=actual visible="1" band=detail id=16 x="2514" y="4" height="76" width="329" color="0" border="0" alignment="1" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=batch visible="1" band=detail id=12 x="1600" y="4" height="76" width="302" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=10 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=expdate visible="1" band=detail id=14 x="1915" y="4" height="76" width="590" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=bonus visible="1" band=detail id=22 x="3227" y="4" height="76" width="357" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=12 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=returns visible="1" band=detail id=24 x="3589" y="4" height="76" width="357" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=12 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=expired visible="1" band=detail id=26 x="3950" y="4" height="76" width="361" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=12 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=discount visible="1" band=detail id=20 x="4315" y="4" height="76" width="357" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=12 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=docdate visible="1" band=detail id=6 x="219" y="8" height="64" width="503" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+htmltable(border="1" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" encodeSelfLinkArgs="1" generateJavaScript="1" netscapeLayers="0" pagingMethod=0 )
+xhtmlgen() cssgen(sessionSpecific="0" )
+xmlgen(inline="0" )
+xsltgen()
+jsgen()
+export.xml(headGroups="1" includewhitespace="0" metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 distill.customPostScript="0" xslfop.print="0" )
+export.xhtml()

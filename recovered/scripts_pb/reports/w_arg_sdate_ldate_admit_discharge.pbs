@@ -1,0 +1,54 @@
+// window w_arg_sdate_ldate_admit_discharge (reports)  ancestor: w_arguements
+
+// w_arg_sdate_ldate_admit_discharge.create() returns 0 [event]
+	integer icurrent
+	call super::create
+	this.dw_admitdischarge = create dw_admitdischarge
+	this.st_4 = create st_4
+	icurrent = upperbound(this.control)
+	this.control[icurrent + 1] = this.dw_admitdischarge
+	this.control[icurrent + 2] = this.st_4
+
+// w_arg_sdate_ldate_admit_discharge.destroy() returns 0 [event]
+	call super::destroy
+	destroy this.dw_admitdischarge
+	destroy this.st_4
+
+// w_arg_sdate_ldate_admit_discharge.ue_close(integer ai_stauts) returns 0 [event]
+	super::ue_close(ai_stauts)
+	closewithreturn(this, this.istr_arg)
+
+// w_arg_sdate_ldate_admit_discharge.open() returns long [event]
+	long ancestorreturnvalue
+	ancestorreturnvalue = super::open()
+	this.dw_admitdischarge.settransobject(sqlca)
+	this.dw_admitdischarge.retrieve()
+	this.dw_admitdischarge.scrolltorow(0)
+	return ::message.returnvalue
+
+// cb_cancel.clicked() returns long [event]
+	long ancestorreturnvalue
+	ancestorreturnvalue = super::clicked()
+	parent.post event ue_close(-1)
+	return ::message.returnvalue
+
+// cb_ok.clicked() returns long [event]
+	long ancestorreturnvalue
+	ancestorreturnvalue = super::clicked()
+	parent.em_startdate.getdata(parent.istr_arg.d_sdate)
+	parent.em_enddate.getdata(parent.istr_arg.d_edate)
+	parent.istr_arg.i_status = 1
+	if isnull(parent.dw_admitdischarge.getitemnumber(1, "dischargestatus")) then
+		messagebox("Discharge Status Validation!", "Please Select Some Discharge Status")
+		return ::message.returnvalue
+	else
+		parent.istr_arg.l_code1 = parent.dw_admitdischarge.getitemnumber(1, "dischargestatus")
+	end if
+	parent.post event ue_close(1)
+	return ::message.returnvalue
+
+// dw_admitdischarge.ue_keydown(keycode key, unsignedlong keyflags) returns long [event]
+	if key = keyenter! then
+		send(handle(this), 256, 9, long(90))
+	end if
+	return ::message.returnvalue

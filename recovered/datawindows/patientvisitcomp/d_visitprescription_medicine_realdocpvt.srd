@@ -1,0 +1,153 @@
+release 12.5;
+datawindow ( units=2 timer_interval=0 processing=0 color=1073741824 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.file=""  picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.printername=""  print.documentname=""  print.orientation=2 print.margin.left=0 print.margin.right=0 print.margin.top=0 print.margin.bottom=0 print.paper.size=1 print.paper.source=0 print.canusedefaultprinter=yes selected.mouse=no hidegrayline=no showbackcoloronxp=no)
+header(height=0 color="536870912" transparency="0" gradient.color="8421504" gradient.transparency="0" gradient.angle="0" brushmode="0" gradient.repetition.mode="0" gradient.repetition.length="100" gradient.repetition.count="0" gradient.focus="0" gradient.scale="100" gradient.spread="100" )
+summary(height=0 color="536870912" transparency="0" gradient.color="8421504" gradient.transparency="0" gradient.angle="0" brushmode="0" gradient.repetition.mode="0" gradient.repetition.length="100" gradient.repetition.count="0" gradient.focus="0" gradient.scale="100" gradient.spread="100" )
+footer(height=0 color="536870912" transparency="0" gradient.color="8421504" gradient.transparency="0" gradient.angle="0" brushmode="0" gradient.repetition.mode="0" gradient.repetition.length="100" gradient.repetition.count="0" gradient.focus="0" gradient.scale="100" gradient.spread="100" )
+detail(height=341 color="536870912" transparency="0" gradient.color="8421504" gradient.transparency="0" gradient.angle="0" brushmode="0" gradient.repetition.mode="0" gradient.repetition.length="100" gradient.repetition.count="0" gradient.focus="0" gradient.scale="100" gradient.spread="100"  height.autosize=yes)
+table(column=(type=long updatewhereclause=yes name=type dbname="TYPE"  )
+column=(type=char(20) updatewhereclause=no name=typedesc dbname="TypeDesc"  )
+column=(type=long updatewhereclause=yes name=visitcode dbname="VisitCode"  )
+column=(type=char(274) updatewhereclause=yes name=itemname dbname="ItemName"  )
+column=(type=decimal(4) updatewhereclause=yes name=dosageqty dbname="DosageQty"  )
+column=(type=char(400) updatewhereclause=yes name=dosageunit dbname="DosageUnit"  )
+column=(type=long updatewhereclause=yes name=localdosageunit dbname="LocalDosageUnit"  )
+column=(type=char(60) updatewhereclause=yes name=dosagestrength dbname="DosageStrength"  )
+column=(type=char(60) updatewhereclause=yes name=dosagefreq dbname="DosageFreq"  )
+column=(type=char(499) updatewhereclause=yes name=localdosage dbname="LocalDosage"  )
+column=(type=long identity=yes updatewhereclause=yes name=rowid dbname="RowID"  )
+column=(type=long updatewhereclause=yes name=duration dbname="Duration"  )
+column=(type=char(60) updatewhereclause=yes name=doctor dbname="Doctor"  )
+column=(type=char(60) updatewhereclause=no name=disease dbname="Disease"  )
+column=(type=char(400) updatewhereclause=yes name=details dbname="Details"  )
+ retrieve="SELECT 
+	TYPE = 1,
+	TypeDesc = 'Drug Name and Dosage',
+	VisitCode = V.VisitCode,
+	ItemName = LTRIM(RTRIM(ISNULL((SELECT DU.Name FROM DosageUnit DU WHERE DU.DosageUnitCode = VP.DosageUnitCode),'') + ' ' + (SELECT I.Name + ' (' + GI.Name + ')' FROM Item I, GenericItem GI WHERE VP.ICode = I.ICode AND GI.GenericCode = I.GenericCode))),
+	DosageQty = VP.Qty,
+	DosageUnit = NULL,
+	LocalDosageUnit = NULL,/*(SELECT DU.LocalDosageUnit FROM DosageUnit DU WHERE DU.DosageUnitCode = VP.DosageUnitCode),*/
+	DosageStrength = VP.DosageStrength,
+	DosageFreq = (SELECT D.Name FROM Dosage D WHERE D.DosageCode = VP.DosageCode),
+	LocalDosage = (SELECT D.LocalDosage FROM Dosage D WHERE D.DosageCode = VP.DosageCode),
+	RowID = VP.RowID,
+	Duration = VP.Duration,
+	Doctor = (SELECT D.Name FROM Doctors D WHERE D.DoctCode = V.DoctCode),
+	Disease = (SELECT D.Name FROM Disease D WHERE D.DiseaseCode = VP.DiseaseCode),
+	Details = VP.Details 
+FROM
+	Visit V
+	LEFT OUTER JOIN VisitPrescription AS VP ON (V.VisitCode = VP.VisitCode)
+WHERE
+	V.VisitCode = :ai_code
+UNION ALL
+SELECT 
+	TYPE = 2,
+	TypeDesc = 'Precausions',
+	VisitCode = VisitPrecaution.VisitCode,
+	ItemName = Precaution.Name,
+	DosageQty = 0,
+	DosageUnit = NULL,
+	LocalDosageUnit = NULL,   
+	DosageStrength = NULL,
+	DosageFreq = NULL,
+	LocalDosage = Precaution.LocalPrecaution, 
+	RowID = NULL,
+	Duration = NULL,
+	Doctor = NULL,
+	Disease = NULL,
+	Details = NULL
+FROM Precaution,   
+	VisitPrecaution  
+WHERE ( VisitPrecaution.PrecautionCode = Precaution.PrecautionCode ) and  
+	( VisitPrecaution.VisitCode = :ai_code )
+UNION ALL
+SELECT 
+	TYPE = 3,
+	TypeDesc = 'Test Recommedations',
+	VisitCode = VisitDiagnostics.VisitCode,
+	ItemName = DiagnosticItem.Name,
+	DosageQty = 0,
+	DosageUnit = (SELECT MAX(Visit.Recommendations) FROM Visit WHERE Visit.VisitCode = :ai_code),
+	LocalDosageUnit = NULL,   
+	DosageStrength = NULL,
+	DosageFreq = NULL,
+	LocalDosage = NULL,
+	RowID = NULL,
+	Duration = NULL,
+	Doctor = NULL,
+	Disease = NULL,
+	Details = NULL
+FROM DiagnosticItem,   
+	VisitDiagnostics
+WHERE VisitDiagnostics.DiagnosticItemCode = DiagnosticItem.DiagnosticItemCode  AND 
+	VisitDiagnostics.VisitCode = :ai_code
+UNION ALL
+SELECT 
+	TYPE = 4,
+	TypeDesc = 'Clinical Diagnosis',
+	VisitCode = VS.VisitCode,
+	ItemName = S.Name,
+	DosageQty = 0,
+	DosageUnit = NULL,
+	LocalDosageUnit = NULL,   
+	DosageStrength = NULL,
+	DosageFreq = NULL,
+	LocalDosage = (SELECT SL.Name FROM SeverityLevel SL WHERE VS.SeverityLevelCode = SL.SeverityLevelCode) + ' - ' + VS.Details,
+	RowID = VS.RowID, 
+	Duration = VS.Duration,
+	Doctor = NULL,
+	Disease = NULL,
+	Details = NULL
+FROM 
+	VisitSymptoms VS, Symptom S
+WHERE 
+	VS.VisitCode = :ai_code AND
+	S.SymptomCode = VS.SymptomCode
+UNION ALL
+SELECT 
+	TYPE = 5,
+	TypeDesc = 'Physical Examination',
+	VisitCode = VP.VisitCode,
+	ItemName = PE.Name,
+	DosageQty = 0,
+	DosageUnit = NULL,
+	LocalDosageUnit = NULL,   
+	DosageStrength = NULL,
+	DosageFreq = NULL,
+	LocalDosage = VP.Details,
+	RowID = VP.RowID, 
+	Duration = NULL,
+	Doctor = NULL,
+	Disease = NULL,
+	Details = NULL
+FROM 
+	VisitPhysicalExam VP, PhysicalExam PE
+WHERE 
+	VP.VisitCode = :ai_code AND
+	VP.PhysicalExamCode = PE.PhysicalExamCode
+"
+  arguments=(("ai_code", number))
+ sort="type A, rowid A"
+)
+group(level=1 header.height=200 header.height.autosize=yes trailer.height=0 by=("type"  ) header.color="536870912" header.transparency="0" header.gradient.color="8421504" header.gradient.transparency="0" header.gradient.angle="0" header.brushmode="0" header.gradient.repetition.mode="0" header.gradient.repetition.length="100" header.gradient.repetition.count="0" header.gradient.focus="0" header.gradient.scale="100" header.gradient.spread="100" trailer.color="536870912" trailer.transparency="0" trailer.gradient.color="8421504" trailer.gradient.transparency="0" trailer.gradient.angle="0" trailer.brushmode="0" trailer.gradient.repetition.mode="0" trailer.gradient.repetition.length="100" trailer.gradient.repetition.count="0" trailer.gradient.focus="0" trailer.gradient.scale="100" trailer.gradient.spread="100" )
+line(name=l_5 visible="1" band=detail background.mode="2" background.color="16777215" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="0" pen.width="8" pen.color="0" x1="0" y1="325	rowheight() - 2" x2="5933" y2="325	rowheight() - 2" )
+compute(name=compute_1 visible="1" height.autosize=yes slideup=allabove band=detail font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="33554432" x="33" y="8" height="133" width="325" format="[GENERAL]" expression="cumulativeSum( 1 for group 1)" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_2 visible="1	if(duration=0 or ISNULL(duration), 0,1)" height.autosize=yes band=detail font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="33554432" x="1325" y="158" height="133" width="1083" format="[GENERAL]" expression="'( ' + trim(string(duration)) + ' Days )'" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+column(name=dosageunit visible="1	if(dosageunit='' or ISNULL(dosageunit), 0, 1)" height.autosize=yes band=detail id=6 x="433" y="308" height="8" width="1533" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" transparency="0" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=localdosageunit visible="1	if(localdosageunit='' or ISNULL(localdosageunit), 0, 1)" height.autosize=yes band=detail id=7 x="2000" y="308" height="8" width="883" color="33554432" border="0" alignment="1" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" transparency="0" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=details visible="1	if(details='' or ISNULL(details), 0, 1)" moveable=1 band=detail id=15 x="2975" y="308" height="8" width="2966" color="33554432" border="0" alignment="1" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" transparency="0" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" font.charset="0" font.face="Arial" font.family="1" font.height="-8" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=itemname visible="1	if(itemname='' or ISNULL(itemname),0,1)" height.autosize=yes band=detail id=4 x="433" y="8" height="133" width="5475" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=60 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" transparency="0" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=localdosage visible="1	if(localdosage = '' or ISNULL(localdosage), 0,1)" height.autosize=yes band=detail id=10 x="2433" y="158" height="133" width="3050" color="33554432" border="0" alignment="1" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" transparency="0" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=typedesc visible="1" band=header.1 id=2 x="33" y="8" height="166" width="5858" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" transparency="0" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="700" tabsequence=0 )
+line(name=l_2 visible="1" band=header.1 background.mode="2" background.color="16777215" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="0" pen.width="8" pen.color="0" x1="0" y1="191" x2="5933" y2="191" )
+htmltable(border="1" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" encodeSelfLinkArgs="1" generateDDDWFrames="1" generateJavaScript="1" netscapeLayers="0" pagingMethod=0 )
+xhtmlgen() cssgen(sessionSpecific="0" )
+xmlgen(inline="0" )
+xsltgen()
+jsgen()
+export.xml(headGroups="1" includewhitespace="0" metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 distill.customPostScript="0" xslfop.print="0" )
+export.xhtml()

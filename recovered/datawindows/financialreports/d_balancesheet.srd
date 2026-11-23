@@ -1,0 +1,209 @@
+release 12.5;
+datawindow ( units=2 timer_interval=60000 processing=0 color=16777215 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.printername=""  print.documentname=""  print.orientation=0 print.margin.left=0 print.margin.right=0 print.margin.top=0 print.margin.bottom=0 print.paper.size=1 print.paper.source=0 print.canusedefaultprinter=yes selected.mouse=no hidegrayline=no showbackcoloronxp=no)
+header(height=1666 color="536870912" )
+summary(height=0 color="536870912" )
+footer(height=0 color="536870912" )
+detail(height=177 color="536870912" )
+table(column=(type=long updatewhereclause=yes name=portion dbname="Portion"  )
+column=(type=decimal(0) updatewhereclause=yes name=mainacccode dbname="MainAccCode"  )
+column=(type=char(60) updatewhereclause=yes name=accounttype dbname="AccountType"  )
+column=(type=decimal(0) updatewhereclause=yes name=catacccode dbname="CatAccCode"  )
+column=(type=char(60) updatewhereclause=yes name=accountcategory dbname="AccountCategory"  )
+column=(type=long updatewhereclause=yes name=subacccode dbname="SubAccCode"  )
+column=(type=char(60) updatewhereclause=yes name=accountgroup dbname="AccountGroup"  )
+column=(type=long updatewhereclause=yes name=acccode dbname="AccCode"  )
+column=(type=char(60) updatewhereclause=yes name=account dbname="Account"  )
+column=(type=decimal(2) updatewhereclause=yes name=balance dbname="Balance"  )
+ retrieve="SELECT	
+	Portion,
+	MainAccCode, 
+	AccountType, 
+	CatAccCode, 
+	AccountCategory,
+	SubAccCode, 
+	AccountGroup, 
+	AccCode, 
+	Account, 
+	Balance=SUM(Balance)
+FROM 
+(SELECT
+	Portion=2,
+	MainAccCode=(SELECT Code FROM GLOBAL WHERE TableName = 'mainaccounts' and NAME = 'GT_EquityMain'), 
+	AccountType=(SELECT NAME FROM MainAccounts 
+			WHERE MainAccCode = (SELECT Code FROM GLOBAL WHERE TableName = 'mainaccounts' and NAME = 'GT_EquityMain')), 
+	CatAccCode=(SELECT Code FROM GLOBAL WHERE TableName = 'categoryaccounts' and NAME = 'GT_CapitalAccountsCat'), 
+	AccountCategory=(SELECT NAME FROM CategoryAccounts WHERE CatAccCode = (SELECT Code FROM GLOBAL WHERE TableName = 'categoryaccounts' and NAME = 'GT_CapitalAccountsCat')),
+	SubAccCode=8888, 
+	AccountGroup = 'ACCUMULATED PROFIT/LOSS',
+	AccCode=8888, 
+	Account = 'ACCUMULATED PROFIT/LOSS UPTO DATE',
+	Balance = Value1
+FROM ReportData
+WHERE Code1=-1 AND Code2 IN (SELECT MAX(Code2) FROM ReportData WHERE Code1=-1 AND Code2 IN (3,5,7,9,11))
+UNION ALL
+SELECT
+	Portion=1,
+	MainAccCode=(SELECT Code FROM GLOBAL WHERE TableName = 'mainaccounts' and NAME = 'GT_AssetMain'), 
+	AccountType=(SELECT NAME FROM MainAccounts WHERE MainAccCode = (SELECT Code FROM GLOBAL WHERE TableName = 'mainaccounts' and NAME = 'GT_AssetMain')), 
+	CatAccCode=(SELECT Code FROM GLOBAL WHERE TableName = 'categoryaccounts' and NAME = 'GT_CurrentAssetsCat'), 
+	AccountCategory=(SELECT NAME FROM CategoryAccounts WHERE CatAccCode = (SELECT Code FROM GLOBAL WHERE TableName = 'categoryaccounts' and NAME = 'GT_CurrentAssetsCat')),
+	SubAccCode=6666, 
+	AccountGroup ='CLOSING STOCK/INVENTORY',
+	AccCode=6666, 
+	Account ='CLOSING STOCK/INVENTORY',
+	Balance = -(Value1)
+FROM ReportData
+WHERE Name1 = 'CLOSING STOCK/INVENTORY'
+UNION ALL 
+SELECT	
+	Portion=CASE M.MainAccCode WHEN 1 THEN 1 ELSE 2 END,
+	M.MainAccCode, 
+	AccountType = M.Name,
+	C.CatAccCode,
+	AccountCategory = C.Name,
+	SubAccCode= S.SubAccCode, 
+	AccountGroup = S.Name,
+	AccCode=CASE :ai_level WHEN 1 THEN S.SubAccCode ELSE V.AccCode END, 
+	Account = CASE :ai_level WHEN 1 THEN S.Name ELSE A.NAme END,
+	Balance = SUM(V.Debit - V.Credit)
+FROM	VirtualGl V, 
+	Accounts A, 
+	CategoryAccounts C,
+	SubAccounts S,
+	MainAccounts M
+WHERE	
+	V.Date <= :ad_EndDate AND
+	M.MainAccCode IN (SELECT Code
+			 FROM GLOBAL 
+			 WHERE TableName = 'mainaccounts' and NAME IN 
+				('GT_AssetMain', 'GT_LiabilityMain', 'GT_EquityMain')) AND
+	M.MainAccCode = C.MainAccCode AND
+	C.CatAccCode = S.CatAccCode AND
+	S.SubAccCode = A.SubCode AND
+	A.AccCode = V.AccCode
+GROUP BY
+	M.MainAccCode, 
+	M.Name,
+	C.CatAccCode,
+	C.Name,
+	S.SubAccCode, 
+	S.Name,
+	CASE :ai_level WHEN 1 THEN S.SubAccCode ELSE V.AccCode END, 
+	CASE :ai_level WHEN 1 THEN S.Name ELSE A.NAme END
+HAVING	SUM(V.Debit - V.Credit) <> 0) T
+GROUP BY
+	Portion,
+	MainAccCode, 
+	AccountType,
+	CatAccCode,
+	AccountCategory,
+	SubAccCode, 
+	AccountGroup,
+	AccCode, 
+	Account
+ORDER BY
+	Portion,
+	MainAccCode, 
+	AccountType,
+	CatAccCode,
+	AccountCategory,
+	SubAccCode, 
+	AccountGroup,
+	AccCode, 
+	Account
+/*SELECT	
+	Portion=2,
+	MainAccCode=(SELECT Code FROM GLOBAL WHERE TableName = 'mainaccounts' and NAME = 'GT_EquityMain'), 
+	AccountType=(SELECT NAME FROM MainAccounts 
+			WHERE MainAccCode = (SELECT Code FROM GLOBAL WHERE TableName = 'mainaccounts' and NAME = 'GT_EquityMain')), 
+	CatAccCode=(SELECT Code FROM GLOBAL WHERE TableName = 'categoryaccounts' and NAME = 'GT_CapitalAccountsCat'), 
+	AccountCategory=(SELECT NAME FROM CategoryAccounts WHERE CatAccCode = (SELECT Code FROM GLOBAL WHERE TableName = 'categoryaccounts' and NAME = 'GT_CapitalAccountsCat')),
+	SubAccCode=7777, 
+	AccountGroup = 'RETAINED EARNINGS',
+	AccCode=7777, 
+	Account ='RETAINED EARNINGS',
+	Balance = -SUM(B)
+FROM
+	(SELECT	B=Value1
+	FROM ReportData
+	WHERE Code1=-1 AND Code2 IN (SELECT MAX(Code2) FROM ReportData WHERE Code1=-1)
+	UNION ALL
+	SELECT	B= -(Value1)
+	FROM ReportData
+	WHERE Name1 = 'CLOSING STOCK'
+	UNION ALL
+	SELECT	
+		B= SUM(V.Debit - V.Credit)
+	FROM	VirtualGl V, 
+		Accounts A, 
+		CategoryAccounts C,
+		SubAccounts S,
+		MainAccounts M
+	WHERE	
+		V.Date <= :ad_EndDate AND
+		M.MainAccCode IN (SELECT Code
+			 FROM GLOBAL 
+			 WHERE TableName = 'mainaccounts' and NAME IN 
+				('GT_AssetMain', 'GT_LiabilityMain', 'GT_EquityMain')) AND
+		M.MainAccCode = C.MainAccCode AND
+		C.CatAccCode = S.CatAccCode AND
+		S.SubAccCode = A.SubCode AND
+		A.AccCode = V.AccCode) A
+UNION ALL*/"
+  arguments=(("ad_EndDate", datetime), ("ai_Level", number))
+)
+group(level=1 header.height=229 trailer.height=260 by=("portion"  ) header.color="536870912" trailer.color="536870912" )
+group(level=2 header.height=177 trailer.height=218 by=("accounttype"  ) header.color="536870912" trailer.color="536870912" )
+group(level=3 header.height=177 trailer.height=218 by=("accountcategory"  ) header.color="536870912" trailer.color="536870912" )
+text(name=t_3 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" alignment="2" border="0" x="93" y="250" height="166" width="7604" text="Balance Sheet" html.valueishtml="0" )
+compute(name=c_address2 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="93" y="822" height="156" width="7604" format="[general]" expression="f_ReportHeaderInfo('address2')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=c_address1 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="93" y="635" height="156" width="7604" format="[general]" expression="f_ReportHeaderInfo('address1')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=c_companyname visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" x="93" y="447" height="156" width="7604" format="[general]" expression="f_ReportHeaderInfo('clientname')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+line(name=l_5 visible="1" band=header background.mode="2" background.color="16777215" pen.style="2" pen.width="10" pen.color="0" x1="104" y1="1229" x2="7708" y2="1229" )
+line(name=l_4 visible="1" band=header background.mode="2" background.color="16777215" pen.style="2" pen.width="10" pen.color="0" x1="93" y1="1645" x2="7697" y2="1645" )
+text(name=t_6 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" alignment="1" border="0" x="6614" y="1270" height="333" width="1020" text="Amount
+(Rs.)" html.valueishtml="0" )
+text(name=t_22 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-12" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="822" y="1291" height="208" width="802" text="Description" html.valueishtml="0" )
+compute(name=compute_3 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" x="833" y="1020" height="166" width="1020" format="[GENERAL]" expression="IF( ai_Level =1, 'Summary', 'Detail')" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=startdate_t visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="3093" y="1020" height="166" width="437" text="As On :" html.valueishtml="0" )
+compute(name=compute_8 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" x="3562" y="1020" height="166" width="1270" format="dd/mm/yyyy hh:mm:ss" expression=" ad_EndDate " alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_8 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="83" y="1020" height="166" width="708" text="Detail Level:" html.valueishtml="0" )
+compute(name=page_1 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" background.mode="2" background.color="16777215" color="0" x="6208" y="52" height="166" width="1479" format="[general]" expression="'Page ' + page() + ' of ' + pageCount()" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_9 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="700" background.mode="2" background.color="16777215" color="0" x="4583" y="52" height="166" width="1583" format="dd/mm/yyyy hh:mm:ss" expression="today()" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+column(name=account visible="1	if( ai_Level >=2, 1, 0)" band=detail id=9 x="2843" y="10" height="156" width="3489" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=60 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=accountgroup visible="1" band=detail id=7 x="229" y="10" height="156" width="2552" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=60 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+compute(name=compute_7 visible="1" band=detail font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="6489" y="10" height="156" width="1083" format="###,###,###.00" expression="abs( balance )" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_9 visible="1	if( balance < 0, 1, 0)" band=detail font.charset="0" font.face="Univers" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="1" border="0" x="6375" y="10" height="156" width="72" text="(" html.valueishtml="0" )
+text(name=t_13 visible="1	if( balance < 0, 1, 0)" band=detail font.charset="0" font.face="Univers" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="1" border="0" x="7604" y="10" height="156" width="72" text=")" html.valueishtml="0" )
+compute(name=compute_4 visible="1" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-12" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" x="104" y="11" height="197" width="3812" format="[GENERAL]" expression="if( portion = 1, ~"PROPERTY & ASSETS~", ~"DEBTS/LIABILITIES~")" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_5 visible="1" band=trailer.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-12" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" x="729" y="10" height="197" width="3812" format="[GENERAL]" expression="if( portion = 1, ~"PROPERTY & ASSETS~", ~"DEBTS/LIABILITIES~")" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_7 visible="1" band=trailer.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-12" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" alignment="1" border="0" x="114" y="10" height="208" width="552" text="TOTAL" html.valueishtml="0" )
+compute(name=compute_6 visible="1" band=trailer.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" x="6489" y="10" height="156" width="1083" format="###,###,###.00" expression="Abs(sum(balance for group 1))" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+line(name=l_1 visible="1" band=trailer.1 background.mode="1" background.color="553648127" pen.style="0" pen.width="41" pen.color="0" x1="6489" y1="229" x2="7572" y2="229" )
+text(name=t_18 visible="1	if( sum(balance for group 1) < 0, 1, 0)" band=trailer.1 font.charset="0" font.face="Univers" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="1" border="0" x="6385" y="10" height="156" width="72" text="(" html.valueishtml="0" )
+text(name=t_19 visible="1	if( sum(balance for group 1) < 0, 1, 0)" band=trailer.1 font.charset="0" font.face="Univers" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="1" border="0" x="7604" y="10" height="156" width="72" text=")" html.valueishtml="0" )
+column(name=accounttype visible="1" band=header.2 id=3 x="125" y="10" height="156" width="3791" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=60 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-9" font.pitch="2" font.weight="700" font.underline="1" tabsequence=0 )
+text(name=t_5 visible="1" band=trailer.2 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="125" y="42" height="166" width="458" text="TOTAL" html.valueishtml="0" )
+column(name=accounttype_1 visible="1" band=trailer.2 id=3 x="625" y="42" height="156" width="3375" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=60 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-9" font.pitch="2" font.weight="700" tabsequence=0 )
+line(name=l_3 visible="1" band=trailer.2 background.mode="2" background.color="16777215" pen.style="2" pen.width="10" pen.color="0" x1="6479" y1="0" x2="7562" y2="0" )
+text(name=t_16 visible="1	if( sum(balance for group 2) < 0, 1, 0)" band=trailer.2 font.charset="0" font.face="Univers" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="1" border="0" x="6395" y="42" height="156" width="62" text="(" html.valueishtml="0" )
+compute(name=compute_2 visible="1" band=trailer.2 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="6489" y="42" height="156" width="1083" format="###,###,###.00" expression="abs(sum(balance for group 2))" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_17 visible="1	if( sum(balance for group 2) < 0, 1, 0)" band=trailer.2 font.charset="0" font.face="Univers" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="1" border="0" x="7604" y="42" height="156" width="72" text=")" html.valueishtml="0" )
+column(name=accountcategory visible="1" band=header.3 id=5 x="177" y="11" height="156" width="3750" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=60 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+line(name=l_2 visible="1" band=trailer.3 background.mode="2" background.color="16777215" pen.style="2" pen.width="10" pen.color="0" x1="6479" y1="0" x2="7562" y2="0" )
+text(name=t_15 visible="1	if( sum(balance for group 3) < 0, 1, 0)" band=trailer.3 font.charset="0" font.face="Univers" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="1" border="0" x="7604" y="42" height="166" width="72" text=")" html.valueishtml="0" )
+compute(name=compute_1 visible="1" band=trailer.3 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="6489" y="42" height="166" width="1083" format="###,###,###.00" expression="abs(sum(balance for group 3))" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_14 visible="1	if( sum(balance for group 3) < 0, 1, 0)" band=trailer.3 font.charset="0" font.face="Univers" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="1" border="0" x="6385" y="42" height="166" width="72" text="(" html.valueishtml="0" )
+column(name=accountcategory_1 visible="1" band=trailer.3 id=5 x="666" y="42" height="166" width="3302" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=60 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+text(name=t_4 visible="1" band=trailer.3 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="177" y="42" height="166" width="447" text="TOTAL" html.valueishtml="0" )
+sparse(names="compute_4	accounttype	accountcategory	accountgroup")
+htmltable(border="1" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" encodeSelfLinkArgs="1" generateJavaScript="1" netscapeLayers="0" pagingMethod=0 )
+xhtmlgen() cssgen(sessionSpecific="0" )
+xmlgen(inline="0" )
+xsltgen()
+jsgen()
+export.xml(headGroups="1" includewhitespace="0" metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 distill.customPostScript="0" xslfop.print="0" )
+export.xhtml()

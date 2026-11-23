@@ -1,0 +1,93 @@
+release 12.5;
+datawindow ( units=0 timer_interval=60000 processing=0 color=16777215 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.printername=""  print.documentname=""  print.orientation=0 print.margin.left=0 print.margin.right=0 print.margin.top=97 print.margin.bottom=97 print.paper.size=1 print.paper.source=0 print.canusedefaultprinter=yes selected.mouse=no hidegrayline=no showbackcoloronxp=no)
+header(height=636 color="536870912" )
+summary(height=104 color="536870912" )
+footer(height=0 color="536870912" )
+detail(height=68 color="536870912" )
+table(column=(type=char(75) updatewhereclause=yes name=item_customicode dbname="Item.CustomICode"  )
+column=(type=char(60) updatewhereclause=yes name=item_name dbname="Item.Name"  )
+column=(type=char(1) updatewhereclause=yes name=active dbname="active"  )
+column=(type=long updatewhereclause=yes name=item_packunits dbname="Item.PackUnits"  )
+column=(type=char(20) updatewhereclause=yes name=itempacking_name dbname="ItemPacking.Name"  )
+column=(type=char(100) updatewhereclause=yes name=batch dbname="GodownDetail.Batch"  )
+column=(type=datetime updatewhereclause=yes name=godowndetail_expiry dbname="GodownDetail.Expiry"  )
+column=(type=decimal(5) updatewhereclause=yes name=item_avgprice dbname="Item.AvgPrice"  )
+column=(type=decimal(4) updatewhereclause=yes name=qty dbname="GodownDetail.CurrQty"  )
+column=(type=char(60) updatewhereclause=yes name=itemclass dbname="itemclass"  )
+column=(type=long updatewhereclause=yes name=gcode dbname="gcode"  )
+column=(type=char(60) updatewhereclause=yes name=godown dbname="godown"  )
+ retrieve="   SELECT Item.CustomICode,   
+         Item.Name,   
+			active=CASE item.active WHEN 1 THEN 'Y' ELSE 'N' END,
+         Item.PackUnits,   
+         ItemPacking.Name,   
+         GodownDetail.Batch,   
+         GodownDetail.Expiry,   
+         Item.AvgPrice,   
+         GodownDetail.CurrQty,
+			itemclass=itemclass.name ,
+			gcode=godowndetail.gcode,
+			godown=(select name from godown where gcode=godowndetail.gcode) 
+    FROM GodownDetail,   
+		Item LEFT OUTER JOIN ItemPacking ON (item.packcode = ItemPacking.packcode),
+		itemclass
+			  
+   WHERE ( Item.iccode IN (:aa_iccode)) and
+			( item.iccode=itemclass.iccode)and
+			( Item.ICode = GodownDetail.ICode ) and  
+         ( ( GodownDetail.Expiry <= DateAdd(day, :ar_date, GetDate()) ) )    
+	
+	 order by itemclass.name  ,
+			 Item.name
+
+"
+  arguments=(("ar_date", number), ("aa_iccode", numberlist))
+)
+group(level=1 header.height=84 trailer.height=80 by=("itemclass"  ) header.color="536870912" trailer.color="536870912" )
+compute(name=expirdate visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="279" y="436" height="60" width="992" format="[General]" expression="RelativeDate (today(), ar_date  )" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_1 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="279" y="348" height="60" width="261" text="Phone(s) :" html.valueishtml="0" )
+compute(name=c_phone visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="571" y="348" height="60" width="1353" format="[general]" expression="f_ReportHeaderInfo('phone')" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_2 visible="1	0" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="1961" y="348" height="60" width="114" text="Fax :" html.valueishtml="0" )
+compute(name=c_fax visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="2098" y="348" height="60" width="1216" format="[general]" expression="'Fax : '+f_ReportHeaderInfo('fax')" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_3 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" alignment="2" border="0" x="279" y="32" height="60" width="3035" text="Expiry Report" html.valueishtml="0" )
+compute(name=c_companyname visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" x="279" y="112" height="60" width="3035" format="[general]" expression="f_ReportHeaderInfo('clientname')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=c_address1 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="279" y="192" height="60" width="3035" format="[general]" expression="f_ReportHeaderInfo('address1')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=c_address2 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="279" y="272" height="60" width="3035" format="[general]" expression="f_ReportHeaderInfo('address2')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+line(name=l_2 visible="1" band=header background.mode="1" background.color="553648127" pen.style="2" pen.width="5" pen.color="0" x1="297" y1="632" x2="3461" y2="632" )
+line(name=l_1 visible="1" band=header background.mode="1" background.color="553648127" pen.style="2" pen.width="5" pen.color="0" x1="297" y1="516" x2="3461" y2="516" )
+text(name=t_item_name visible="1" band=header font.charset="0" font.face="Arial Narrow" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="2" border="0" x="334" y="544" height="64" width="215" text="Item Name" html.valueishtml="0" )
+text(name=t_item_packunits visible="1" band=header font.charset="0" font.face="Arial Narrow" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="1" border="0" x="1157" y="544" height="64" width="215" text="Pack Units" html.valueishtml="0" )
+text(name=t_itempacking_name visible="1" band=header font.charset="0" font.face="Arial Narrow" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="2" border="0" x="1408" y="544" height="64" width="288" text="Packing Name" html.valueishtml="0" )
+text(name=godowndetail_batch_t visible="1" band=header font.charset="0" font.face="Arial Narrow" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="2" border="0" x="1751" y="544" height="64" width="110" text="Batch" html.valueishtml="0" )
+text(name=t_batch visible="1" band=header font.charset="0" font.face="Arial Narrow" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="2" border="0" x="2080" y="544" height="64" width="206" text="Expir Date" html.valueishtml="0" )
+text(name=t_qty visible="1" band=header font.charset="0" font.face="Arial Narrow" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="1" border="0" x="2395" y="544" height="64" width="160" text="Quantity" html.valueishtml="0" )
+text(name=t_5 visible="1" band=header font.charset="0" font.face="Arial Narrow" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="1" border="0" x="3333" y="544" height="64" width="110" text="Value" html.valueishtml="0" )
+text(name=t_item_avgprice visible="1" band=header font.charset="0" font.face="Arial Narrow" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="1" border="0" x="2967" y="544" height="64" width="174" text="Avgprice" html.valueishtml="0" )
+text(name=t_godown visible="1" band=header font.charset="0" font.face="Arial Narrow" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="2601" y="544" height="64" width="165" text="Godown" html.valueishtml="0" )
+line(name=l_4 visible="1" band=summary background.mode="1" background.color="553648127" pen.style="2" pen.width="5" pen.color="0" x1="325" y1="4" x2="3488" y2="4" )
+compute(name=c_sumvalue visible="1" band=summary font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" x="3031" y="20" height="56" width="411" format="#########0.00" expression="sum(  c_value  for all )" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_4 visible="1" band=summary font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="1" border="0" x="2702" y="16" height="60" width="174" text="Total:" html.valueishtml="0" )
+column(name=item_name visible="1" tag="Y" band=detail id=2 x="279" y="4" height="60" width="837" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=60 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial Narrow" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=godown visible="1" band=detail id=12 x="2574" y="4" height="60" width="306" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial Narrow" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=item_packunits visible="1" tag="Y" band=detail id=4 x="1138" y="4" height="60" width="233" color="0" border="0" alignment="1" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial Narrow" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=itempacking_name visible="1" tag="Y" band=detail id=5 x="1403" y="4" height="60" width="315" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=20 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial Narrow" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=batch visible="1" tag="Y" band=detail id=6 x="1751" y="4" height="60" width="302" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=10 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial Narrow" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=godowndetail_expiry visible="1" band=detail id=7 x="2071" y="4" height="60" width="229" color="0" border="0" alignment="1" format="d/m/yyyy" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial Narrow" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=qty visible="1" tag="Y" band=detail id=9 x="2327" y="4" height="60" width="229" color="0" border="0" alignment="1" format="	f_SetColumnFormat('Qty')" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial Narrow" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=item_avgprice visible="1" tag="Y" band=detail id=8 x="2907" y="4" height="60" width="233" color="0" border="0" alignment="1" format="######0.00" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial Narrow" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+compute(name=c_value visible="1" band=detail font.charset="0" font.face="Arial Narrow" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="3168" y="4" height="60" width="274" format="##########0.00" expression="truncate( qty * item_avgprice,2)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+column(name=itemclass visible="1" band=header.1 id=10 x="613" y="8" height="72" width="1079" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+text(name=t_7 visible="1" band=header.1 font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="700" background.mode="2" background.color="16777215" color="0" alignment="0" border="0" x="279" y="8" height="68" width="288" text="Item Class:" html.valueishtml="0" )
+line(name=l_3 visible="1" band=trailer.1 background.mode="1" background.color="553648127" pen.style="2" pen.width="5" pen.color="0" x1="325" y1="0" x2="3488" y2="0" )
+compute(name=compute_1 visible="1" band=trailer.1 font.charset="0" font.face="Arial Narrow" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="3173" y="12" height="60" width="274" format="##########0.00" expression="sum(truncate( qty * item_avgprice,2) for group 1)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_6 visible="1" band=trailer.1 font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="1" border="0" x="2624" y="12" height="60" width="251" text="Sub Total:" html.valueishtml="0" )
+htmltable(border="0" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" encodeSelfLinkArgs="1" generateJavaScript="1" netscapeLayers="0" pagingMethod=0 )
+xhtmlgen() cssgen(sessionSpecific="0" )
+xmlgen(inline="0" )
+xsltgen()
+jsgen()
+export.xml(headGroups="1" includewhitespace="0" metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 distill.customPostScript="0" xslfop.print="0" )
+export.xhtml()

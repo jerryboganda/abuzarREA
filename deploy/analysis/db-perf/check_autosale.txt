@@ -1,0 +1,70 @@
+CREATE  Procedure sp_AutoSalePosting @salecategory Int AS
+
+/*
+Author: Muhammad Usman
+The purpose of this storedprocedure is to post sale invoice based on two things
+i.e. salecategory and saleinvoice age.
+Salecategory is passed as an argument to this storedprocedure.
+The time specified in preferences table attributes(cashsaleautopostingtime,creditsaleautopostingtime)
+are used as the invoice age.
+Let's suppose cashsaleautopostingtime attribute value in preferences table is 5,
+so this storedprocedure post those invoices which are 5 minutes old
+and belong to the salecategory mentioned (salecategory passed as an argument).
+*/
+
+DECLARE @invoiceage INT, @custcode INT
+DECLARE @saleinvcode INT 
+DECLARE @balance NUMERIC(15, 5)
+DECLARE @dt DATETIME
+DECLARE @savebal CHAR(1)
+
+IF @salecategory = 3 
+	SET @invoiceage = DBO.Fn_Get_INT_Preference('cashsaleautopostingtime')
+ELSE
+	SET @invoiceage = DBO.Fn_Get_INT_Preference('creditsaleautopostingtime')
+
+SET @savebal = DBO.Fn_GetPreference('SaveBalanceOnSalePosting')
+
+Begin Transaction
+
+DECLARE saleposting_cursor CURSOR FOR 
+
+SELECT saleinvcode 
+FROM SaleLedger WITH (UPDLOCK,ROWLOCK,READPAST) INNER JOIN Customer C On SaleLedger.CustCode = C.CustCode
+Where DateDiff ( Minute , OriginalDate , GetDate() ) >= @invoiceage AND Posted = 'N' AND Salecatcode = @salecategory 
+		AND C.SchedForPosting = 'Y'
+
+OPEN saleposting_cursor
+
+FETCH NEXT FROM saleposting_cursor
+INTO @saleinvcode
+
+WHILE @@FETCH_STATUS = 0
+BEGIN
+
+	SET @custcode = 0
+	SET @balance = 0
+
+	IF @savebal = 'Y' AND @salecategory <> 3
+	BEGIN
+		SET @custcode = (SELECT custcode FROM SaleLedger WHERE SaleInvCode = @saleinvcode)
+		SET @dt = GetDate()
+		EXECUTE SP_OPENINGBALANCE @custcode, @dt, @balance OUTPUT
+	END
+
+	Update SaleLedger 
+	Set Posted = 'Y' , PostDate = GetDate() , PostedBy = 1, Balance = @Balance
+	Where saleinvcode = @saleinvcode
+	FETCH NEXT FROM saleposting_cursor
+	INTO @saleinvcode
+END
+
+IF @@ERROR = 0 
+	Commit Transaction
+ELSE
+	Rollback Transaction
+
+CLOSE saleposting_cursor
+DEALLOCATE saleposting_cursor
+
+RETURN 0

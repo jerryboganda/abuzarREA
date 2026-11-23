@@ -1,0 +1,86 @@
+release 12.5;
+datawindow ( units=2 timer_interval=60000 processing=0 color=16777215 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.printername=""  print.documentname=""  print.orientation=0 print.margin.left=250 print.margin.right=250 print.margin.top=250 print.margin.bottom=250 print.paper.size=1 print.paper.source=0 print.canusedefaultprinter=yes selected.mouse=no hidegrayline=no showbackcoloronxp=no)
+header(height=1302 color="536870912" )
+summary(height=0 color="536870912" )
+footer(height=0 color="536870912" )
+detail(height=197 color="536870912" )
+table(column=(type=long key=yes updatewhereclause=yes name=icode dbname="Item.ICode"  )
+column=(type=char(60) updatewhereclause=yes name=name dbname="Item.Name"  )
+column=(type=char(60) updatewhereclause=yes name=supplier dbname="Supplier"  )
+column=(type=decimal(4) updatewhereclause=yes name=requestedqty dbname="RequestedQty"  )
+column=(type=char(1) updatewhereclause=yes name=requestedloosepack dbname="RequestedLoosePack"  )
+column=(type=decimal(4) updatewhereclause=yes name=givenqty dbname="GivenQty"  )
+column=(type=char(1) updatewhereclause=yes name=givenloosepack dbname="GivenLoosePack"  )
+column=(type=decimal(4) updatewhereclause=yes name=balanceqty dbname="BalanceQty"  )
+column=(type=char(1) updatewhereclause=yes name=balanceloosepack dbname="BalanceLoosePack"  )
+ retrieve="Select  A.ICode,
+	I.Name,
+	Supplier = IsNull(Supplier.Name, 'Supplier Not Available') ,
+	CASE ( (A.Qty / I.PackUnits) - CAST(A.Qty / I.PackUnits AS INT) ) When 0 Then (A.Qty / I.PackUnits) Else A.Qty End As RequestedQty,
+	CASE When ( (A.Qty / I.PackUnits) - CAST(A.Qty / I.PackUnits AS INT) ) = 0 Then '' Else 'L' End As RequestedLoosePack,
+	ISNULL(CASE ( (B.Qty / I.PackUnits) - CAST(B.Qty / I.PackUnits AS INT) ) When 0 Then (B.Qty / I.PackUnits) Else B.Qty End, 0 ) As GivenQty,
+	CASE When ( (B.Qty / I.PackUnits) - CAST(B.Qty / I.PackUnits AS INT) ) = 0 Then '' Else 'L' End As GivenLoosePack,
+	CASE ( (A.Qty - IsNull(B.Qty,0) / I.PackUnits) - CAST((A.Qty - IsNull(B.Qty,0)) / I.PackUnits AS INT) ) When 0 Then ( (A.Qty - IsNull(B.Qty,0) ) / I.PackUnits) Else (A.Qty - IsNull(B.Qty,0) ) End As BalanceQty,
+	CASE When ( (A.Qty - IsNull(B.Qty,0) / I.PackUnits) - CAST((A.Qty - IsNull(B.Qty,0)) / I.PackUnits AS INT) ) = 0 Then '' Else 'L' End As BalanceLoosePack
+From 
+(
+Select 	QD.icode As ICode, Sum(Case QH.LoosePack When 1 Then QD.qty When 2 Then QD.Qty * QD.PackUnits End) As Qty , 'Q' As Type
+from 		QuotationHeader QH Inner Join QuotationDetail QD On QH.QuotationCode = QD.QuotationCode Inner Join SaleLedger SL On SL.QuotationNo = QH.QuotationCode
+Where  	QH.QuotationCode = :al_quotationcode
+group by QD.icode
+) A Left Outer Join 
+(
+Select 	 SD.Icode As ICode, Sum(SD.LooseQty) As Qty, 'S' As Type
+From   	 QuotationHeader QH Inner Join QuotationDetail QD On QH.QuotationCode = QD.QuotationCode Inner Join SaleLedger SL ON QH.QuotationCode = SL.QuotationNo Inner Join SaleDetail SD On SL.SaleInvCode = SD.SaleInvCode
+Where  	 QH.QuotationCode = :al_quotationcode And
+			 QD.Icode = SD.ICode
+Group By SD.ICode
+) B On A.ICode = B.ICode Left Outer Join
+(
+Select A.Name, S.SuppCode,S.ICode
+From  ItemSuppliers s Inner Join Accounts A ON A.AccCode = s.Suppcode Inner Join
+(
+Select icode, min(priority) as priority
+From itemsuppliers
+Group By icode ) si 
+On s.icode = si.icode
+Where s.priority = si.priority
+) Supplier
+On A.Icode = Supplier.ICode Inner Join Item I ON A.ICode = I.ICode
+
+Where ( A.Qty - IsNull(B.Qty,0) ) > 0
+"
+  update="Item" updatewhere=0 updatekeyinplace=no
+  arguments=(("al_quotationcode", number))
+ sort="supplier A, name A"
+)
+group(level=1 header.height=239 trailer.height=0 by=("supplier"  ) header.color="536870912" trailer.color="536870912" )
+text(name=t_12 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="700" background.mode="2" background.color="16777215" color="0" alignment="2" border="0" x="135" y="62" height="156" width="7145" text="Quotation Rejected Items" html.valueishtml="0" )
+compute(name=c_companyname visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" x="145" y="250" height="166" width="7135" format="[general]" expression="f_ReportHeaderInfo('clientname')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=c_address1 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="145" y="447" height="166" width="7135" format="[general]" expression="f_ReportHeaderInfo('address1')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=c_address2 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="145" y="645" height="156" width="7135" format="[general]" expression="f_ReportHeaderInfo('address2')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_2 visible="1" band=header font.charset="0" font.face="Arial Narrow" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="5854" y="62" height="156" width="1427" format="[general]" expression="'Page ' + page() + ' of ' + pageCount()" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_15 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="145" y="62" height="156" width="302" text="Date: " html.valueishtml="0" )
+compute(name=compute_1 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="489" y="62" height="156" width="1406" format="dd/mm/yyyy" expression="today()" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+line(name=l_1 visible="1" band=header background.mode="2" background.color="16777215" pen.style="2" pen.width="10" pen.color="0" x1="145" y1="1281" x2="7197" y2="1281" )
+line(name=l_2 visible="1" band=header background.mode="2" background.color="16777215" pen.style="2" pen.width="10" pen.color="0" x1="156" y1="1052" x2="7250" y2="1052" )
+text(name=t_2 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="0" border="0" x="145" y="843" height="166" width="916" text="Quotation No. :" html.valueishtml="0" )
+text(name=t_7 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="135" y="1093" height="156" width="354" text="S No." html.valueishtml="0" )
+text(name=t_3 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="635" y="1093" height="156" width="781" text="Item Name" html.valueishtml="0" )
+compute(name=compute_3 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="1104" y="843" height="166" width="1656" format="[GENERAL]" expression=" al_quotationcode " alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_6 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="4395" y="1093" height="156" width="718" text="Rejected Qty" html.valueishtml="0" )
+compute(name=compute_5 visible="1" band=detail font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="135" y="10" height="156" width="427" format="[GENERAL]" expression="GetRow()" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+column(name=name visible="1" band=detail id=2 x="635" y="10" height="156" width="3510" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=balanceloosepack visible="1" band=detail id=9 x="5166" y="10" height="156" width="145" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=balanceqty visible="1" band=detail id=8 x="4281" y="10" height="166" width="833" color="0" border="0" alignment="1" format="	f_SetColumnFormat('Qty')" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=supplier visible="1" band=header.1 id=3 x="135" y="52" height="156" width="3427" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="1" font.height="-9" font.pitch="2" font.weight="700" tabsequence=0 )
+htmltable(border="0" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" encodeSelfLinkArgs="1" generateJavaScript="1" netscapeLayers="0" pagingMethod=0 )
+xhtmlgen() cssgen(sessionSpecific="0" )
+xmlgen(inline="0" )
+xsltgen()
+jsgen()
+export.xml(headGroups="1" includewhitespace="0" metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 distill.customPostScript="0" xslfop.print="0" )
+export.xhtml()

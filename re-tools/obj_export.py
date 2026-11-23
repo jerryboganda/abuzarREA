@@ -1,0 +1,226 @@
+"""Export windows, menus, user objects, structures and the application object (class metadata + initial property values)
+from the compiled .pbd libraries, using the real PowerBuilder object manager (PBVM125.dll).
+
+32-bit Python only:  C:\\Tools\\py32\\python.exe -I obj_export.py <library.pbd> <out dir> [start_index]
+Needs pbvm_host.py next to it, the DLL folder C:\\Tools\\dwhost\\bin, and liblist.txt (one library path per line) in the
+current project (default: re-tools/liblist.txt). All libraries are registered so cross-library references resolve.
+Output: <out dir>/<kind>/<name>.json
+"""
+import sys, os, json, struct, threading, time
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from pbvm_host import *
+
+PB = 'PBVM125.dll'
+HERE = os.path.dirname(os.path.abspath(__file__))
+KINDS = {0x4081: 'application', 0x4085: 'window', 0x4080: 'userobject', 0x40af: 'menu', 0x4079: 'structure',
+         0x4078: 'function'}
+PRIM = {1: 'integer', 2: 'long', 3: 'real', 4: 'double', 5: 'decimal', 6: 'string', 7: 'boolean', 8: 'date', 9: 'time',
+        10: 'handle', 11: 'blob', 12: 'datetime', 13: 'byte', 14: 'longlong'}
+
+# --- dialog watchdog: PowerBuilder runtime errors pop a modal box; close them so batch runs never block
+user32 = ctypes.WinDLL('user32')
+user32.PostMessageW.argtypes = [V, ctypes.c_uint, V, V]
+user32.GetWindowTextW.argtypes = [V, ctypes.c_wchar_p, I]
+user32.GetWindowThreadProcessId.argtypes = [V, V]
+DIALOGS_CLOSED = []
+_ENUM = ctypes.WINFUNCTYPE(ctypes.c_bool, V, V)
+
+
+def _each_window(h, _):
+    pid = ctypes.c_uint32(0)
+    user32.GetWindowThreadProcessId(h, ctypes.addressof(pid))
+    if pid.value == os.getpid():
+        buf = ctypes.create_unicode_buffer(256)
+        user32.GetWindowTextW(h, buf, 256)
+        if buf.value.startswith('PowerBuilder application execution error'):   # not the runtime's own helper windows
+            DIALOGS_CLOSED.append(buf.value)
+            user32.PostMessageW(h, 0x0010, None, None)       # WM_CLOSE
+    return True
+
+
+_each_cb = _ENUM(_each_window)
+
+
+user32.EnumDesktopWindows.argtypes = [V, V, V]
+
+
+def _watch():
+    """Close PowerBuilder runtime-error boxes that belong to THIS process (never touches other programs)."""
+    while True:
+        if HDESK:
+            user32.EnumDesktopWindows(HDESK, _each_cb, None)     # the private desktop pbvm_host created
+        else:
+            user32.EnumWindows(_each_cb, None)
+        time.sleep(0.2)
+
+
+threading.Thread(target=_watch, daemon=True).start()
+
+pool = export('pbshr125.dll', 'pbstg_begin_nofast', V, I)(0x2000)
+dbg = export('pbshr125.dll', 'sh_dbg_init', V, V)(pool)
+mgr = export(PB, 'ob_mgr_init', V, V, V)(dbg, pool)
+export(PB, 'ob_set_mode', None, V, I)(mgr, 2)
+export(PB, 'rt_init', None, V, V)(mgr, pool)
+export(PB, 'FN_Init', V, V, V, V, I)(mgr, pool, H['pbvm125.dll'], 1)
+# backslash paths: the library manager matches registered paths literally
+# PB_LIBLIST: another library list (e.g. the patched libraries of deploy\Application)
+_libs = [os.path.normpath(l.strip()) for l in open(os.environ.get('PB_LIBLIST') or os.path.join(HERE, 'liblist.txt'),
+                                                   encoding='utf-8').read().split('\n') if l.strip()]
+_bufs = [ctypes.create_unicode_buffer(p) for p in _libs]
+_arr = (ctypes.c_void_p * len(_libs))(*[ctypes.addressof(b) for b in _bufs])
+export(PB, 'ob_set_liblist', I, V, V, I, I)(mgr, ctypes.addressof(_arr), len(_libs), 0)
+export(PB, 'rt_start_run', None, V)(mgr)
+export(PB, 'ob_open_typedef_group', V, V, ctypes.c_wchar_p, ctypes.c_wchar_p, I)(mgr, 'pbvm125.dll', '_typedef.grp', 0)
+
+list_objs = export(PB, 'ob_get_objnames_of_class_in_lib', V, V, I, V, ctypes.c_wchar_p)
+gref = export(PB, 'ob_group_reference', ctypes.c_uint32, V, I, ctypes.c_wchar_p, I)
+cref = export(PB, 'ob_class_reference', ctypes.c_uint32, V, ctypes.c_uint32, ctypes.c_wchar_p)
+
+# Same steps as FN_RuntimeCreate: make the application object the default application and link the project, so that
+# global system objects (message, error, sqlca ...) resolve while classes are linked.
+APP_NAME = 'traderappv1'
+_ag = gref(mgr, 0, APP_NAME, 0x4081) & 0xffff
+APP_LINKED = _ag != 0xffff
+if _ag != 0xffff:
+    _aref = cref(mgr, _ag, APP_NAME)
+    _alib = export(PB, 'ob_get_group_lib', ctypes.c_uint32, V, ctypes.c_uint32)(mgr, _aref & 0xffff)
+    export(PB, 'ob_set_default_appl', None, V, ctypes.c_uint32, ctypes.c_wchar_p)(mgr, _alib, APP_NAME)
+    try:
+        export(PB, 'ob_link_project', I, V, ctypes.c_uint32)(mgr, _ag)
+    except OSError:
+        pass
+finfo = export(PB, 'ob_get_class_field_info', V, V, ctypes.c_uint32, V)
+cname = export(PB, 'ob_class_name', V, V, ctypes.c_uint32, ctypes.c_uint16)
+parent = export(PB, 'ob_get_parent_class', ctypes.c_uint32, V, ctypes.c_uint32, ctypes.c_uint16)
+
+
+def class_name(ref):
+    try:
+        p = cname(mgr, ref, 0)
+        return wstr(p) if p else None
+    except OSError:
+        return None
+
+
+def parent_name(ref):
+    try:
+        p = parent(mgr, ref, 0)
+        if p in (0, 0xffffffff) or (p & 0xffff) == 0xffff:
+            return None
+        return class_name(p)
+    except OSError:
+        return None
+
+
+def decode(dt, raw):
+    """raw = 4 bytes at record+10"""
+    if dt & 0x8000:
+        return struct.unpack('<H', raw[:2])[0]            # enum value (or class ref -> ignored)
+    if dt in (1, 2, 13, 14):
+        return struct.unpack('<i', raw)[0]
+    if dt == 7:
+        return bool(struct.unpack('<H', raw[:2])[0])
+    if dt == 6:
+        p = struct.unpack('<I', raw)[0]
+        if not p:
+            return ''
+        v = wstr(p, 2000)
+        if v is None:
+            # the 2000-character read ran past the end of a mapped page (the string is short, its page is not): read up to the terminator instead
+            try:
+                v = ctypes.wstring_at(p)
+            except Exception:
+                v = None
+        return v
+    return raw.hex()
+
+
+def type_label(dt, gid):
+    if dt & 0x8000:
+        n = class_name(((dt << 16) | gid) & 0xffffffff)
+        return n or ('type_%x' % dt)
+    return PRIM.get(dt, 'type_%d' % dt)
+
+
+# properties whose default is true: a zero value of them is `false`, never `unset`
+ZERO_MEANS_VALUE = {'visible', 'enabled', 'border'}
+
+
+def export_class(ref, gid, depth=0, keep_zero=True):
+    n = ctypes.c_int(0)
+    rec = finfo(mgr, ref, ctypes.addressof(n))
+    out = {'name': class_name(ref), 'ancestor': parent_name(ref), 'fields': [], 'controls': []}
+    if not rec:
+        return out
+    for i in range(n.value):
+        b = mem(rec + 0x4a * i, 0x4a)
+        name = wstr(struct.unpack_from('<I', b, 2)[0])
+        dt = struct.unpack_from('<H', b, 8)[0]
+        attr = b[0x22]
+        raw = b[10:14]
+        if name in ('classdefinition', '__hwnd'):
+            continue
+        if attr in (0x8c, 0x9c) and (dt & 0x8000) and depth < 8:   # nested control / menu item (0x9c: inherited, may be customised here)
+            # an inherited node (0x9c) holds the full property table of the descendant: a zero there is a value (`visible = false` of the date fields of w_arg_group), not an
+            # unset default; a control the object declares itself (0x8c) keeps its zeros out, except for the properties whose default is true
+            child = export_class(((dt << 16) | gid) & 0xffffffff, gid, depth + 1, keep_zero=(attr == 0x9c) or (keep_zero and attr != 0x8c))
+            child['field'] = name
+            if attr == 0x9c:
+                child['inherited'] = True                          # tools/diff_inherited.py keeps only what differs from the ancestor
+            out['controls'].append(child)
+            continue
+        inherited_default = attr in (0xbc, 0xba) and raw == b'\0\0\0\0' and not (keep_zero or name in ZERO_MEANS_VALUE)
+        if inherited_default:
+            continue
+        f = {'name': name, 'type': type_label(dt, gid), 'attr': '0x%02x' % attr}
+        if attr == 0xcc and struct.unpack_from('<H', b, 14)[0] & 0x2000:
+            f['array'] = True                                       # `long ia_table[]`: the raw value is only the address of the array
+        try:
+            f['value'] = decode(dt, raw)
+        except Exception:
+            f['value'] = raw.hex()
+        out['fields'].append(f)
+    return out
+
+
+def main(lib, out, start=0):
+    os.makedirs(out, exist_ok=True)
+    log = open(os.path.join(out, '_progress.log'), 'a', encoding='utf-8')
+    items = []
+    for kind, kname in KINDS.items():
+        cnt = ctypes.c_int(0)
+        r = list_objs(mgr, kind, ctypes.addressof(cnt), lib)
+        for i in range(cnt.value):
+            items.append((kind, kname, wstr(u32(r + 4 * i))))
+    items.sort(key=lambda t: (t[1], t[2].lower()))
+    for idx, (kind, kname, name) in enumerate(items):
+        if idx < start:
+            continue
+        log.write('START\t%d\t%s\t%s\n' % (idx, kname, name))
+        log.flush()
+        try:
+            if kname == 'function':
+                data = {'name': name}
+            else:
+                g = gref(mgr, 0, name, kind) & 0xffff
+                if g == 0xffff:
+                    raise RuntimeError('group not found')
+                ref = cref(mgr, g, name)
+                data = export_class(ref, g)
+                data['kind'] = kname
+                data['library'] = os.path.basename(lib)
+                data['group'] = g
+            os.makedirs(os.path.join(out, kname), exist_ok=True)
+            with open(os.path.join(out, kname, name + '.json'), 'w', encoding='utf-8') as f:
+                json.dump(data, f, ensure_ascii=False, indent=1)
+            log.write('OK\t%d\t%s\t%s\n' % (idx, kname, name))
+        except Exception as e:
+            log.write('FAIL\t%d\t%s\t%s\t%s\n' % (idx, kname, name, e))
+        log.flush()
+    log.write('DONE\t%d\tdialogs=%d\tapp_linked=%s\n' % (len(items), len(DIALOGS_CLOSED), APP_LINKED))
+    log.close()
+
+
+if __name__ == '__main__':
+    main(sys.argv[1], sys.argv[2], int(sys.argv[3]) if len(sys.argv) > 3 else 0)

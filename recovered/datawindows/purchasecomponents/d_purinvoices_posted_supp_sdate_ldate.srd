@@ -1,0 +1,64 @@
+release 12.5;
+datawindow ( units=0 timer_interval=0 processing=1 color=80269524 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.printername=""  print.documentname=""  print.orientation=0 print.margin.left=110 print.margin.right=110 print.margin.top=96 print.margin.bottom=96 print.paper.size=0 print.paper.source=0 print.canusedefaultprinter=yes grid.lines=0 selected.mouse=yes hidegrayline=no showbackcoloronxp=no)
+header(height=76 color="536870912" )
+summary(height=0 color="536870912" )
+footer(height=72 color="536870912" )
+detail(height=84 color="536870912" )
+table(column=(type=long updatewhereclause=yes name=purinvcode dbname="PurInvCode"  )
+column=(type=long updatewhereclause=yes name=suppcode dbname="SuppCode"  )
+column=(type=char(12) updatewhereclause=yes name=aliasname dbname="AliasName"  )
+column=(type=char(60) updatewhereclause=yes name=supplier dbname="Supplier"  )
+column=(type=datetime updatewhereclause=yes name=date dbname="Purledger.Date"  )
+column=(type=char(60) update=yes updatewhereclause=yes name=username dbname="UserName"  )
+column=(type=char(100) updatewhereclause=yes name=remarks dbname="Purledger.Remarks"  )
+column=(type=char(1) updatewhereclause=yes name=posted dbname="Purledger.Posted" 
+ values="Yes	Y/No	N/"  )
+column=(type=char(1) updatewhereclause=yes name=selected dbname="SELECTED" 
+ values="	Y/	N"  )
+ retrieve="SELECT
+	PurInvCode=SL.PurInvCode, 
+	SuppCode=SL.SuppCode,
+	AliasName = (SELECT A.AliasName FROM Accounts A WHERE A.AccCode = SL.SuppCode), 
+	Supplier = (SELECT A.Name FROM Accounts A WHERE A.AccCode = SL.SuppCode), 
+	SL.Date, 
+	UserName=(SELECT users.username FROM users where users.usercode = SL.SalesManCode),
+	SL.Remarks,
+	SL.Posted,
+	SELECTED='Y'
+FROM
+	PurLedger SL
+WHERE 
+	SL.SuppCode = CASE WHEN :ai_suppcode > 0 THEN :ai_suppcode ELSE SL.SuppCode END AND
+	SL.Date >= :ad_startdate AND SL.Date <= :ad_enddate AND SL.Posted='Y'
+ORDER BY
+	SL.Date,
+	SL.PurInvCode"
+  arguments=(("ai_suppcode", number), ("ad_startdate", datetime), ("ad_enddate", datetime))
+ sort="date A"
+)
+text(name=t_1 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80269524" color="0" alignment="2" border="6" x="9" y="8" height="60" width="192" text="Select" html.valueishtml="0" )
+text(name=purinvcode_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80269524" color="0" alignment="2" border="6" x="210" y="8" height="60" width="343" text="Pur Inv Code" html.valueishtml="0" )
+text(name=date_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80269524" color="0" alignment="2" border="6" x="562" y="8" height="60" width="512" text="Date" html.valueishtml="0" )
+text(name=posted_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80269524" color="0" alignment="2" border="6" x="1083" y="8" height="60" width="210" text="Posted" html.valueishtml="0" )
+text(name=aliasname_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80269524" color="0" alignment="2" border="6" x="1303" y="8" height="60" width="370" text="Alias Name" html.valueishtml="0" )
+text(name=supplier_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80269524" color="0" alignment="2" border="6" x="1682" y="8" height="60" width="1371" text="Supplier" html.valueishtml="0" )
+text(name=username_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80269524" color="0" alignment="2" border="6" x="3063" y="8" height="60" width="411" text="User Name" html.valueishtml="0" )
+text(name=remarks_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80269524" color="0" alignment="2" border="6" x="3483" y="8" height="60" width="1184" text="Remarks" html.valueishtml="0" )
+column(name=selected visible="1" band=detail id=9 x="9" y="4" height="76" width="192" color="0" border="0" alignment="2" format="[general]" html.valueishtml="0" checkbox.lefttext=no checkbox.scale=no checkbox.threed=yes checkbox.text="" checkbox.on="Y" checkbox.off="N" criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=10 )
+column(name=aliasname visible="1" band=detail id=3 x="1303" y="4" height="76" width="370" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=supplier visible="1" band=detail id=4 x="1682" y="4" height="76" width="1371" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=username visible="1" band=detail id=6 x="3063" y="4" height="76" width="411" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=60 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=purinvcode visible="1" band=detail id=1 x="210" y="4" height="76" width="343" color="0" border="0" alignment="2" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=date visible="1" band=detail id=5 x="562" y="4" height="76" width="512" color="0" border="0" alignment="0" format="dd/mm/yyyy hh:mm" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=remarks visible="1" band=detail id=7 x="3483" y="4" height="76" width="1184" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=posted visible="1" band=detail id=8 x="1083" y="4" height="76" width="210" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" ddlb.allowedit=no ddlb.autohscroll=no ddlb.imemode=0 ddlb.limit=0 ddlb.showlist=no ddlb.sorted=yes ddlb.useasborder=no ddlb.vscrollbar=no ddlb.nilisnull=no ddlb.required=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+htmltable(border="1" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" encodeSelfLinkArgs="1" generateJavaScript="1" netscapeLayers="0" pagingMethod=0 )
+xhtmlgen() cssgen(sessionSpecific="0" )
+xmlgen(inline="0" )
+xsltgen()
+jsgen()
+export.xml(headGroups="1" includewhitespace="0" metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 distill.customPostScript="0" xslfop.print="0" )
+export.xhtml()

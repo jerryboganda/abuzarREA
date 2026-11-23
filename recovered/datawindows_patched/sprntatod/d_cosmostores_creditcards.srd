@@ -1,0 +1,58 @@
+release 12.5;
+datawindow ( units=2 timer_interval=0 processing=0 color=16777215 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.printername=""  print.documentname=""  print.orientation=0 print.margin.left=250 print.margin.right=250 print.margin.top=250 print.margin.bottom=250 print.paper.size=0 print.paper.source=0 print.canusedefaultprinter=yes selected.mouse=no hidegrayline=no showbackcoloronxp=no)
+header(height=0 )
+summary(height=2145 color="536870912" )
+footer(height=0 color="536870912" )
+detail(height=156 color="536870912" )
+table(column=(type=long updatewhereclause=yes name=saleinvcode dbname="SaleInvCode"  )
+column=(type=long updatewhereclause=yes name=acccode dbname="AccCode"  )
+column=(type=char(60) updatewhereclause=yes name=accoutnname dbname="AccoutnName"  )
+column=(type=decimal(2) updatewhereclause=yes name=amount dbname="Amount"  )
+ retrieve=" SELECT 
+	SaleInvCode=CashierWindow.SaleInvCode,   
+	AccCode=CashierWindow.AccCode,   
+	AccoutnName=Accounts.Name,   
+	Amount=CashierWindow.Amount  
+FROM 
+	CashierWindow,   
+	Accounts  
+WHERE 
+	Accounts.AccCode = CashierWindow.AccCode and  
+	CashierWindow.SaleInvCode = :ai_code
+UNION ALL
+SELECT 
+	SaleInvCode=:ai_code,   
+	AccCode=NULL,   
+	AccoutnName=Null,   
+	Amount=0.00
+FROM
+	(SELECT a=1) A
+WHERE 
+	:ai_code NOT IN 
+		(SELECT DISTINCT CashierWindow.SaleInvCode FROM CashierWindow WHERE CashierWindow.SaleInvCode = :ai_code)
+	
+"
+  arguments=(("ai_code", number), ("ai_balance", number), ("as_username", string), ("as_machine", string))
+ sort="accoutnname A"
+)
+text(name=t_2 visible="1" band=summary font.charset="0" font.face="Arial" font.family="2" font.height="-11" font.italic="1" font.pitch="2" font.weight="700" background.mode="2" background.color="16777215" color="0" alignment="2" border="0" x="0" y="750" height="177" width="2656" text="We want you to pay the lowest price" html.valueishtml="0" )
+compute(name=compute_5 visible="1" band=summary font.charset="0" font.face="Free 3 of 9 Extended" font.family="0" font.height="-38" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="31" y="52" height="375" width="2614" format="[GENERAL]" expression="'*' + string(saleinvcode) + '*' " alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_1 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="20" y="438" height="145" width="2614" format="[GENERAL]" expression=" saleinvcode " alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_1 visible="1" band=summary font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="2" border="0" x="31" y="625" height="145" width="2625" text="Cosmo Operates a No Refund /No Exchange Policy" html.valueishtml="0" )
+text(name=t_3 visible="1" band=summary font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="2" border="0" x="31" y="917" height="145" width="2625" text="Thank you for shopping at Cosmo Express" html.valueishtml="0" )
+text(name=t_4 visible="1" band=summary font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="0" border="0" x="41" y="1740" height="229" width="2614" text="	f_saleinvfooter()" html.valueishtml="0" )
+bitmap(name=p_bg visible="1" band=summary filename="bg1.bmp" x="593" y="1104" height="614" width="1500" border="0"  originalsize=no )
+text(name=t_18 visible="1	0" band=summary font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="1" border="0" x="31" y="1125" height="156" width="552" text="Balance:" html.valueishtml="0" )
+compute(name=compute_2 visible="1	0" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="700" background.mode="1" background.color="553648127" color="0" x="20" y="1104" height="156" width="447" format="###,###,##0.00" expression=" ai_balance " alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_6 visible="1" band=detail font.charset="0" font.face="Arial Narrow" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" x="31" y="10" height="135" width="1635" format="[GENERAL]" expression="wordcap( accoutnname )" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+column(name=amount visible="1	if(amount = 0,0,1)" band=detail id=4 x="1697" y="10" height="135" width="1010" color="33554432" border="0" alignment="1" format="##,###,###0.00" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+htmltable(border="1" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" encodeSelfLinkArgs="1" generateJavaScript="1" netscapeLayers="0" pagingMethod=0 )
+xhtmlgen() cssgen(sessionSpecific="0" )
+xmlgen(inline="0" )
+xsltgen()
+jsgen()
+export.xml(headGroups="1" includewhitespace="0" metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 distill.customPostScript="0" xslfop.print="0" )
+export.xhtml()

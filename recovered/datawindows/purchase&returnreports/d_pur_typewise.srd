@@ -1,0 +1,116 @@
+release 12.5;
+datawindow ( units=2 timer_interval=60000 processing=0 color=16777215 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.printername=""  print.documentname=""  print.orientation=0 print.margin.left=0 print.margin.right=0 print.margin.top=0 print.margin.bottom=0 print.paper.size=1 print.paper.source=0 print.canusedefaultprinter=yes selected.mouse=no hidegrayline=no showbackcoloronxp=no)
+header(height=1354 color="536870912" )
+summary(height=1385 color="536870912" )
+footer(height=0 color="536870912" )
+detail(height=208 color="536870912" )
+table(column=(type=char(100) updatewhereclause=yes name=purtype dbname="purtype"  )
+column=(type=decimal(6) updatewhereclause=yes name=grossamount dbname="grossamount"  )
+column=(type=decimal(6) updatewhereclause=yes name=tax dbname="tax"  )
+ retrieve="SELECT
+	purtype=ISNULL(A.purchasetype,'OTHERS(Empty Purchase Type)'),
+	grossamount=sum(A.invamount),
+	tax=SUM(A.totaltax) 
+FROM
+	(SELECT 
+		invcode = dbo.purledger.purinvcode,    
+		date = dbo.purledger.date,    
+		flatdisc = dbo.purledger.flatdisc , 
+		salestax= dbo.purledger.salestax ,       
+		misccharges = dbo.purledger.misccharges , 
+		invdiscperc = dbo.purledger.discperc , 
+		invgstperc1 = dbo.purledger.invgstperc1 , 
+		invtype = Case dbo.purledger.purcatcode 	When 1 Then 'Cash' 	When 2 Then 'Credit' When 7 Then 'Loose' When 8 Then 'Loose' Else 'Opening' End,  
+		dbo.accounts.name, 
+		amount =  Sum ((dbo.purdetail.looseqty + dbo.purdetail.packqty ) * dbo.purdetail.purprice),    
+		itemdiscpercvalue = Sum ( (dbo.purdetail.looseqty + dbo.purdetail.packqty ) * dbo.purdetail.purprice * (dbo.purdetail.discperc / 100)),    
+		invdiscpercvalue = Sum ( (dbo.purdetail.looseqty + dbo.purdetail.packqty ) * dbo.purdetail.purprice * (1 - dbo.purdetail.discperc / 100)) * (dbo.purledger.discperc / 100)    ,
+		itemsalestax = Sum (Round ( (dbo.purdetail.looseqty + dbo.purdetail.packqty + dbo.purdetail.bonusqty) * dbo.purdetail.unitsalestax + Round ( Round ( (dbo.purdetail.looseqty + dbo.purdetail.packqty ) * dbo.purdetail.purprice * (1 - dbo.purdetail.discperc * 0.01 ), 2 ) * dbo.purdetail.gstperc * 0.01 , 2 ) , 2 ) ) ,
+		posted= dbo.purledger.posted,
+		Purchasetype=dbo.purchasetype.name,
+		postdate=purledger.postdate,
+		dbo.purledger.GRN,
+		invamount=ISNULL(  Round(Sum ((dbo.purdetail.looseqty + dbo.purdetail.packqty ) * dbo.purdetail.purprice)
+			- Sum ( (dbo.purdetail.looseqty + dbo.purdetail.packqty ) * dbo.purdetail.purprice * (dbo.purdetail.discperc / 100))
+			- Sum ( (dbo.purdetail.looseqty + dbo.purdetail.packqty ) * dbo.purdetail.purprice * (1 - dbo.purdetail.discperc / 100)) * (dbo.purledger.discperc / 100)
+			- purledger.flatdisc + purledger.misccharges, 0), ISNULL((SELECT A=dbo.Fn_Get_Int_Preference('roundpurinvon')), 0)),
+		totaltax=ISNULL(	Round(Round(Round( Sum ((dbo.purdetail.looseqty + dbo.purdetail.packqty ) * dbo.purdetail.purprice)
+			- Sum ( (dbo.purdetail.looseqty + dbo.purdetail.packqty ) * dbo.purdetail.purprice * (dbo.purdetail.discperc / 100))
+			-  Sum ( (dbo.purdetail.looseqty + dbo.purdetail.packqty ) * dbo.purdetail.purprice * (1 - dbo.purdetail.discperc / 100)) * (dbo.purledger.discperc / 100)   
+			- purledger.flatdisc,2) * 0.01 * purledger.invgstperc1,2)
+			+
+			Sum (Round ( (dbo.purdetail.looseqty + dbo.purdetail.packqty + dbo.purdetail.bonusqty) * dbo.purdetail.unitsalestax + Round ( Round ( (dbo.purdetail.looseqty + dbo.purdetail.packqty ) * dbo.purdetail.purprice * (1 - dbo.purdetail.discperc * 0.01 ), 2 ) * dbo.purdetail.gstperc * 0.01 , 2 ) , 2 ) ),0), ISNULL((SELECT A=dbo.Fn_Get_Int_Preference('roundpurinvon')), 0))
+	FROM 
+		dbo.purledger
+		LEFT OUTER JOIN dbo.purchasetype ON ( dbo.purledger.purtypecode = dbo.purchasetype.purtypecode),
+		dbo.purdetail,   
+		dbo.accounts
+	WHERE 
+		( dbo.purledger.purinvcode = dbo.purdetail.purinvcode ) and  
+		( dbo.purledger.suppcode = dbo.accounts.acccode )and  
+		( dbo.purledger.date between :ar_StartDate and :ar_EndDate)            
+	GROUP BY 
+		dbo.accounts.name,   
+		dbo.purledger.misccharges,   
+		dbo.purledger.flatdisc,   
+		dbo.purledger.date,
+		dbo.purledger.postdate,   
+		dbo.purledger.purinvcode, 
+		dbo.purchasetype.name,  
+		dbo.purledger.discperc,  
+		dbo.purledger.invgstperc1,
+		dbo.purledger.salestax,
+		dbo.purledger.purcatcode,
+		dbo.purledger.posted,
+		dbo.purledger.GRN) as A
+GROUP BY A.purchasetype
+UNION ALL
+SELECT 
+	purtype=name,
+	grossamount=0,
+	tax=0
+FROM purchasetype
+WHERE purtypecode not in (select distinct(purtypecode) from purledger where .purledger.date between :ar_StartDate and :ar_EndDate and purtypecode is not null)
+ORDER BY purtype
+"
+  arguments=(("ar_StartDate", datetime), ("ar_EndDate", datetime))
+)
+compute(name=compute_1 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="427" y="52" height="156" width="697" format="dd/mm/yyyy" expression="today()" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_4 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="700" background.mode="2" background.color="16777215" color="0" alignment="0" border="0" x="3406" y="31" height="177" width="1822" text="Type Wise Purchase Summary" html.valueishtml="0" )
+text(name=t_5 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="52" y="52" height="166" width="343" text="Date: " html.valueishtml="0" )
+compute(name=c_address2 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="52" y="614" height="156" width="7781" format="[general]" expression="f_ReportHeaderInfo('address2')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=c_companyname visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" x="52" y="239" height="156" width="7781" format="[general]" expression="f_ReportHeaderInfo('clientname')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_2 visible="1" band=header font.charset="0" font.face="Arial Narrow" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="6531" y="52" height="156" width="1302" format="[general]" expression="'Page ' + page() + ' of ' + pageCount()" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=c_address1 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="52" y="427" height="156" width="7781" format="[general]" expression="f_ReportHeaderInfo('address1')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=c_enddate visible="1" band=header font.charset="0" font.face="Arial Narrow" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="1739" y="843" height="156" width="677" format="dd/mm/yyyy" expression=" ar_EndDate " alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_1 visible="1" band=header font.charset="0" font.face="Arial Narrow" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="1" border="0" x="52" y="843" height="156" width="583" text="From Date: " html.valueishtml="0" )
+text(name=t_2 visible="1" band=header font.charset="0" font.face="Arial Narrow" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="1" border="0" x="1489" y="843" height="156" width="197" text="To: " html.valueishtml="0" )
+compute(name=c_startdate visible="1" band=header font.charset="0" font.face="Arial Narrow" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="687" y="843" height="156" width="687" format="dd/mm/yyyy" expression=" ar_StartDate " alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+line(name=l_1 visible="1" band=header background.mode="1" background.color="553648127" pen.style="2" pen.width="10" pen.color="0" x1="104" y1="1041" x2="7822" y2="1041" )
+line(name=l_2 visible="1" band=header background.mode="1" background.color="553648127" pen.style="2" pen.width="10" pen.color="0" x1="125" y1="1333" x2="7854" y2="1333" )
+text(name=t_3 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="1" border="0" x="6781" y="1135" height="166" width="843" text="Net Amount" html.valueishtml="0" )
+text(name=t_6 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="1" border="0" x="4583" y="1135" height="166" width="604" text="Sales Tax" html.valueishtml="0" )
+text(name=t_10 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="1" border="0" x="156" y="1114" height="166" width="291" text="Type" html.valueishtml="0" )
+text(name=t_9 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="1" border="0" x="3135" y="1135" height="166" width="468" text="Amount" html.valueishtml="0" )
+line(name=l_3 visible="1" band=summary background.mode="1" background.color="553648127" pen.style="2" pen.width="10" pen.color="0" x1="104" y1="0" x2="7833" y2="0" )
+text(name=t_7 visible="1" band=summary font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="1" border="0" x="687" y="1093" height="166" width="1145" text="Computer Operator" html.valueishtml="0" )
+text(name=t_8 visible="1" band=summary font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="1" border="0" x="5364" y="1093" height="166" width="666" text="Supervisor" html.valueishtml="0" )
+line(name=l_6 visible="1" band=summary background.mode="1" background.color="553648127" pen.style="0" pen.width="10" pen.color="0" x1="5343" y1="1062" x2="7635" y2="1062" )
+line(name=l_5 visible="1" band=summary background.mode="1" background.color="553648127" pen.style="0" pen.width="10" pen.color="0" x1="687" y1="1062" x2="2864" y2="1062" )
+line(name=l_4 visible="1" band=summary background.mode="1" background.color="553648127" pen.style="2" pen.width="10" pen.color="0" x1="93" y1="281" x2="7833" y2="281" )
+compute(name=compute_4 visible="1" band=summary font.charset="0" font.face="Arial" font.family="2" font.height="-13" font.pitch="2" font.weight="400" background.mode="1" background.color="553648127" color="0" x="5000" y="41" height="197" width="2656" format="######0.00" expression="sum( tax  +  grossamount  for all)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_5 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-13" font.pitch="2" font.weight="400" background.mode="1" background.color="553648127" color="0" x="2000" y="41" height="197" width="1718" format="###########0.00" expression="sum(grossamount for all)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+column(name=purtype visible="1" band=detail id=1 x="104" y="10" height="187" width="2000" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="553648127" font.charset="0" font.face="Arial" font.family="1" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=tax visible="1	if( tax >0,1,0)" band=detail id=3 x="3947" y="10" height="187" width="1250" color="0" border="0" alignment="1" format="###########0.00" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="553648127" font.charset="0" font.face="Times New Roman" font.family="1" font.height="-13" font.pitch="2" font.weight="400" tabsequence=0 )
+compute(name=compute_3 visible="1" band=detail font.charset="0" font.face="Arial" font.family="2" font.height="-13" font.pitch="2" font.weight="400" background.mode="1" background.color="553648127" color="0" x="5312" y="10" height="187" width="2343" format="######0.00" expression=" tax  +  grossamount " alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+column(name=grossamount visible="1" band=detail id=2 x="2229" y="10" height="187" width="1489" color="0" border="0" alignment="1" format="###########0.00" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="553648127" font.charset="0" font.face="Times New Roman" font.family="1" font.height="-13" font.pitch="2" font.weight="400" tabsequence=0 )
+htmltable(border="0" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" encodeSelfLinkArgs="1" generateJavaScript="1" netscapeLayers="0" pagingMethod=0 )
+xhtmlgen() cssgen(sessionSpecific="0" )
+xmlgen(inline="0" )
+xsltgen()
+jsgen()
+export.xml(headGroups="1" includewhitespace="0" metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 distill.customPostScript="0" xslfop.print="0" )
+export.xhtml()

@@ -1,0 +1,302 @@
+release 12.5;
+datawindow ( units=2 timer_interval=0 processing=4 color=16777215 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.documentname=""  print.orientation=1 print.margin.left=250 print.margin.right=250 print.margin.top=250 print.margin.bottom=250 print.paper.size=1 print.paper.source=0 grid.lines=0 grid.columnmove=no selected.mouse=no hidegrayline=no showbackcoloronxp=no crosstab.dynamic=yes)
+header[1](height=1364 color="536870912" )
+header[2](height=364 color="536870912" )
+summary(height=416 color="536870912" )
+footer(height=10 color="536870912" )
+detail(height=187 color="536870912" )
+table(column=(type=char(20) updatewhereclause=yes name=maintype dbname="maintype"  )
+column=(type=number updatewhereclause=yes name=type dbname="type"  )
+column=(type=char(20) updatewhereclause=yes name=particulars dbname="particulars"  )
+column=(type=number updatewhereclause=yes name=amt dbname="amt"  )
+ retrieve="SELECT
+	Particulars=ISNULL(T.Particulars, 'Sales'),
+	MainType= ISNULL(MAINTYPE, 'Gross Profit'),
+	Type=ISNULL(T.Type, 1),
+	Packing=IP.Name,
+	AMT=ROUND(ISNULL(SUM(T.AMT), 0), 2)
+FROM
+	ItemPacking IP
+	LEFT OUTER JOIN 
+	(SELECT  
+		Particulars='Sales',
+		MainType= 'Gross Profit',
+		Type = 1 /*1 stands for sales*/,
+		I.PackCode,
+		Amt= SUM(D.looseqty * (D.saleprice - D.itemflatdisc) * (1 - D.discperc * .01) * (1 - S.discperc * .01))
+	FROM    
+		saleledger S, saledetail D, Item I
+	WHERE
+		S.saleinvcode = D.saleinvcode AND
+		S.Date >= :ad_startdate AND S.Date <= :ad_enddate AND
+		D.ICode = I.ICode
+	GROUP BY 
+		I.PackCode
+	UNION ALL
+	SELECT  
+		Particulars='Sales',
+		MainType= 'Gross Profit',
+		Type = 1 /*1 stands for sales returns*/,
+		I.PackCode,
+		Amt= - (SUM(D.looseqty * D.srprice * (1 - D.discperc * .01) * (1 - S.discperc * .01)))
+	FROM    
+		srledger S, srdetail D, Item I
+	WHERE
+		S.srinvcode = D.srinvcode AND
+		S.Date >= :ad_startdate AND S.Date <= :ad_enddate AND
+		D.ICode = I.ICode
+	GROUP BY 
+		I.PackCode
+	UNION ALL
+	SELECT 
+		Particulars='Opening Stock',
+		MainType= 'Gross Profit',
+		TYPE=2/* 2 Stands for Opening Stock*/,
+		T.PackCode,
+		Amt= - (ISNULL(SUM(T.Stock), 0))
+	FROM
+		(SELECT 
+			S.ICode,
+			I.PackCode,
+			Stock=ISNULL(SUM(ISNULL(S.NewAvgPrice * S.NewStock, 0)), 0)
+		FROM StockLedger S, Item I
+		WHERE 
+			S.ICode = I.ICode AND
+			date < :ad_startdate AND
+			CONVERT(VARCHAR(10), S.ICode) + ' ' + CONVERT(VARCHAR(20), utn) IN
+					(SELECT 
+							CONVERT(VARCHAR(10), icode) + ' ' + CONVERT(VARCHAR(20), MAX(utn))
+					FROM StockLedger
+					WHERE date < :ad_startdate
+					GROUP BY icode)
+		GROUP BY 
+			S.ICode, 
+			I.PackCode) T
+	GROUP BY 
+		T.PackCode
+	UNION ALL
+	SELECT  
+		Particulars='Purchases',
+		MainType= 'Gross Profit',
+		Type = 3 /*3 stands for Purchase*/,
+		I.PackCode,
+		Amt = - (SUM( (D.looseqty + D.PackQty * D.PackUnits) * D.Purprice * (1 - D.discperc * .01) * (1 - P.discperc * .01)))
+	FROM    
+		purledger P, Purdetail D, Item I
+	WHERE
+		P.Purinvcode = D.PurInvCode AND
+		P.Date >= :ad_startdate AND P.Date <= :ad_enddate AND
+		D.ICode = I.ICode
+	GROUP BY 
+		I.PackCode
+	UNION ALL
+	SELECT  
+		Particulars='Purchases',
+		MainType= 'Gross Profit',
+		Type = 3/*3 stands for Purchase return*/,
+		I.PackCode,
+		Amt = SUM( (D.looseqty + D.PackQty * D.PackUnits) * D.PrPrice * (1 - D.discperc * .01) * (1 - P.discperc * .01))
+	FROM    
+		prledger P, Prdetail D, Item I
+	WHERE
+		P.Prinvcode = D.PrInvCode AND
+		P.Date >= :ad_startdate AND P.Date <= :ad_enddate AND
+		D.ICode = I.ICode
+	GROUP BY 
+		I.PackCode
+	UNION ALL
+	SELECT 
+		Particulars='Closing Stock',
+		MainType= 'Gross Profit',
+		TYPE=5/* 5 Stands for Closing Stock*/,
+		T.PackCode,
+		Amt=ISNULL(SUM(T.Stock), 0)
+	FROM
+		(SELECT 
+			S.ICode,
+			I.PackCode,
+			Stock=ISNULL(SUM(ISNULL(S.NewAvgPrice * S.NewStock, 0)), 0)
+		FROM StockLedger S, Item I
+		WHERE 
+			S.ICode = I.ICode AND
+			date <= :ad_enddate AND
+			CONVERT(VARCHAR(10), S.ICode) + ' ' + CONVERT(VARCHAR(20), utn) IN
+					(SELECT 
+							CONVERT(VARCHAR(10), icode) + ' ' + CONVERT(VARCHAR(20), MAX(utn))
+					FROM StockLedger
+					WHERE date <= :ad_enddate
+					GROUP BY icode)
+		GROUP BY 
+			S.ICode, 
+			I.PackCode) T
+	GROUP BY 
+		T.PackCode
+	UNION ALL
+	SELECT  
+		Particulars=A.Name,
+		MainType= 'Gross Profit',
+		Type = 4 /*4 stands for direct expenses*/,
+		PackCode=(SELECT MIN(PACKCode) FROM ItemPacking),
+		Amt= ISNULL(SUM(D.CREDIT - D.DEBIT), 0)
+	FROM    
+		GLHeader H, 
+		GLDetail D, 
+		(SELECT ACCCODE, Name, AliasName
+		FROM ACCOUNTS WHERE SUBCODE IN
+			(SELECT SUBACCCODE FROM SUBACCOUNTS WHERE CATACCCODE IN 
+					(SELECT CODE FROM GLOBAL WHERE TableName='CategoryAccounts' AND 
+					NAME = 'GT_DirectExpensesCat')) AND
+			ACCCODE NOT IN 
+					(SELECT CODE FROM GLOBAL WHERE TableName='Accounts' AND NAME IN
+								('GT_PurchaseAccount', 'GT_PurchaseReturnsAccount'))) A
+	WHERE
+		H.GLVochCode = D.GLVochCode AND
+		H.Date >= :ad_startdate AND H.Date <= :ad_enddate AND
+		D.AccCode = A.AccCode
+	GROUP BY 
+		D.AccCode,
+		A.Name
+	UNION ALL
+	SELECT  
+		Particulars=A.Name,
+		MainType= 'Operating Profit',
+		Type = 10/*10 stands for Operating expenses*/,
+		PackCode=(SELECT MIN(PACKCode) FROM ItemPacking),
+		Amt= ISNULL(SUM(D.CREDIT - D.DEBIT), 0)
+	FROM    
+		GLHeader H, 
+		GLDetail D, 
+		(SELECT ACCCODE, Name, AliasName
+		FROM ACCOUNTS WHERE SUBCODE IN
+			(SELECT SUBACCCODE FROM SUBACCOUNTS WHERE CATACCCODE IN 
+					(SELECT CODE FROM GLOBAL WHERE TableName='CategoryAccounts' AND 
+					NAME = 'GT_OperatingExpensesCat'))) A
+	WHERE
+		H.GLVochCode = D.GLVochCode AND
+		H.Date >= :ad_startdate AND H.Date <= :ad_enddate AND
+		D.AccCode = A.AccCode
+	GROUP BY 
+		D.AccCode, 
+		A.Name
+	UNION ALL
+	SELECT  
+		Particulars='Sales Tax On Purchases',
+		MainType= 'Sales Tax',
+		Type = 11 /*11 stands for SalesTax*/,
+		I.PackCode,
+		Amt = SUM((D.looseqty + D.packqty + D.bonusqty) * D.unitsalestax) +
+					SUM(ROUND((D.looseqty + D.packqty) * D.purprice * (1 - (.01 * D.discperc)) * D.gstperc * .01, 2))
+	FROM    
+		purledger P, Purdetail D, Item I
+	WHERE
+		P.Purinvcode = D.PurInvCode AND
+		P.Date >= :ad_startdate AND P.Date <= :ad_enddate AND
+		D.ICode = I.ICode
+	GROUP BY 
+		I.PackCode
+	UNION ALL
+	SELECT  
+		Particulars='Sales Tax On Purchases',
+		MainType= 'Sales Tax',
+		Type = 11 /*11 stands for SalesTax*/,
+		I.PackCode,
+		Amt = - (SUM((D.looseqty + D.packqty + D.bonusqty) * D.unitsalestax) +
+					SUM(ROUND((D.looseqty + D.packqty) * D.prprice * (1 - (.01 * D.discperc)) * D.gstperc * .01, 2)))
+	FROM    
+		prledger P, Prdetail D, Item I
+	WHERE
+		P.Prinvcode = D.PrInvCode AND
+		P.Date >= :ad_startdate AND P.Date <= :ad_enddate AND
+		D.ICode = I.ICode
+	GROUP BY 
+		I.PackCode
+	UNION ALL
+	SELECT  
+		Particulars='Sales Tax On Sales',
+		MainType= 'Sales Tax',
+		Type = 12 /*12 stands for SalesTax on Sales*/,
+		I.PackCode,
+		Amt = SUM((D.looseqty + D.packqty + D.bonusqty) * D.unitsalestax) +
+					SUM(ROUND((D.looseqty + D.packqty) * (D.Saleprice - D.ItemFlatDisc) * (1 - (.01 * D.discperc)) * D.gstperc * .01, 2))
+	FROM    
+		saleledger P, saledetail D, Item I
+	WHERE
+		P.SaleInvCode = D.SaleInvCode AND
+		P.Date >= :ad_startdate AND P.Date <= :ad_enddate AND
+		D.ICode = I.ICode
+	GROUP BY 
+		I.PackCode
+	UNION ALL
+	SELECT  
+		Particulars='Sales Tax On Sales',
+		MainType= 'Sales Tax',
+		Type = 12 /*12 stands for SalesTax on Sales*/,
+		I.PackCode,
+		Amt = - (SUM((D.looseqty + D.packqty + D.bonusqty) * D.unitsalestax) +
+					SUM(ROUND((D.looseqty + D.packqty) * D.srprice * (1 - (.01 * D.discperc)) * D.gstperc * .01, 2)))
+	FROM    
+		srledger P, srdetail D, Item I
+	WHERE
+		P.Srinvcode = D.SrInvCode AND
+		P.Date >= :ad_startdate AND P.Date <= :ad_enddate AND
+		D.ICode = I.ICode
+	GROUP BY 
+		I.PackCode) AS T ON (IP.PackCode = T.PackCode)
+GROUP BY 
+	IP.Name,
+	MainType,
+	T.Type,
+	T.Particulars
+ORDER BY 
+	MainType, 
+	TYPE, 
+	Particulars"
+  arguments=(("ad_startdate", datetime), ("ad_enddate", datetime))
+ sort="maintype A, type A, particulars A"
+)
+group(level=1 header.height=0 trailer.height=583 by=("maintype"  ) header.color="536870912" trailer.color="536870912" )
+group(level=2 header.height=0 trailer.height=0 by=("type"  ) header.color="536870912" trailer.color="536870912" )
+text(name=type_t band=header[2] font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" alignment="0" border="0" x="52" y="11" height="166" width="10" text="Type" )
+text(name=maintype_t visible="1	0" band=header[2] font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" alignment="0" border="0" x="20" y="11" height="166" width="10" text="Maintype" )
+text(name=particulars_t band=header[2] font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" alignment="0" border="0" x="83" y="11" height="343" width="2520" text="Particulars" )
+text(name=amt_t band=header[2] font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" alignment="2" border="0" x="2625" y="11" height="343" width="781" text="@packing" )
+text(name=grand_sum_amt_t band=header[2] font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" alignment="2" border="0" x="3427" y="11" height="343" width="833" text="Total " )
+compute(name=compute_8 visible="1	0" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" x="2625" y="11" height="197" width="781" format="[general]" expression="sum(amt for all )" alignment="1" border="0" crosstab.repeat=no )
+compute(name=compute_9 visible="1	0" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" x="3427" y="11" height="197" width="833" format="[general]" expression="sum(grand_sum_amt for all )" alignment="1" border="0" crosstab.repeat=no )
+compute(name=compute_7 visible="1	0" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" x="20" y="11" height="197" width="10" format="[general]" expression="~"Grand Total~"" alignment="1" border="0" crosstab.repeat=no )
+column(name=type visible="1	0" band=detail id=2 x="52" y="10" height="166" width="10" color="33554432" border="0" alignment="1" format="[general]" edit.focusrectangle=no edit.autohscroll=yes edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=maintype visible="1	0" band=detail id=1 x="20" y="10" height="166" width="10" color="33554432" border="0" alignment="0" format="[general]" edit.focusrectangle=no edit.autohscroll=yes edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=16 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=amt band=detail id=4 x="2625" y="10" height="166" width="781" color="33554432" border="0" alignment="1" format="#,###,##0.00;(#,###,##0.00)" edit.focusrectangle=no edit.autohscroll=yes edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=yes background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=particulars band=detail id=3 x="83" y="10" height="166" width="2520" color="33554432" border="0" alignment="0" format="[general]" edit.focusrectangle=no edit.autohscroll=yes edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=60 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+compute(name=grand_sum_amt band=detail font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" x="3427" y="10" height="166" width="833" format="#,###,##0.00;(#,###,##0.00)" expression="crosstabsum(1)" alignment="1" border="0" crosstab.repeat=no )
+compute(name=compute_12 moveable=1 band=foreground font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="553648127" color="0" x="208" y="41" height="166" width="3812" format="[GENERAL]" expression="'Page ' + page() + ':' + pageAcross() + ' of ' + pageCount() + ':' + pageCountAcross()" alignment="0" border="0" crosstab.repeat=no )
+compute(name=compute_10 moveable=1 band=foreground font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="553648127" color="0" x="208" y="1187" height="166" width="9906" format="[GENERAL]" expression="~"From: ~" + String(ad_startdate,~"mmm dd, yyyy~") + SPACE(10) + ~"To: ~" + String(ad_enddate, ~"mmm dd, yyyy~") + SPACE(10) + ~"Report Date: ~" + String(today(), ~"mmm dd, yyyy~")" alignment="2" border="0" crosstab.repeat=no )
+compute(name=c_companyname moveable=1 band=foreground font.charset="0" font.face="Times New Roman" font.family="1" font.height="-12" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" x="208" y="500" height="197" width="9906" format="[GENERAL]" expression="f_ReportHeaderInfo('clientname')" alignment="2" border="0" crosstab.repeat=no )
+compute(name=compute_13 moveable=1 band=foreground font.charset="0" font.face="Times New Roman" font.family="1" font.height="-14" font.pitch="2" font.weight="700" background.mode="1" background.color="553648127" color="0" x="208" y="239" height="229" width="9906" format="[GENERAL]" expression="~"Trading and Profit & Loss Account~"" alignment="2" border="0" crosstab.repeat=no )
+compute(name=c_address2 moveable=1 band=foreground font.charset="0" font.face="Times New Roman" font.family="1" font.height="-12" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="208" y="958" height="197" width="9906" format="[GENERAL]" expression="f_ReportHeaderInfo('address2')" alignment="2" border="0" crosstab.repeat=no )
+compute(name=c_address1 moveable=1 band=foreground font.charset="0" font.face="Times New Roman" font.family="1" font.height="-12" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="208" y="729" height="197" width="9906" format="[GENERAL]" expression="f_ReportHeaderInfo('address1')" alignment="2" border="0" crosstab.repeat=no )
+crosstab(columns="packing" rows="maintype, type, particulars" values="sum(amt for crosstab)" sourcenames = "particulars, maintype, type, packing, amt" crosstabonly=yes  band=foreground )
+compute(name=compute_4 visible="1	0" band=trailer.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" x="20" y="10" height="166" width="10" format="[general]" expression="maintype + ~" Total~"" alignment="1" border="0" crosstab.repeat=no )
+compute(name=compute_17 visible="1	if( Left(maintype, 9) = 'Operating', 1, 0)" band=trailer.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" x="83" y="10" height="166" width="2520" format="[GENERAL]" expression="If(maintype='Operating Profit', 'Total Operating Expenses', '')" alignment="0" border="0" crosstab.repeat=no )
+compute(name=compute_11 visible="1	if( maintype = 'Sales Tax', 0,1)" band=trailer.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="2" background.color="16777215" color="0" x="83" y="208" height="166" width="2520" format="[GENERAL]" expression=" maintype " alignment="0" border="0" crosstab.repeat=no )
+compute(name=compute_14 visible="1	if( maintype = 'Gross Profit', 1,0)" band=trailer.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="2" background.color="16777215" color="0" x="83" y="406" height="166" width="2520" format="[GENERAL]" expression="trim( maintype ) + ' Ratio'" alignment="0" border="0" crosstab.repeat=no )
+compute(name=compute_15 visible="1	if( maintype = 'Gross Profit', 1,0)" band=trailer.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" x="2625" y="406" height="166" width="781" format="#,###,##0.00;(#,###,##0.00)" expression="(cumulativesum(amt for group 1) / if(sum(if( TYPE=1, AMT, 0 ) for group 1)=0,1, sum(if( TYPE=1, AMT, 0 ) for group 1))) * 100" alignment="1" border="0" crosstab.repeat=no )
+compute(name=compute_16 visible="1	if( maintype = 'Gross Profit', 1,0)" band=trailer.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" x="3427" y="406" height="166" width="833" format="#,###,##0.00;(#,###,##0.00)" expression="(cumulativesum(grand_sum_amt for group 1) / if(sum(if( TYPE=1, grand_sum_amt, 0 ) for group 1)=0,1, sum(if( TYPE=1, grand_sum_amt, 0 ) for group 1))) * 100" alignment="1" border="0" crosstab.repeat=no )
+compute(name=compute_18 visible="1	if( Left(maintype, 9) = 'Operating', 1, 0)" band=trailer.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" x="2625" y="10" height="166" width="781" format="#,###,##0.00;(#,###,##0.00)" expression="Sum( amt for group 1)" alignment="1" border="0" crosstab.repeat=no )
+compute(name=compute_6 visible="1	if( Left(maintype, 9) = 'Operating', 1, 0)" band=trailer.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" x="3427" y="10" height="166" width="833" format="#,###,##0.00;(#,###,##0.00)" expression="sum(grand_sum_amt for group 1)" alignment="1" border="0" crosstab.repeat=no )
+compute(name=compute_5 visible="1	if( maintype = 'Sales Tax', 0,1)" band=trailer.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" x="2625" y="208" height="166" width="781" format="#,###,##0.00;(#,###,##0.00)" expression="cumulativeSum( amt for all )" alignment="1" border="0" crosstab.repeat=no )
+compute(name=compute_19 visible="1	if( maintype = 'Sales Tax', 0,1)" band=trailer.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" x="3427" y="208" height="166" width="833" format="#,###,##0.00;(#,###,##0.00)" expression="cumulativeSum( grand_sum_amt for all )" alignment="1" border="0" crosstab.repeat=no )
+compute(name=compute_2 visible="1	0" band=trailer.2 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" x="2625" y="11" height="197" width="781" format="[general]" expression="sum(amt for group 2)" alignment="1" border="0" crosstab.repeat=no )
+compute(name=compute_3 visible="1	0" band=trailer.2 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" x="3427" y="11" height="197" width="833" format="[general]" expression="sum(grand_sum_amt for group 2)" alignment="1" border="0" crosstab.repeat=no )
+compute(name=compute_1 band=trailer.2 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" x="20" y="11" height="197" width="10" format="[general]" expression="type + ~" Total~"" alignment="1" border="0" crosstab.repeat=no )
+sparse(names="maintype	type")
+htmltable(border="0" cellPadding="1" cellSpacing="1" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" generateJavaScript="1" pagingMethod=0 )
+xhtmlgen() cssgen()
+xmlgen()
+xsltgen()
+jsgen()
+export.xml(metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 )
+export.xhtml()

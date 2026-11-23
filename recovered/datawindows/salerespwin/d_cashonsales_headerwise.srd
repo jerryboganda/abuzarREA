@@ -1,0 +1,87 @@
+release 12.5;
+datawindow ( units=0 timer_interval=0 processing=0 color=80269524 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.printername=""  print.documentname=""  print.orientation=0 print.margin.left=110 print.margin.right=110 print.margin.top=96 print.margin.bottom=96 print.paper.size=0 print.paper.source=0 print.canusedefaultprinter=yes selected.mouse=no hidegrayline=no showbackcoloronxp=no)
+header(height=0 )
+summary(height=0 color="536870912" )
+footer(height=0 color="536870912" )
+detail(height=1280 color="536870912" )
+table(column=(type=long key=yes update=yes updatewhereclause=yes name=code dbname="SaleInvCode"  )
+column=(type=long update=yes updatewhereclause=yes name=headerinvno dbname="HeaderInvNo"  )
+column=(type=long update=yes updatewhereclause=yes initial="1" name=headerno dbname="HeaderNo"  )
+column=(type=datetime update=yes updatewhereclause=yes initial="today" name=date dbname="Date"  )
+column=(type=char(12) updatewhereclause=yes name=aliasname dbname="AliasName"  )
+column=(type=char(60) updatewhereclause=yes name=accountname dbname="AccountName"  )
+column=(type=decimal(2) update=yes updatewhereclause=yes name=invtotal dbname="InvTotal"  )
+column=(type=decimal(2) updatewhereclause=yes initial="0" name=oldamt dbname="OldAmt"  )
+column=(type=decimal(2) update=yes updatewhereclause=yes initial="0" name=amt dbname="Amt"  )
+column=(type=char(1) update=yes updatewhereclause=yes initial="C" name=paymentmode dbname="PaymentMode" 
+ values="Cash	C/Cheque	B/"  )
+column=(type=long update=yes updatewhereclause=yes initial="2" name=paymentacccode dbname="PaymentAccCode" 
+ values=""  )
+column=(type=datetime update=yes updatewhereclause=yes name=amtdate dbname="AmtDate"  )
+column=(type=char(20) update=yes updatewhereclause=yes name=amtreference dbname="AmtReference"  )
+column=(type=long update=yes updatewhereclause=yes name=amtby dbname="AmtBy"  )
+column=(type=decimal(2) update=yes updatewhereclause=yes initial="0" name=outstandingamt dbname="OutStandingAmt"  )
+ retrieve="SELECT
+	SaleInvCode=S.SaleInvCode,
+	HeaderInvNo=S.HeaderInvNo,
+	HeaderNo=S.HeaderNo,
+	Date=S.Date,
+	AliasName=A.AliasName,
+	AccountName=A.Name,
+	InvTotal=ISNULL(S.InvTotal, 0),
+	OldAmt=ISNULL(S.Amt, 0),
+	Amt=ISNULL(S.Amt, 0),
+	PaymentMode=S.PaymentMode,
+	PaymentAccCode=S.PaymentAccCode,
+	AmtDate=S.AmtDate,
+	AmtReference=S.AmtReference,
+	AmtBy=S.AmtBy,
+	OutStandingAmt=S.OutStandingAmt
+	
+FROM SaleLedger S WITH (READPAST, ROWLOCK, UPDLOCK), Accounts A
+WHERE
+	S.AccountFor = 'Y' AND
+	S.Posted = 'N' AND 
+	S.Deleted='N' AND
+	S.CustCode = A.AccCode AND
+	S.SaleCatCode = 2 AND 
+	S.SaleInvCode = :ai_saleinvcode
+ORDER BY
+	S.SaleInvCode,
+	A.Name,
+	A.AliasName"
+  update="SaleLedger" updatewhere=1 updatekeyinplace=yes
+  arguments=(("ai_saleinvcode", number))
+)
+text(name=code_t visible="1" band=detail font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="55" y="20" height="64" width="521" text="Sale Invoice No.:" html.valueishtml="0" )
+text(name=date_t visible="1" band=detail font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="55" y="136" height="64" width="521" text="Date:" html.valueishtml="0" )
+text(name=t_2 visible="1" band=detail font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="55" y="252" height="64" width="521" text="Header Invoice No.:" html.valueishtml="0" )
+text(name=invtotal_t visible="1" band=detail font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="55" y="368" height="64" width="521" text="Invoice Amount:" html.valueishtml="0" )
+text(name=amt_t visible="1" band=detail font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="55" y="484" height="64" width="521" text="Amount:" html.valueishtml="0" )
+text(name=t_1 visible="1" band=detail font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="55" y="600" height="64" width="521" text="Balance Amount:" html.valueishtml="0" )
+text(name=paymentmode_t visible="1" band=detail font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="55" y="716" height="64" width="521" text="Payment Mode:" html.valueishtml="0" )
+text(name=paymentacccode_t visible="1" band=detail font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="55" y="832" height="64" width="521" text="Account:" html.valueishtml="0" )
+text(name=amtreference_t visible="1" band=detail font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="55" y="948" height="64" width="521" text="Reference No.:" html.valueishtml="0" )
+text(name=aliasname_t visible="1" band=detail font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="55" y="1064" height="64" width="521" text="Alias Name:" html.valueishtml="0" )
+text(name=accountname_t visible="1" band=detail font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="55" y="1180" height="64" width="521" text="Customer:" html.valueishtml="0" )
+column(name=paymentacccode visible="1" band=detail id=11 x="599" y="832" height="76" width="1755" color="0" border="5" alignment="0" format="[general]" html.valueishtml="0" dddw.allowedit=no dddw.autohscroll=no dddw.autoretrieve=yes dddw.useasborder=no dddw.datacolumn=acccode dddw.displaycolumn=name dddw.hscrollbar=yes dddw.hsplitscroll=no dddw.imemode=0 dddw.limit=0 dddw.name=ddd_cashandbankaccounts dddw.nilisnull=yes dddw.percentwidth=150 dddw.lines=10 dddw.required=yes dddw.showlist=no dddw.vscrollbar=yes criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=50 )
+column(name=amtreference visible="1" band=detail id=13 x="599" y="948" height="76" width="1755" color="0" border="5" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=upper edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=20 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=60 )
+column(name=accountname visible="1" band=detail id=6 x="599" y="1180" height="76" width="1755" color="0" border="5" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=60 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=code visible="1" band=detail id=1 x="599" y="20" height="76" width="539" color="0" border="5" alignment="1" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=date visible="1" band=detail id=4 x="599" y="136" height="76" width="539" color="0" border="5" alignment="0" format="[shortdate] [time]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+compute(name=compute_2 visible="1" band=detail font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="599" y="252" height="76" width="539" format="[GENERAL]" expression="IF(ISNULL(f_ReportHeaderInfosale('Remarks',  headerno ) ),'', f_ReportHeaderInfosale('Remarks',  headerno )+'-') + String(headerinvno)" alignment="1" border="5" html.valueishtml="0" crosstab.repeat=no )
+column(name=invtotal visible="1" band=detail id=7 x="599" y="368" height="76" width="539" color="0" border="5" alignment="1" format="###,###,###0.00" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=amt visible="1" band=detail id=9 x="599" y="484" height="76" width="539" color="0" border="5" alignment="1" format="###,###,###0.00" html.valueishtml="0" editmask.focusrectangle=no editmask.autoskip=no editmask.required=no editmask.readonly=no editmask.codetable=no editmask.ddcalendar=no editmask.spin=no editmask.useformat=no editmask.mask="###,###0.00" editmask.imemode=0 editmask.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=30 )
+compute(name=compute_1 visible="1" band=detail font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="599" y="600" height="76" width="539" format="###,###,###0.00" expression=" invtotal - amt " alignment="1" border="5" html.valueishtml="0" crosstab.repeat=no )
+column(name=paymentmode visible="1" band=detail id=10 x="599" y="716" height="76" width="539" color="0" border="5" alignment="0" format="[general]" html.valueishtml="0" ddlb.allowedit=no ddlb.autohscroll=no ddlb.imemode=0 ddlb.limit=0 ddlb.showlist=no ddlb.sorted=no ddlb.useasborder=no ddlb.vscrollbar=no ddlb.nilisnull=yes ddlb.required=yes criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=40 )
+column(name=aliasname visible="1" band=detail id=5 x="599" y="1064" height="76" width="539" color="0" border="5" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=12 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+htmltable(border="1" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" encodeSelfLinkArgs="1" generateJavaScript="1" netscapeLayers="0" pagingMethod=0 )
+xhtmlgen() cssgen(sessionSpecific="0" )
+xmlgen(inline="0" )
+xsltgen()
+jsgen()
+export.xml(headGroups="1" includewhitespace="0" metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 distill.customPostScript="0" xslfop.print="0" )
+export.xhtml()

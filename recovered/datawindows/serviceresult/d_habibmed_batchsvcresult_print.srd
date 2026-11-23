@@ -1,0 +1,318 @@
+release 12.5;
+datawindow ( units=3 timer_interval=0 processing=0 color=1073741824 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.printername=""  print.documentname=""  print.orientation=0 print.margin.left=0 print.margin.right=0 print.margin.top=0 print.margin.bottom=0 print.paper.size=1 print.paper.source=0 print.canusedefaultprinter=yes selected.mouse=no hidegrayline=no showbackcoloronxp=no)
+header(height=7154 color="536870912" )
+summary(height=0 color="536870912" )
+footer(height=4508 color="536870912" )
+detail(height=635 color="536870912"  height.autosize=yes)
+table(column=(type=long updatewhereclause=yes name=serviceresultcode dbname="ServiceResultCode"  )
+column=(type=datetime updatewhereclause=yes name=deliverydate dbname="DeliveryDate"  )
+column=(type=long updatewhereclause=yes name=serviceinvcode dbname="ServiceInvCode"  )
+column=(type=long updatewhereclause=yes name=headerno dbname="HeaderNo"  )
+column=(type=char(100) updatewhereclause=yes name=patientrefby dbname="PatientRefBy"  )
+column=(type=datetime updatewhereclause=yes name=servicebookingdate dbname="ServiceBookingDate"  )
+column=(type=datetime updatewhereclause=yes name=deliverydueon dbname="DeliveryDueOn"  )
+column=(type=datetime updatewhereclause=yes name=resultdate dbname="ResultDate"  )
+column=(type=long updatewhereclause=yes name=servicerowid dbname="ServiceRowID"  )
+column=(type=char(60) updatewhereclause=yes name=username dbname="UserName"  )
+column=(type=char(60) updatewhereclause=yes name=serviccategory dbname="ServicCategory"  )
+column=(type=char(60) updatewhereclause=yes name=doctorname dbname="DoctorName"  )
+column=(type=long updatewhereclause=yes name=printonnewpage dbname="PrintOnNewPage"  )
+column=(type=char(1) updatewhereclause=yes name=printrefrange dbname="ServiceComponent.PrintRefRange"  )
+column=(type=char(400) updatewhereclause=yes name=refdescription dbname="ServiceComponent.RefDescription"  )
+column=(type=char(60) updatewhereclause=yes name=service dbname="Service"  )
+column=(type=char(50) updatewhereclause=yes name=regno dbname="RegNo"  )
+column=(type=char(60) updatewhereclause=yes name=patient dbname="Patient"  )
+column=(type=char(1) updatewhereclause=yes name=gender dbname="Gender" 
+ values="Male	M/Female	F/"  )
+column=(type=datetime updatewhereclause=yes name=dob dbname="DOB"  )
+column=(type=long updatewhereclause=yes name=ageyears dbname="AgeYears"  )
+column=(type=long updatewhereclause=yes name=agemonths dbname="AgeMonths"  )
+column=(type=long updatewhereclause=yes name=agedays dbname="AgeDays"  )
+column=(type=char(100) updatewhereclause=yes name=servicehead dbname="ServiceHead"  )
+column=(type=char(100) updatewhereclause=yes name=servicecomponent dbname="ServiceComponent"  )
+column=(type=char(100) updatewhereclause=yes name=servicecomponenttype dbname="ServiceComponentType"  )
+column=(type=long updatewhereclause=yes name=rowid dbname="RowID"  )
+column=(type=long updatewhereclause=yes name=servicecomponentunitcode dbname="ServiceComponentUnitCode" 
+ values=""  )
+column=(type=char(100) updatewhereclause=yes name=componentvalue dbname="ComponentValue"  )
+column=(type=char(100) updatewhereclause=yes name=componentvalue2 dbname="ComponentValue2"  )
+column=(type=char(100) updatewhereclause=yes name=lowerreferencevalue dbname="LowerReferenceValue"  )
+column=(type=char(100) updatewhereclause=yes name=upperreferencevalue dbname="UpperReferenceValue"  )
+column=(type=char(4000) updatewhereclause=yes name=comments dbname="Comments"  )
+column=(type=char(100) updatewhereclause=yes name=testremarks dbname="TestRemarks"  )
+column=(type=char(100) updatewhereclause=yes name=remarks dbname="Remarks"  )
+column=(type=char(1) updatewhereclause=yes name=printable dbname="Printable"  )
+column=(type=long updatewhereclause=yes name=priority dbname="Priority"  )
+column=(type=char(400) updatewhereclause=yes name=detail1 dbname="Detail1"  )
+column=(type=char(400) updatewhereclause=yes name=detail2 dbname="Detail2"  )
+column=(type=char(400) updatewhereclause=yes name=detail3 dbname="Detail3"  )
+column=(type=char(400) updatewhereclause=yes name=detail4 dbname="Detail4"  )
+column=(type=char(400) updatewhereclause=yes name=detail5 dbname="Detail5"  )
+column=(type=char(400) updatewhereclause=yes name=detail6 dbname="Detail6"  )
+ retrieve="SELECT
+	ServiceResultCode=H.ServiceResultCode,
+	DeliveryDate=D.DeliveryDate,
+	ServiceInvCode = H.ServiceInvCode,
+	HeaderNo=SH.HeaderNo,
+	PatientRefBy=SH.PatientRefBy,
+	ServiceBookingDate = SH.Date,
+	DeliveryDueOn  = SVD.DeliveryDate,
+	ResultDate=H.Date,
+	ServiceRowID=D.ServiceRowID,
+	UserName=U.UserName,
+	ServicCategory = (SELECT SCT.Name FROM ServiceCategory SCT WHERE SCT.ServiceCatCode = S.ServiceCatCode),
+	DoctorName=(SELECT D.Name FROM Doctors D WHERE D.DoctCode = SH.DoctCode),
+	PrintOnNewPage = CASE S.PrintOnNewPage WHEN 'N' THEN 0 ELSE 1 END,
+	SC.PrintRefRange,
+	SC.RefDescription,
+	Service = S.Name,
+	RegNo=
+		(SELECT P.RegNo
+		FROM Patient P
+		WHERE ISNULL(SH.PatientCode, 
+			(SELECT PA.PatientCode 
+			FROM PatientAdmission PA 
+			WHERE PA.AdmissionCode=SH.AdmissionCode)) = P.PatientCode), 
+	Patient=
+		(SELECT P.Name
+		FROM Patient P
+		WHERE ISNULL(SH.PatientCode, 
+			(SELECT PA.PatientCode 
+			FROM PatientAdmission PA 
+			WHERE PA.AdmissionCode=SH.AdmissionCode)) = P.PatientCode), 
+	Gender = (SELECT P.Gender
+		FROM Patient P
+		WHERE ISNULL(SH.PatientCode, 
+			(SELECT PA.PatientCode 
+			FROM PatientAdmission PA 
+			WHERE PA.AdmissionCode=SH.AdmissionCode)) = P.PatientCode), 
+	DOB = (SELECT P.DOB
+		FROM Patient P
+		WHERE ISNULL(SH.PatientCode, 
+			(SELECT PA.PatientCode 
+			FROM PatientAdmission PA 
+			WHERE PA.AdmissionCode=SH.AdmissionCode)) = P.PatientCode), 
+	AgeYears=
+		(SELECT P.AgeYears
+		FROM Patient P
+		WHERE ISNULL(SH.PatientCode, 
+			(SELECT PA.PatientCode 
+			FROM PatientAdmission PA 
+			WHERE PA.AdmissionCode=SH.AdmissionCode)) = P.PatientCode), 
+	AgeMonths=
+		(SELECT P.AgeMonths
+		FROM Patient P
+		WHERE ISNULL(SH.PatientCode, (SELECT PA.PatientCode FROM PatientAdmission PA WHERE PA.AdmissionCode=SH.AdmissionCode)) = P.PatientCode), 
+	AgeDays=
+		(SELECT P.AgeDays
+		FROM Patient P
+		WHERE ISNULL(SH.PatientCode, (SELECT PA.PatientCode FROM PatientAdmission PA WHERE PA.AdmissionCode=SH.AdmissionCode)) = P.PatientCode), 
+	ServiceHead = D.ServiceHead,
+	ServiceComponent = SC.Name,
+	ServiceComponentType = SCT.Name,
+	RowID = D.RowID,
+	ServiceComponentUnitCode = D.ServiceComponentUnitCode,
+	ComponentValue= D.ComponentValue,
+	ComponentValue2= D.ComponentValue2,
+	LowerReferenceValue = D.LowerReferenceValue,
+	UpperReferenceValue = D.UpperReferenceValue,
+	Comments = D.Comments,
+	TestRemarks = D.Remarks,
+	Remarks = H.Remarks,
+	Printable = S.Printable,
+	Priority = SB.Priority,
+	Detail1 = (SELECT T.Detail1 FROM ServiceResultStamp T WHERE H.ServiceResultStampCode = T.ServiceResultStampCode),
+	Detail2 = (SELECT T.Detail2 FROM ServiceResultStamp T WHERE H.ServiceResultStampCode = T.ServiceResultStampCode),
+	Detail3 = (SELECT T.Detail3 FROM ServiceResultStamp T WHERE H.ServiceResultStampCode = T.ServiceResultStampCode),
+	Detail4 = (SELECT T.Detail4 FROM ServiceResultStamp T WHERE H.ServiceResultStampCode = T.ServiceResultStampCode),
+	Detail5 = (SELECT T.Detail5 FROM ServiceResultStamp T WHERE H.ServiceResultStampCode = T.ServiceResultStampCode),
+	Detail6 = (SELECT T.Detail6 FROM ServiceResultStamp T WHERE H.ServiceResultStampCode = T.ServiceResultStampCode)
+FROM
+	ServiceResultHeader H,
+	ServiceResultDetail D,
+	ServiceHeader SH,
+	ServiceDetail SVD,
+	Customer C,
+	ServiceComponent SC,
+	ServiceComponentType SCT,
+	Service S,
+	ServiceBreakUp SB,
+	Users U
+WHERE
+	D.ServiceRowID IN (:ai_servicerowid) AND
+	D.ServiceResultCode = H.ServiceResultCode AND
+	D.ServiceRowID = SVD.SrvRowID AND
+	H.ServiceInvCode = SH.ServiceInvCode AND
+	H.UserCode = U.UserCode AND
+	SH.CustCode = C.CustCode AND
+	H.ServiceInvCode = SVD.ServiceInvCode AND
+	SVD.ServiceCode = S.ServiceCode AND
+	S.ServiceResultStyleCode = :ai_style AND
+	S.ServiceCode = SB.ServiceCode AND
+	D.ServiceComponentCode = SC.ServiceComponentCode AND
+	D.ServiceComponentCode = SB.ServiceComponentCode AND
+	SB.ServiceComponentCode = SC.ServiceComponentCode AND
+	SC.ServiceComponentTypeCode = SCT.ServiceComponentTypeCode AND
+	C.PrintOutstandingServiceResult = 'Y' AND
+	D.PrintOnReport = 'Y'
+UNION ALL
+SELECT
+	ServiceResultCode=H.ServiceResultCode,
+	DeliveryDate=D.DeliveryDate,
+	ServiceInvCode = H.ServiceInvCode,
+	HeaderNo=SH.HeaderNo,
+	PatientRefBy=SH.PatientRefBy,
+	ServiceBookingDate = SH.Date,
+	DeliveryDueOn  = SVD.DeliveryDate,
+	ResultDate=H.Date,
+	ServiceRowID=D.ServiceRowID,
+	UserName=U.UserName,
+	ServicCategory = (SELECT SCT.Name FROM ServiceCategory SCT WHERE SCT.ServiceCatCode = S.ServiceCatCode),
+	DoctorName=(SELECT D.Name FROM Doctors D WHERE D.DoctCode = SH.DoctCode),
+	PrintOnNewPage = CASE S.PrintOnNewPage WHEN 'N' THEN 0 ELSE 1 END,
+	SC.PrintRefRange,
+	SC.RefDescription,
+	Service = S.Name,
+	RegNo=
+		(SELECT P.RegNo
+		FROM Patient P
+		WHERE ISNULL(SH.PatientCode, 
+			(SELECT PA.PatientCode 
+			FROM PatientAdmission PA 
+			WHERE PA.AdmissionCode=SH.AdmissionCode)) = P.PatientCode), 
+	Patient=
+		(SELECT P.Name
+		FROM Patient P
+		WHERE ISNULL(SH.PatientCode, 
+			(SELECT PA.PatientCode 
+			FROM PatientAdmission PA 
+			WHERE PA.AdmissionCode=SH.AdmissionCode)) = P.PatientCode), 
+	Gender = (SELECT P.Gender
+		FROM Patient P
+		WHERE ISNULL(SH.PatientCode, 
+			(SELECT PA.PatientCode 
+			FROM PatientAdmission PA 
+			WHERE PA.AdmissionCode=SH.AdmissionCode)) = P.PatientCode), 
+	DOB = (SELECT P.DOB
+		FROM Patient P
+		WHERE ISNULL(SH.PatientCode, 
+			(SELECT PA.PatientCode 
+			FROM PatientAdmission PA 
+			WHERE PA.AdmissionCode=SH.AdmissionCode)) = P.PatientCode), 
+	AgeYears=
+		(SELECT P.AgeYears
+		FROM Patient P
+		WHERE ISNULL(SH.PatientCode, 
+			(SELECT PA.PatientCode 
+			FROM PatientAdmission PA 
+			WHERE PA.AdmissionCode=SH.AdmissionCode)) = P.PatientCode), 
+	AgeMonths=
+		(SELECT P.AgeMonths
+		FROM Patient P
+		WHERE ISNULL(SH.PatientCode, (SELECT PA.PatientCode FROM PatientAdmission PA WHERE PA.AdmissionCode=SH.AdmissionCode)) = P.PatientCode), 
+	AgeDays=
+		(SELECT P.AgeDays
+		FROM Patient P
+		WHERE ISNULL(SH.PatientCode, (SELECT PA.PatientCode FROM PatientAdmission PA WHERE PA.AdmissionCode=SH.AdmissionCode)) = P.PatientCode), 
+	ServiceHead = D.ServiceHead,
+	ServiceComponent = SC.Name,
+	ServiceComponentType = SCT.Name,
+	RowID = D.RowID,
+	ServiceComponentUnitCode = D.ServiceComponentUnitCode,
+	ComponentValue= D.ComponentValue,
+	ComponentValue2= D.ComponentValue2,
+	LowerReferenceValue = D.LowerReferenceValue,
+	UpperReferenceValue = D.UpperReferenceValue,
+	Comments = D.Comments,
+	TestRemarks = D.Remarks,
+	Remarks = H.Remarks,
+	Printable = S.Printable,
+	Priority = SB.Priority,
+	Detail1 = (SELECT T.Detail1 FROM ServiceResultStamp T WHERE H.ServiceResultStampCode = T.ServiceResultStampCode),
+	Detail2 = (SELECT T.Detail2 FROM ServiceResultStamp T WHERE H.ServiceResultStampCode = T.ServiceResultStampCode),
+	Detail3 = (SELECT T.Detail3 FROM ServiceResultStamp T WHERE H.ServiceResultStampCode = T.ServiceResultStampCode),
+	Detail4 = (SELECT T.Detail4 FROM ServiceResultStamp T WHERE H.ServiceResultStampCode = T.ServiceResultStampCode),
+	Detail5 = (SELECT T.Detail5 FROM ServiceResultStamp T WHERE H.ServiceResultStampCode = T.ServiceResultStampCode),
+	Detail6 = (SELECT T.Detail6 FROM ServiceResultStamp T WHERE H.ServiceResultStampCode = T.ServiceResultStampCode)
+FROM
+	ServiceResultHeader H,
+	ServiceResultDetail D,
+	ServiceHeader SH,
+	ServiceDetail SVD,
+	Customer C,
+	ServiceComponent SC,
+	ServiceComponentType SCT,
+	Service S,
+	ServiceBreakUp SB,
+	Users U
+WHERE
+	D.ServiceRowID IN (:ai_servicerowid) AND
+	D.ServiceResultCode = H.ServiceResultCode AND
+	D.ServiceRowID = SVD.SrvRowID AND
+	H.ServiceInvCode = SH.ServiceInvCode AND
+	H.UserCode = U.UserCode AND
+	SH.CustCode = C.CustCode AND
+	H.ServiceInvCode = SVD.ServiceInvCode AND
+	SVD.ServiceCode = S.ServiceCode AND
+	S.ServiceResultStyleCode = :ai_style AND
+	S.ServiceCode = SB.ServiceCode AND
+	D.ServiceComponentCode = SC.ServiceComponentCode AND
+	D.ServiceComponentCode = SB.ServiceComponentCode AND
+	SB.ServiceComponentCode = SC.ServiceComponentCode AND
+	SC.ServiceComponentTypeCode = SCT.ServiceComponentTypeCode AND
+	C.PrintOutstandingServiceResult = 'N' AND
+	SH.OutStandingAmt <= 0 AND
+	D.PrintOnReport = 'Y'
+ORDER BY
+	Patient,
+	RegNo,
+	PrintOnNewPage,
+	D.ServiceRowID,
+	Priority,
+	D.ServiceHead,
+	D.RowID"
+  arguments=(("ai_servicerowid", numberlist), ("ai_style", number))
+ filter="componentvalue<>'' AND NOT ISNULL(componentvalue)"
+ )
+group(level=1 header.height=0 trailer.height=0 by=("patient" "regno" "if(printonnewpage=0, '0', '1' + service)"  ) header.color="536870912" trailer.color="536870912" newpage=yes resetpagecount=yes )
+group(level=2 header.height=1248 trailer.height=444 by=("servicecomponenttype"  ) header.color="536870912" trailer.color="536870912" )
+group(level=3 header.height=465 trailer.height=0 by=("service"  ) header.color="536870912" trailer.color="536870912" )
+group(level=4 header.height=0 trailer.height=0 by=("servicehead"  ) header.color="536870912" trailer.color="536870912" )
+column(name=servicebookingdate visible="1" band=header id=6 x="6794" y="6688" height="423" width="5905" color="33554432" border="0" alignment="0" format="dd mmm yyyy hh:mm:ss AM/PM" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+compute(name=compute_1 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="15642" y="4296" height="465" width="4360" format="[general]" expression="'Page ' + page() + ' of ' + pageCount()" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_2 visible="1" band=header font.charset="0" font.face="Free 3 of 9 Extended" font.family="0" font.height="-24" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" x="13504" y="4826" height="804" width="6582" format="[GENERAL]" expression="'*' +  trim(string(serviceinvcode)) + '*'" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+column(name=serviceinvcode visible="1" band=header id=3 x="7535" y="4826" height="825" width="5863" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-20" font.pitch="2" font.weight="700" tabsequence=0 )
+text(name=t_6 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="0" border="0" x="12827" y="6688" height="423" width="1545" text="Remarks:" html.valueishtml="0" )
+text(name=t_4 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="0" border="0" x="14520" y="6201" height="423" width="1778" text="Age/Sex:" html.valueishtml="0" )
+compute(name=compute_4 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" x="16488" y="6201" height="444" width="3640" format="[GENERAL]" expression="if( ageyears > 0, trim(string(ageyears)) + ' Y ', '') + if( gender = 'M', ' / Male', ' / Female')" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_2 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="0" border="0" x="14520" y="5715" height="423" width="1778" text="Patient ID:" html.valueishtml="0" )
+column(name=regno visible="1" band=header id=17 x="16488" y="5715" height="423" width="3640" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=remarks visible="1" band=header id=35 x="14499" y="6709" height="423" width="5651" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+text(name=t_1 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-20" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" alignment="0" border="0" x="4550" y="4804" height="825" width="2878" text="LAB ID.:" html.valueishtml="0" )
+text(name=patient_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="0" border="0" x="4550" y="5715" height="423" width="2116" text="Pat. Name:" html.valueishtml="0" )
+text(name=t_3 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="0" border="0" x="4550" y="6201" height="423" width="2116" text="Refer By:" html.valueishtml="0" )
+column(name=patient visible="1" band=header id=18 x="6794" y="5715" height="423" width="7471" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=patientrefby visible="1" band=header id=5 x="6794" y="6201" height="423" width="7471" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+text(name=t_5 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="0" border="0" x="4550" y="6688" height="423" width="2116" text="Sample Date:" html.valueishtml="0" )
+compute(name=compute_3 visible="1" height.autosize=yes band=detail font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" x="13843" y="21" height="423" width="6286" format="[GENERAL]" expression="if(printrefrange='Y', if(len(trim(lowerreferencevalue))=0,'',  lowerreferencevalue) + if(len(trim(lowerreferencevalue))=0 OR len(trim(upperreferencevalue))=0,'', ' - ') + if(len(trim(upperreferencevalue))=0,'', upperreferencevalue), '')" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+column(name=servicecomponentunitcode visible="1" band=detail id=28 x="11768" y="21" height="402" width="1989" color="0" border="0" alignment="2" format="[general]" html.valueishtml="0" dddw.allowedit=no dddw.autohscroll=no dddw.autoretrieve=yes dddw.useasborder=no dddw.datacolumn=servicecomponentunitcode dddw.displaycolumn=name dddw.hscrollbar=no dddw.hsplitscroll=no dddw.imemode=0 dddw.limit=0 dddw.name=ddd_servicecomponentunit dddw.nilisnull=no dddw.percentwidth=0 dddw.required=no dddw.showlist=no dddw.vscrollbar=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=servicecomponent visible="1" band=detail id=25 x="4550" y="21" height="402" width="4466" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=componentvalue visible="1" band=detail id=29 x="9101" y="21" height="402" width="2561" color="0" border="0" alignment="2" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=refdescription visible="1	if( printrefrange = 'N', 1, 0)" height.autosize=yes band=detail id=15 x="4572" y="508" height="423" width="15578" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=servicecomponenttype visible="1" band=header.2 id=26 x="4550" y="21" height="613" width="15599" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-14" font.pitch="2" font.weight="700" tabsequence=0 )
+text(name=lowerreferencevalue_t visible="1" band=header.2 font.charset="0" font.face="Arial" font.family="2" font.height="-12" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" alignment="2" border="0" x="13843" y="698" height="529" width="6286" text="Normal Range" html.valueishtml="0" )
+text(name=t_8 visible="1" band=header.2 font.charset="0" font.face="Arial" font.family="2" font.height="-12" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" alignment="2" border="0" x="11768" y="698" height="529" width="1989" text="Unit" html.valueishtml="0" )
+text(name=servicecomponent_t visible="1" band=header.2 font.charset="0" font.face="Arial" font.family="2" font.height="-12" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" alignment="2" border="0" x="4550" y="698" height="529" width="4402" text="Tests" html.valueishtml="0" )
+text(name=componentvalue_t visible="1" band=header.2 font.charset="0" font.face="Arial" font.family="2" font.height="-12" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" alignment="2" border="0" x="9101" y="698" height="529" width="2561" text="Result" html.valueishtml="0" )
+column(name=comments visible="1" band=trailer.2 id=33 x="4550" y="22" height="402" width="15599" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=service visible="1	if(printable='Y',1,0)" band=header.3 id=16 x="4550" y="21" height="423" width="15599" color="33554432" border="0" alignment="2" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-11" font.pitch="2" font.weight="700" tabsequence=0 )
+htmltable(border="1" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" encodeSelfLinkArgs="1" generateJavaScript="1" netscapeLayers="0" pagingMethod=0 )
+xhtmlgen() cssgen(sessionSpecific="0" )
+xmlgen(inline="0" )
+xsltgen()
+jsgen()
+export.xml(headGroups="1" includewhitespace="0" metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 distill.customPostScript="0" xslfop.print="0" )
+export.xhtml()

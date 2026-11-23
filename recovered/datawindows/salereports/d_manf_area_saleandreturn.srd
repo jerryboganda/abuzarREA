@@ -1,0 +1,178 @@
+release 12.5;
+datawindow ( units=2 timer_interval=60000 processing=0 color=16777215 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.printername=""  print.documentname=""  print.orientation=0 print.margin.left=0 print.margin.right=0 print.margin.top=0 print.margin.bottom=0 print.paper.size=1 print.paper.source=0 print.canusedefaultprinter=yes selected.mouse=no hidegrayline=no showbackcoloronxp=no)
+header(height=0 )
+summary(height=0 color="536870912" )
+footer(height=0 color="536870912" )
+detail(height=197 color="536870912" )
+table(column=(type=char(60) updatewhereclause=yes name=manufacturer dbname="Manufacturer"  )
+column=(type=char(60) updatewhereclause=yes name=item dbname="Item"  )
+column=(type=char(75) updatewhereclause=yes name=aliasname dbname="AliasName"  )
+column=(type=char(60) updatewhereclause=yes name=area dbname="Area"  )
+column=(type=decimal(4) updatewhereclause=yes name=soldqty dbname="SoldQty"  )
+column=(type=decimal(4) updatewhereclause=yes name=soldbonus dbname="SoldBonus"  )
+column=(type=decimal(6) updatewhereclause=yes name=salevalue dbname="SaleValue"  )
+column=(type=decimal(4) updatewhereclause=yes name=returnqty dbname="ReturnQty"  )
+column=(type=decimal(4) updatewhereclause=yes name=returnbonus dbname="ReturnBonus"  )
+column=(type=decimal(6) updatewhereclause=yes name=returnvalue dbname="ReturnValue"  )
+column=(type=decimal(4) updatewhereclause=yes name=netsaleqty dbname="NetSaleQty"  )
+column=(type=decimal(4) updatewhereclause=yes name=netsalebonus dbname="NetSaleBonus"  )
+column=(type=decimal(6) updatewhereclause=yes name=netsalevalue dbname="NetSaleValue"  )
+ retrieve="SELECT 
+	Manufacturer=(SELECT M.Name FROM Manufacturer M WHERE M.ManfCode = :ar_ManfCode),
+	Item=I.Name, 
+	AliasName=I.CustomICode, 
+	Area=(SELECT AR.Name FROM Area AR WHERE AR.AreaCode = S.AreaCode), 
+	SoldQty=SUM(S.SoldQty), 
+	SoldBonus=SUM(S.SoldBonus), 
+	SaleValue=SUM(S.SaleValue), 
+	ReturnQty=SUM(S.ReturnQty), 
+	ReturnBonus=SUM(S.ReturnBonus), 
+	ReturnValue=SUM(S.ReturnValue), 
+	NetSaleQty=SUM(S.SoldQty - S.ReturnQty), 
+	NetSaleBonus=SUM(S.SoldBonus - S.ReturnBonus), 
+	NetSaleValue=SUM(S.SaleValue - S.ReturnValue)
+FROM
+	Item I,
+	(SELECT
+		SD.ICode, 
+		SoldQty=SUM(SD.LooseQty),
+		SoldBonus=SUM(SD.BonusQty),
+		ReturnQty=0,
+		ReturnBonus=0,
+		SaleValue = SUM(SD.LooseQty * (SD.SalePrice - SD.ItemFlatDisc) * (1 - SD.DiscPerc * .01) * (1 - SL.DiscPerc * .01)),
+		ReturnValue=0,
+		C.AreaCode
+	FROM
+		SaleLedger SL, SaleDetail SD, Customer C, Item I
+	WHERE
+		SL.Date BETWEEN :ar_StartDate AND :ar_EndDate AND
+		SL.CustCode = C.CustCode AND
+		C.AreaCode IN (:ar_AreaCode) AND
+		SL.SaleInvCode = SD.SaleInvCode AND
+		SD.ICode = I.ICode AND
+		I.ManfCode = :ar_ManfCode
+	GROUP BY
+		C.AreaCode,
+		SD.ICode
+	UNION ALL
+	SELECT
+		SD.ICode, 
+		SoldQty=SUM(SD.LooseQty),
+		SoldBonus=SUM(SD.BonusQty),
+		ReturnQty=0,
+		ReturnBonus=0,
+		SaleValue = SUM(SD.LooseQty * (SD.SalePrice - SD.ItemFlatDisc) * (1 - SD.DiscPerc * .01) * (1 - SL.DiscPerc * .01)),
+		ReturnValue=0,
+		C.AreaCode
+	FROM
+		SaleLedger SL, SaleInvDetail SD, Customer C, Item I
+	WHERE
+		SL.impactinventory = 'N' AND
+		SL.Date BETWEEN :ar_StartDate AND :ar_EndDate AND
+		SL.CustCode = C.CustCode AND
+		C.AreaCode IN (:ar_AreaCode) AND
+		SL.SaleInvCode = SD.SaleInvCode AND
+		SD.ICode = I.ICode AND
+		I.ManfCode = :ar_ManfCode
+	GROUP BY
+		C.AreaCode,
+		SD.ICode
+	UNION ALL
+	SELECT
+		SD.ICode, 
+		SoldQty=0,
+		SoldBonus=0,
+		ReturnQty=SUM(SD.LooseQty),
+		ReturnBonus=SUM(SD.BonusQty),
+		SaleValue =0,
+		ReturnValue=SUM(SD.LooseQty * SD.SRPrice * (1 - SD.DiscPerc * .01) * (1 - SL.DiscPerc * .01)),
+		C.AreaCode
+	FROM
+		SRLedger SL, SRDetail SD, Customer C, Item I
+	WHERE
+		SL.Date BETWEEN :ar_StartDate AND :ar_EndDate AND
+		SL.CustCode = C.CustCode AND
+		C.AreaCode IN (:ar_AreaCode) AND
+		SL.SRInvCode = SD.SRInvCode AND
+		SD.ICode = I.ICode AND
+		I.ManfCode = :ar_ManfCode
+	GROUP BY
+		C.AreaCode,
+		SD.ICode) S
+WHERE
+	S.ICode = I.ICode
+GROUP BY
+	S.AreaCode,
+	I.Name,
+	I.CustomICode
+ORDER BY
+	Area,
+	I.Name,
+	I.CustomICode"
+  arguments=(("ar_startdate", datetime), ("ar_enddate", datetime), ("ar_manfcode", number), ("ar_areacode", numberlist))
+ sort="area A, item A, aliasname A, soldqty A, soldbonus A, salevalue A, returnqty A"
+)
+group(level=1 header.height=1875 trailer.height=270 by=("area"  ) header.color="536870912" trailer.color="536870912" newpage=yes resetpagecount=yes )
+compute(name=c_serialno visible="1" band=detail font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="62" y="10" height="166" width="312" format="[GENERAL]" expression="getrow()" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+column(name=item visible="1" band=detail id=2 x="937" y="10" height="166" width="2395" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=60 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=aliasname visible="1" band=detail id=3 x="427" y="10" height="166" width="458" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=75 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=netsalevalue visible="1	if( netsalevalue =0,0,1)" band=detail id=13 x="6770" y="10" height="166" width="802" color="0" border="0" alignment="1" format="###,###,###.00" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=soldqty visible="1	if(soldqty=0,0,1)" band=detail id=5 x="3395" y="10" height="166" width="468" color="0" border="0" alignment="1" format="	f_SetColumnFormat('Qty')" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=soldbonus visible="1	if(soldbonus=0,0,1)" band=detail id=6 x="3937" y="10" height="166" width="479" color="0" border="0" alignment="1" format="	f_SetColumnFormat('Qty')" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=returnqty visible="1	if(returnqty=0,0,1)" band=detail id=8 x="4479" y="10" height="166" width="489" color="0" border="0" alignment="1" format="	f_SetColumnFormat('Qty')" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=returnbonus visible="1	if(returnbonus=0,0,1)" band=detail id=9 x="5041" y="10" height="166" width="489" color="0" border="0" alignment="1" format="	f_SetColumnFormat('Qty')" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=netsaleqty visible="1	if( netsaleqty =0,0,1)" band=detail id=11 x="5604" y="10" height="166" width="510" color="0" border="0" alignment="1" format="	f_SetColumnFormat('Qty')" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=netsalebonus visible="1	if( netsalebonus =0,0,1)" band=detail id=12 x="6187" y="10" height="166" width="510" color="0" border="0" alignment="1" format="	f_SetColumnFormat('Qty')" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+text(name=t_3 visible="1" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" background.mode="2" background.color="16777215" color="0" alignment="2" border="0" x="2489" y="21" height="166" width="2541" text="Manufacturer Sales and Returns For an Area" html.valueishtml="0" )
+compute(name=compute_4 visible="1" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="406" y="21" height="166" width="1343" format="dd/mm/yyyy hh:mm:ss" expression="today()" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_6 visible="1" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="62" y="21" height="166" width="302" text="Date: " html.valueishtml="0" )
+compute(name=c_enddate visible="1" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="2666" y="823" height="156" width="1614" format="dd/mm/yy hh:mm:ss" expression=" ar_EndDate " alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_5 visible="1" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="2416" y="823" height="166" width="218" text="To: " html.valueishtml="0" )
+text(name=t_4 visible="1" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="72" y="823" height="166" width="802" text="From Date: " html.valueishtml="0" )
+compute(name=c_startdate visible="1" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="916" y="823" height="156" width="1395" format="dd/mm/yy hh:mm:ss" expression=" ar_StartDate " alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=manufacturer_t visible="1" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="62" y="1239" height="166" width="802" text="Manufacturer:" html.valueishtml="0" )
+text(name=area_t visible="1" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="72" y="1031" height="166" width="802" text="Area:" html.valueishtml="0" )
+column(name=area visible="1" band=header.1 id=4 x="916" y="1031" height="166" width="3812" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=60 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=manufacturer visible="1" band=header.1 id=1 x="906" y="1250" height="166" width="3812" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=60 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+text(name=t_c_serialno visible="1" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="62" y="1489" height="333" width="312" text="Serial
+No." html.valueishtml="0" )
+text(name=t_item visible="1" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="2" border="0" x="937" y="1489" height="333" width="1500" text="Item
+Name" html.valueishtml="0" )
+text(name=t_aliasname visible="1" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="427" y="1489" height="333" width="458" text="Alias
+Name" html.valueishtml="0" )
+compute(name=c_companyname visible="1" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" x="62" y="219" height="156" width="7531" format="[general]" expression="f_ReportHeaderInfo('clientname')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=c_address1 visible="1" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="62" y="406" height="156" width="7531" format="[general]" expression="f_ReportHeaderInfo('address1')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=c_address2 visible="1" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="62" y="594" height="156" width="7531" format="[general]" expression="f_ReportHeaderInfo('address2')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+line(name=l_1 visible="1" band=header.1 background.mode="2" background.color="16777215" pen.style="2" pen.width="10" pen.color="0" x1="114" y1="1448" x2="7593" y2="1448" )
+line(name=l_2 visible="1" band=header.1 background.mode="2" background.color="16777215" pen.style="2" pen.width="10" pen.color="0" x1="114" y1="1854" x2="7593" y2="1854" )
+compute(name=compute_5 visible="1" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="6187" y="21" height="166" width="1406" format="[general]" expression="'Page ' + page() + ' of ' + pageCount()" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_netsalevalue visible="1" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="1" border="0" x="6770" y="1489" height="333" width="802" text="Net Sales
+Value" html.valueishtml="0" )
+text(name=t_netsalebonus visible="1" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="1" border="0" x="6187" y="1489" height="333" width="510" text="Net Sale
+Bonus" html.valueishtml="0" )
+text(name=t_netsaleqty visible="1" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="1" border="0" x="5604" y="1489" height="333" width="510" text="Net Sale
+Qty" html.valueishtml="0" )
+text(name=t_returnbonus visible="1" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="1" border="0" x="5041" y="1489" height="333" width="489" text="Return
+Bonus" html.valueishtml="0" )
+text(name=t_soldbonus visible="1" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="1" border="0" x="3937" y="1489" height="333" width="479" text="Sold
+Bonus" html.valueishtml="0" )
+text(name=t_returnqty visible="1" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="1" border="0" x="4479" y="1489" height="333" width="489" text="Return
+Qty" html.valueishtml="0" )
+text(name=t_soldqty visible="1" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="1" border="0" x="3395" y="1489" height="333" width="468" text="Sold
+Qty" html.valueishtml="0" )
+text(name=t_1 visible="1" band=trailer.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="1979" y="52" height="166" width="770" text="Report Total:" html.valueishtml="0" )
+compute(name=compute_1 visible="1" band=trailer.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="6458" y="52" height="166" width="1114" format="###,###,###.00" expression="sum(netsalevalue for group 1)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_7 visible="1" band=trailer.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="4135" y="52" height="166" width="833" format="###,###,###.00" expression="sum(returnvalue for group 1)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_8 visible="1" band=trailer.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="3020" y="52" height="166" width="843" format="###,###,###.00" expression="sum(salevalue for group 1)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+line(name=l_5 visible="1" band=trailer.1 background.mode="2" background.color="16777215" pen.style="2" pen.width="10" pen.color="0" x1="1979" y1="11" x2="7572" y2="11" )
+line(name=l_6 visible="1" band=trailer.1 background.mode="2" background.color="16777215" pen.style="2" pen.width="10" pen.color="0" x1="1979" y1="250" x2="7572" y2="250" )
+htmltable(border="1" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" encodeSelfLinkArgs="1" generateJavaScript="1" netscapeLayers="0" pagingMethod=0 )
+xhtmlgen() cssgen(sessionSpecific="0" )
+xmlgen(inline="0" )
+xsltgen()
+jsgen()
+export.xml(headGroups="1" includewhitespace="0" metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 distill.customPostScript="0" xslfop.print="0" )
+export.xhtml()

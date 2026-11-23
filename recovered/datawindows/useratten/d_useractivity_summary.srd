@@ -1,0 +1,730 @@
+release 12.5;
+datawindow ( units=2 timer_interval=60000 processing=0 color=1073741824 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.printername=""  print.documentname=""  print.orientation=0 print.margin.left=250 print.margin.right=250 print.margin.top=250 print.margin.bottom=250 print.paper.size=1 print.paper.source=0 print.canusedefaultprinter=yes selected.mouse=no hidegrayline=no showbackcoloronxp=no)
+header(height=1010 color="536870912" )
+summary(height=239 color="536870912" )
+footer(height=0 color="536870912" )
+detail(height=187 color="536870912" )
+table(column=(type=long update=yes updatewhereclause=yes name=usercode dbname="UserCode"  )
+column=(type=char(60) update=yes updatewhereclause=yes name=username dbname="UserName"  )
+column=(type=decimal(1) update=yes updatewhereclause=yes name=transactionorder dbname="TransactionOrder"  )
+column=(type=char(81) update=yes updatewhereclause=yes name=transactiontype dbname="TransactionType"  )
+column=(type=long update=yes updatewhereclause=yes name=transactioncount dbname="TransactionCount"  )
+ retrieve="SELECT 
+	UserCode=U.UserCode,
+	UserName = U.UserName,
+	TransactionOrder = UT.TransOrder,
+	TransactionType = UT.TransType,
+	TransactionCount = UT.TransCount
+FROM 
+	Users U,
+	(SELECT 
+		TransOrder = 1,
+		TransType  = 'Cash Sales',	
+		UserCode   = S.SalesManCode, 
+		TransCount = Count(S.SaleInvCode)
+	FROM
+		SaleLedger S
+	WHERE 
+		S.SalesManCode IN (:ai_usercode) AND
+		S.Date BETWEEN :adt_startdate AND :adt_enddate AND
+		S.Posted = 'Y' AND
+		S.SaleCatCode = 3
+	GROUP BY
+		S.SalesManCode
+	UNION ALL
+	SELECT 
+		TransOrder = 2,
+		TransType  = 'Credit Sales',	
+		UserCode   = S.SalesManCode, 
+		TransCount = Count(S.SaleInvCode)
+	FROM
+		SaleLedger S
+	WHERE 
+		S.SalesManCode IN (:ai_usercode) AND
+		S.Date BETWEEN :adt_startdate AND :adt_enddate AND
+		S.Posted = 'Y' AND
+		S.SaleCatCode <> 3
+	GROUP BY
+		S.SalesManCode
+	UNION ALL
+	SELECT 
+		TransOrder = 3,
+		TransType  = 'Cash Sales Return',	
+		UserCode   = S.SalesManCode, 
+		TransCount = Count(S.SRInvCode)
+	FROM
+		SRLedger S
+	WHERE 
+		S.SalesManCode IN (:ai_usercode) AND
+		S.Date BETWEEN :adt_startdate AND :adt_enddate AND
+		S.Posted = 'Y' AND
+		S.SRCatCode = 8
+	GROUP BY
+		S.SalesManCode
+	UNION ALL
+	SELECT 
+		TransOrder = 4,
+		TransType  = 'Credit Sales Return',	
+		UserCode   = S.SalesManCode, 
+		TransCount = Count(S.SRInvCode)
+	FROM
+		SRLedger S
+	WHERE 
+		S.SalesManCode IN (:ai_usercode) AND
+		S.Date BETWEEN :adt_startdate AND :adt_enddate AND
+		S.Posted = 'Y' AND
+		S.SRCatCode <> 8
+	GROUP BY
+		S.SalesManCode
+	UNION ALL
+	SELECT 
+		TransOrder = 5,
+		TransType  = 'Purcahses',	
+		UserCode   = T.SalesManCode, 
+		TransCount = Count(T.PurInvCode)
+	FROM
+		PurLedger T
+	WHERE 
+		T.SalesManCode IN (:ai_usercode) AND
+		T.Date BETWEEN :adt_startdate AND :adt_enddate AND
+		T.Posted = 'Y'
+	GROUP BY
+		T.SalesManCode
+	UNION ALL
+	SELECT 
+		TransOrder = 6,
+		TransType  = 'Purcahse Returns',	
+		UserCode   = T.SalesManCode, 
+		TransCount = Count(T.PRInvCode)
+	FROM
+		PRLedger T
+	WHERE 
+		T.SalesManCode IN (:ai_usercode) AND
+		T.Date BETWEEN :adt_startdate AND :adt_enddate AND
+		T.Posted = 'Y'
+	GROUP BY
+		T.SalesManCode
+	UNION ALL
+	SELECT 
+		TransOrder = 7,
+		TransType  = 'Adjustment Increase',	
+		UserCode   = T.UserCode, 
+		TransCount = Count(T.AdjCode)
+	FROM
+		AdjHeader T
+	WHERE 
+		T.UserCode IN (:ai_usercode) AND
+		T.Date BETWEEN :adt_startdate AND :adt_enddate AND
+		T.Posted = 'Y' AND
+		T.AdjCatCode = 1
+	GROUP BY
+		T.UserCode
+	UNION ALL
+	SELECT 
+		TransOrder = 8,
+		TransType  = 'Adjustment Decrease',	
+		UserCode   = T.UserCode, 
+		TransCount = Count(T.AdjCode)
+	FROM
+		AdjHeader T
+	WHERE 
+		T.UserCode IN (:ai_usercode) AND
+		T.Date BETWEEN :adt_startdate AND :adt_enddate AND
+		T.Posted = 'Y' AND
+		T.AdjCatCode = 2
+	GROUP BY
+		T.UserCode
+	UNION ALL
+	SELECT 
+		TransOrder = 9,
+		TransType  = 'Issue',	
+		UserCode   = T.SalesManCode, 
+		TransCount = Count(T.IssueInvCode)
+	FROM
+		IssueHeader T
+	WHERE 
+		T.SalesManCode IN (:ai_usercode) AND
+		T.Date BETWEEN :adt_startdate AND :adt_enddate AND
+		T.Posted = 'Y'
+	GROUP BY
+		T.SalesManCode
+	UNION ALL
+	SELECT 
+		TransOrder = 10,
+		TransType  = 'Receipt',	
+		UserCode   = T.SalesManCode, 
+		TransCount = Count(T.ReceiptInvCode)
+	FROM
+		ReceiptHeader T
+	WHERE 
+		T.SalesManCode IN (:ai_usercode) AND
+		T.Date BETWEEN :adt_startdate AND :adt_enddate AND
+		T.Posted = 'Y'
+	GROUP BY
+		T.SalesManCode
+	UNION ALL
+	SELECT 
+		TransOrder = 11,
+		TransType  = 'Transfer Requistion',	
+		UserCode   = T.SalesManCode, 
+		TransCount = Count(T.TransReqCode)
+	FROM
+		TransferRequisitionHeader T
+	WHERE 
+		T.SalesManCode IN (:ai_usercode) AND
+		T.Date BETWEEN :adt_startdate AND :adt_enddate AND
+		T.Posted = 'Y'
+	GROUP BY
+		T.SalesManCode
+	UNION ALL
+	SELECT 
+		TransOrder = 11.1,
+		TransType  = 'Transfer',	
+		UserCode   = T.SalesManCode, 
+		TransCount = Count(T.TransCode)
+	FROM
+		THeader T
+	WHERE 
+		T.SalesManCode IN (:ai_usercode) AND
+		T.Date BETWEEN :adt_startdate AND :adt_enddate AND
+		T.Posted = 'Y'
+	GROUP BY
+		T.SalesManCode
+	UNION ALL
+	SELECT 
+		TransOrder = 12,
+		TransType  = 'Cash Service Sales',	
+		UserCode   = T.SalesManCode, 
+		TransCount = Count(T.ServiceInvCode)
+	FROM
+		ServiceHeader T
+	WHERE 
+		T.SalesManCode IN (:ai_usercode) AND
+		T.Date BETWEEN :adt_startdate AND :adt_enddate AND
+		T.Posted = 'Y' AND
+		T.ServiceCatCode = 10
+	GROUP BY
+		T.SalesManCode
+	UNION ALL
+	SELECT 
+		TransOrder = 13,
+		TransType  = 'Credit Service Sales',	
+		UserCode   = T.SalesManCode, 
+		TransCount = Count(T.ServiceInvCode)
+	FROM
+		ServiceHeader T
+	WHERE 
+		T.SalesManCode IN (:ai_usercode) AND
+		T.Date BETWEEN :adt_startdate AND :adt_enddate AND
+		T.Posted = 'Y' AND
+		T.ServiceCatCode <> 10
+	GROUP BY
+		T.SalesManCode
+	UNION ALL
+	SELECT 
+		TransOrder = 14,
+		TransType  = 'Cash Service Return',	
+		UserCode   = T.SalesManCode, 
+		TransCount = Count(T.ServiceInvCode)
+	FROM
+		ServiceRHeader T
+	WHERE 
+		T.SalesManCode IN (:ai_usercode) AND
+		T.Date BETWEEN :adt_startdate AND :adt_enddate AND
+		T.Posted = 'Y' AND
+		T.ServiceRCatCode = 13
+	GROUP BY
+		T.SalesManCode
+	UNION ALL
+	SELECT 
+		TransOrder = 15,
+		TransType  = 'Credit Service Return',	
+		UserCode   = T.SalesManCode, 
+		TransCount = Count(T.ServiceInvCode)
+	FROM
+		ServiceRHeader T
+	WHERE 
+		T.SalesManCode IN (:ai_usercode) AND
+		T.Date BETWEEN :adt_startdate AND :adt_enddate AND
+		T.Posted = 'Y' AND
+		T.ServiceRCatCode <> 13
+	GROUP BY
+		T.SalesManCode
+	UNION ALL
+	SELECT 
+		TransOrder = 16,
+		TransType  = 'Sale Order',	
+		UserCode   = T.UserCode, 
+		TransCount = Count(T.SaleOrderCode)
+	FROM
+		SaleOrderHeader T
+	WHERE 
+		T.UserCode IN (:ai_usercode) AND
+		T.Date BETWEEN :adt_startdate AND :adt_enddate AND
+		T.Posted = 'Y'
+	GROUP BY
+		T.UserCode
+	UNION ALL
+	SELECT 
+		TransOrder = 17,
+		TransType  = 'Avg. Price Adjustment',	
+		UserCode   = T.UserCode, 
+		TransCount = Count(T.DocumentCode)
+	FROM
+		AvgPriceAdjHeader T
+	WHERE 
+		T.UserCode IN (:ai_usercode) AND
+		T.Date BETWEEN :adt_startdate AND :adt_enddate AND
+		T.Posted = 'Y'
+	GROUP BY
+		T.UserCode
+	UNION ALL
+	SELECT 
+		TransOrder = 18,
+		TransType  = 'Quotation',
+		UserCode   = T.SalesManCode, 
+		TransCount = Count(T.QuotationCode)
+	FROM
+		QuotationHeader T
+	WHERE 
+		T.SalesManCode IN (:ai_usercode) AND
+		T.Date BETWEEN :adt_startdate AND :adt_enddate AND
+		T.Posted = 'Y'
+	GROUP BY
+		T.SalesManCode
+	UNION ALL
+	SELECT 
+		TransOrder = 19,
+		TransType  = 'Due Adjustment',
+		UserCode   = T.UserCode, 
+		TransCount = Count(T.DueAdjCode)
+	FROM
+		DueAdjHeader T
+	WHERE 
+		T.UserCode IN (:ai_usercode) AND
+		T.Date BETWEEN :adt_startdate AND :adt_enddate
+	GROUP BY
+		T.UserCode
+	UNION ALL
+	SELECT 
+		TransOrder = 20,
+		TransType  = 'Due Satisfy',	
+		UserCode   = T.UserCode, 
+		TransCount = Count(T.DueSatisfyCode)
+	FROM
+		DueSatisfyHeader T
+	WHERE 
+		T.UserCode IN (:ai_usercode)
+	GROUP BY
+		T.UserCode
+	UNION ALL
+	SELECT 
+		TransOrder = 21,
+		TransType  = 'Expiry Intimation',	
+		UserCode   = T.UserCode, 
+		TransCount = Count(T.IntimationCode)
+	FROM
+		ExpiryIntimation T
+	WHERE 
+		T.UserCode IN (:ai_usercode) AND
+		T.Date BETWEEN :adt_startdate AND :adt_enddate AND
+		T.Posted = 'Y'
+	GROUP BY
+		T.UserCode
+	UNION ALL
+	SELECT 
+		TransOrder = 22,
+		TransType  = 'Incentive Sheet',	
+		UserCode   = T.UserCode, 
+		TransCount = Count(T.IncentiveDocCode)
+	FROM
+		IncentiveSheet T
+	WHERE 
+		T.UserCode IN (:ai_usercode) AND
+		T.Date BETWEEN :adt_startdate AND :adt_enddate AND
+		T.Posted = 'Y'
+	GROUP BY
+		T.UserCode
+	UNION ALL
+	SELECT 
+		TransOrder = 23,
+		TransType  = 'Issue Request',	
+		UserCode   = T.SalesManCode, 
+		TransCount = Count(T.IssueReqInvCode)
+	FROM
+		IssueReqHeader T
+	WHERE 
+		T.SalesManCode IN (:ai_usercode) AND
+		T.Date BETWEEN :adt_startdate AND :adt_enddate AND
+		T.Posted = 'Y'
+	GROUP BY
+		T.SalesManCode
+	UNION ALL
+	SELECT 
+		TransOrder = 24,
+		TransType  = 'Item Conversion Increase',	
+		UserCode   = T.UserCode, 
+		TransCount = Count(T.ItemConversionCode)
+	FROM
+		ItemConversionHeader T
+	WHERE 
+		T.UserCode IN (:ai_usercode) AND
+		T.Date BETWEEN :adt_startdate AND :adt_enddate AND
+		T.Posted = 'Y' AND
+		T.ItemConversionEffectCode = 1
+	GROUP BY
+		T.UserCode
+	UNION ALL
+	SELECT 
+		TransOrder = 25,
+		TransType  = 'Item Conversion Decrease',	
+		UserCode   = T.UserCode, 
+		TransCount = Count(T.ItemConversionCode)
+	FROM
+		ItemConversionHeader T
+	WHERE 
+		T.UserCode IN (:ai_usercode) AND
+		T.Date BETWEEN :adt_startdate AND :adt_enddate AND
+		T.Posted = 'Y' AND
+		T.ItemConversionEffectCode = 2
+	GROUP BY
+		T.UserCode
+	UNION ALL
+	SELECT 
+		TransOrder = 26,
+		TransType  = 'Notes Receivable',	
+		UserCode   = T.SalesManCode, 
+		TransCount = Count(T.NoteCode)
+	FROM
+		Notes T
+	WHERE 
+		T.SalesManCode IN (:ai_usercode) AND
+		T.DueDate BETWEEN :adt_startdate AND :adt_enddate AND
+		T.Posted = 'Y' AND
+		T.NoteCatCode = 1
+	GROUP BY
+		T.SalesManCode
+	UNION ALL
+	SELECT 
+		TransOrder = 27,
+		TransType  = 'Notes Payable',	
+		UserCode   = T.SalesManCode, 
+		TransCount = Count(T.NoteCode)
+	FROM
+		Notes T
+	WHERE 
+		T.SalesManCode IN (:ai_usercode) AND
+		T.DueDate BETWEEN :adt_startdate AND :adt_enddate AND
+		T.Posted = 'Y' AND
+		T.NoteCatCode = 2
+	GROUP BY
+		T.SalesManCode
+	UNION ALL
+	SELECT 
+		TransOrder = 28,
+		TransType  = 'Patient Admission',	
+		UserCode   = T.UserCode, 
+		TransCount = Count(T.AdmissionCode)
+	FROM
+		PatientAdmission T
+	WHERE 
+		T.UserCode IN (:ai_usercode) AND
+		T.Date BETWEEN :adt_startdate AND :adt_enddate
+	GROUP BY
+		T.UserCode
+	UNION ALL
+	SELECT 
+		TransOrder = 28.1,
+		TransType  = 'Patient Discharge',	
+		UserCode   = T.UserCode, 
+		TransCount = Count(T.AdmissionCode)
+	FROM
+		PatientAdmission T
+	WHERE 
+		T.UserCode IN (:ai_usercode) AND
+		T.DischargedOn BETWEEN :adt_startdate AND :adt_enddate
+	GROUP BY
+		T.UserCode
+	UNION ALL
+	SELECT 
+		TransOrder = 29,
+		TransType  = 'Patient Transfer',	
+		UserCode   = T.UserCode, 
+		TransCount = Count(T.TransferCode)
+	FROM
+		PatientTransfer T
+	WHERE 
+		T.UserCode IN (:ai_usercode) AND
+		T.Date BETWEEN :adt_startdate AND :adt_enddate
+	GROUP BY
+		T.UserCode
+	UNION ALL
+	SELECT 
+		TransOrder = 30,
+		TransType  = 'Purchase Return Allocation',	
+		UserCode   = T.UserCode, 
+		TransCount = Count(T.PRAllocationCode)
+	FROM
+		PRAllocationHeader T
+	WHERE 
+		T.UserCode IN (:ai_usercode) AND
+		T.Date BETWEEN :adt_startdate AND :adt_enddate AND
+		T.Posted = 'Y'
+	GROUP BY
+		T.UserCode
+	UNION ALL
+	SELECT 
+		TransOrder = 31,
+		TransType  = 'Sale Return Allocation',	
+		UserCode   = T.UserCode, 
+		TransCount = Count(T.SRAllocationCode)
+	FROM
+		SRAllocationHeader T
+	WHERE 
+		T.UserCode IN (:ai_usercode) AND
+		T.Date BETWEEN :adt_startdate AND :adt_enddate AND
+		T.Posted = 'Y'
+	GROUP BY
+		T.UserCode
+	UNION ALL
+	SELECT 
+		TransOrder = 32,
+		TransType  = 'Prescrption',	
+		UserCode   = T.CreatedBy, 
+		TransCount = Count(T.PresCode)
+	FROM
+		PrescriptionHeader T
+	WHERE 
+		T.CreatedBy IN (:ai_usercode) AND
+		T.ModifiedDate BETWEEN :adt_startdate AND :adt_enddate AND
+		T.Posted = 'Y'
+	GROUP BY
+		T.CreatedBy
+	UNION ALL
+	SELECT 
+		TransOrder = 33,
+		TransType  = 'Production',	
+		UserCode   = T.CreatedBy, 
+		TransCount = Count(T.ProdCode)
+	FROM
+		ProdHeader T
+	WHERE 
+		T.CreatedBy IN (:ai_usercode) AND
+		T.Date BETWEEN :adt_startdate AND :adt_enddate AND
+		T.Posted = 'Y'
+	GROUP BY
+		T.CreatedBy
+	UNION ALL
+	SELECT 
+		TransOrder = 34,
+		TransType  = 'Purchase Order',	
+		UserCode   = T.SalesManCode, 
+		TransCount = Count(T.POCode)
+	FROM
+		PurOrderHeader T
+	WHERE 
+		T.SalesManCode IN (:ai_usercode) AND
+		T.Date BETWEEN :adt_startdate AND :adt_enddate AND
+		T.Posted = 'Y'
+	GROUP BY
+		T.SalesManCode
+	UNION ALL
+	SELECT 
+		TransOrder = 35,
+		TransType  = 'Purchase Quotation',	
+		UserCode   = T.UserCode, 
+		TransCount = Count(T.PurQuotationCode)
+	FROM
+		PurQuotationHeader T
+	WHERE 
+		T.UserCode IN (:ai_usercode) AND
+		T.Date BETWEEN :adt_startdate AND :adt_enddate AND
+		T.Posted = 'Y'
+	GROUP BY
+		T.UserCode
+	UNION ALL
+	SELECT 
+		TransOrder = 36,
+		TransType  = 'Purchase Register',	
+		UserCode   = T.UserCode, 
+		TransCount = Count(T.PurRegisterCode)
+	FROM
+		PurRegister T
+	WHERE 
+		T.UserCode IN (:ai_usercode) AND
+		T.Date BETWEEN :adt_startdate AND :adt_enddate AND
+		T.Posted = 'Y'
+	GROUP BY
+		T.UserCode
+	UNION ALL
+	SELECT 
+		TransOrder = 37,
+		TransType  = 'Recipe',	
+		UserCode   = T.UserCode, 
+		TransCount = Count(T.RecipeCode)
+	FROM
+		Recipe T
+	WHERE 
+		T.UserCode IN (:ai_usercode) AND
+		T.Date BETWEEN :adt_startdate AND :adt_enddate
+	GROUP BY
+		T.UserCode
+	UNION ALL
+	SELECT 
+		TransOrder = 38,
+		TransType  = 'Refused Sales',	
+		UserCode   = T.UserCode, 
+		TransCount = Count(T.RefusedSaleInvCode)
+	FROM
+		RefusedSaleHeader T
+	WHERE 
+		T.UserCode IN (:ai_usercode) AND
+		T.Date BETWEEN :adt_startdate AND :adt_enddate
+	GROUP BY
+		T.UserCode
+	UNION ALL
+	SELECT 
+		TransOrder = 39,
+		TransType  = 'Sale Invoice Group',	
+		UserCode   = T.UserCode, 
+		TransCount = Count(T.SaleInvGroupCode)
+	FROM
+		SaleInvGroup T
+	WHERE 
+		T.UserCode IN (:ai_usercode) AND
+		T.Date BETWEEN :adt_startdate AND :adt_enddate
+	GROUP BY
+		T.UserCode
+	UNION ALL
+	SELECT 
+		TransOrder = 40,
+		TransType  = 'Samples',	
+		UserCode   = T.UserCode, 
+		TransCount = Count(T.SampleCode)
+	FROM
+		Samples T
+	WHERE 
+		T.UserCode IN (:ai_usercode) AND
+		T.SampleDate BETWEEN :adt_startdate AND :adt_enddate AND
+		T.Posted = 'Y'
+	GROUP BY
+		T.UserCode
+	UNION ALL
+	SELECT 
+		TransOrder = 41,
+		TransType  = 'Service Result',	
+		UserCode   = T.UserCode, 
+		TransCount = Count(T.ServiceResultCode)
+	FROM
+		ServiceResultHeader T
+	WHERE 
+		T.UserCode IN (:ai_usercode) AND
+		T.Date BETWEEN :adt_startdate AND :adt_enddate AND
+		T.Posted = 'Y'
+	GROUP BY
+		T.UserCode
+	UNION ALL
+	SELECT 
+		TransOrder = 42,
+		TransType  = 'Service Template',	
+		UserCode   = T.UserCode, 
+		TransCount = Count(T.ServiceTemplateCode)
+	FROM
+		ServiceTemplateHeader T
+	WHERE 
+		T.UserCode IN (:ai_usercode) AND
+		T.Date BETWEEN :adt_startdate AND :adt_enddate
+	GROUP BY
+		T.UserCode
+	UNION ALL
+	SELECT 
+		TransOrder = 43,
+		TransType  = 'Survey',	
+		UserCode   = T.CreatedBy, 
+		TransCount = Count(T.SurveyCode)
+	FROM
+		SurveyHeader T
+	WHERE 
+		T.CreatedBy IN (:ai_usercode) AND
+		T.Date BETWEEN :adt_startdate AND :adt_enddate
+	GROUP BY
+		T.CreatedBy
+	UNION ALL
+	SELECT 
+		TransOrder = 44,
+		TransType  = 'Transaction Window - ' + ISNULL((SELECT TT.Name FROM TransactionType TT WHERE T.TransactionTypeCode = TT.TransactionTypeCode), ''),	
+		UserCode   = T.UserCode, 
+		TransCount = Count(T.DocumentCode)
+	FROM
+		TransactionHeader T
+	WHERE 
+		T.UserCode IN (:ai_usercode) AND
+		T.Date BETWEEN :adt_startdate AND :adt_enddate AND
+		T.Posted = 'Y'
+	GROUP BY
+		T.TransactionTypeCode,
+		T.UserCode
+	UNION ALL
+	SELECT 
+		TransOrder = 45,
+		TransType  = 'Voucher - ' + ISNULL((SELECT VC.Name FROM VocherCategory VC WHERE T.VochCatCode = VC.VochCatCode), ''),	
+		UserCode   = T.SalesManCode, 
+		TransCount = Count(T.GLVochCode)
+	FROM
+		GLHeader T
+	WHERE 
+		T.SalesManCode IN (:ai_usercode) AND
+		T.Date BETWEEN :adt_startdate AND :adt_enddate AND
+		T.Posted = 'Y'
+	GROUP BY
+		T.VochCatCode,
+		T.SalesManCode) UT
+WHERE 
+	U.UserCode IN (:ai_usercode) AND
+	U.UserCode = UT.UserCode
+ORDER BY
+	UserName,
+	TransactionOrder"
+  arguments=(("ai_usercode", numberlist), ("adt_startdate", datetime), ("adt_enddate", datetime))
+)
+group(level=1 header.height=468 trailer.height=229 by=("usercode" "username"  ) header.color="536870912" trailer.color="536870912" )
+compute(name=compute_10 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="4291" y="62" height="166" width="1187" format="dd/mm/yyyy hh:mm:ss" expression="today()" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_12 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="3947" y="62" height="166" width="322" text="Date: " html.valueishtml="0" )
+compute(name=compute_4 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="5937" y="52" height="166" width="1541" format="[general]" expression="'Page ' + page() + ' of ' + pageCount()" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_4 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" alignment="2" border="0" x="72" y="260" height="166" width="7406" text="User Activity Summary" html.valueishtml="0" )
+compute(name=c_companyname visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" x="72" y="458" height="156" width="7406" format="[general]" expression="f_ReportHeaderInfo('clientname')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=c_address1 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="72" y="645" height="156" width="7406" format="[general]" expression="f_ReportHeaderInfo('address1')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=c_address2 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="72" y="833" height="156" width="7406" format="[general]" expression="f_ReportHeaderInfo('address2')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_6 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" x="5645" y="21" height="166" width="1458" format="[general]" expression="sum(transactioncount for all)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_6 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" alignment="1" border="0" x="4656" y="21" height="166" width="937" text="Report Total:" html.valueishtml="0" )
+line(name=l_4 visible="1" band=summary background.mode="1" background.color="553648127" pen.style="2" pen.width="10" pen.color="0" x1="72" y1="219" x2="7479" y2="219" )
+compute(name=compute_1 visible="1" band=detail font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" x="72" y="11" height="166" width="635" format="[GENERAL]" expression="cumulativeSum( 1 for group 1 )" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+column(name=transactioncount visible="1" band=detail id=5 x="5885" y="11" height="166" width="1218" color="33554432" border="0" alignment="1" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=transactiontype visible="1" band=detail id=4 x="781" y="11" height="166" width="5000" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=81 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+text(name=usercode_t visible="1" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" alignment="0" border="0" x="72" y="11" height="166" width="354" text="Code:" html.valueishtml="0" )
+column(name=usercode visible="1" band=header.1 id=1 x="479" y="11" height="166" width="395" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="700" tabsequence=0 )
+text(name=t_1 visible="1" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="2" border="0" x="72" y="250" height="166" width="635" text="Serial No." html.valueishtml="0" )
+text(name=username_t visible="1" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" alignment="0" border="0" x="968" y="11" height="166" width="395" text="Name:" html.valueishtml="0" )
+text(name=transactioncount_t visible="1" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="1" border="0" x="5885" y="250" height="166" width="1218" text="Transaction Count" html.valueishtml="0" )
+line(name=l_1 visible="1" band=header.1 background.mode="1" background.color="553648127" pen.style="2" pen.width="10" pen.color="0" x1="72" y1="209" x2="7479" y2="209" )
+text(name=transactiontype_t visible="1" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="2" border="0" x="781" y="250" height="166" width="2281" text="Transaction Type" html.valueishtml="0" )
+column(name=username visible="1" band=header.1 id=2 x="1395" y="11" height="166" width="2020" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=60 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="700" tabsequence=0 )
+compute(name=compute_2 visible="1" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" x="4229" y="11" height="166" width="1239" format="dd/mm/yyyy hh:mm" expression=" adt_startdate " alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_2 visible="1" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" alignment="0" border="0" x="3531" y="11" height="166" width="656" text="Start Date:" html.valueishtml="0" )
+text(name=t_3 visible="1" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" alignment="0" border="0" x="5625" y="11" height="166" width="572" text="End Date:" html.valueishtml="0" )
+compute(name=compute_3 visible="1" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" x="6239" y="11" height="166" width="1239" format="dd/mm/yyyy hh:mm" expression=" adt_enddate " alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+line(name=l_2 visible="1" band=header.1 background.mode="1" background.color="553648127" pen.style="2" pen.width="10" pen.color="0" x1="72" y1="448" x2="7479" y2="448" )
+line(name=l_3 visible="1" band=trailer.1 background.mode="1" background.color="553648127" pen.style="2" pen.width="10" pen.color="0" x1="72" y1="219" x2="7479" y2="219" )
+line(name=l_5 visible="1" band=trailer.1 background.mode="1" background.color="553648127" pen.style="2" pen.width="10" pen.color="0" x1="72" y1="0" x2="7479" y2="0" )
+text(name=t_5 visible="1" band=trailer.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" alignment="1" border="0" x="4656" y="31" height="156" width="937" text="User Total:" html.valueishtml="0" )
+compute(name=compute_5 visible="1" band=trailer.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" x="5645" y="31" height="156" width="1458" format="[general]" expression="sum(transactioncount for group 1)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+htmltable(border="1" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" encodeSelfLinkArgs="1" generateJavaScript="1" netscapeLayers="0" pagingMethod=0 )
+xhtmlgen() cssgen(sessionSpecific="0" )
+xmlgen(inline="0" )
+xsltgen()
+jsgen()
+export.xml(headGroups="1" includewhitespace="0" metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 distill.customPostScript="0" xslfop.print="0" )
+export.xhtml()

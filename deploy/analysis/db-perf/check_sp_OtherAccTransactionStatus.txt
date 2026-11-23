@@ -1,0 +1,139 @@
+
+CREATE PROCEDURE sp_OtherAccTransactionStatus @ad_date datetime ,@ad_ldate datetime,@ai_subacccode smallint AS
+
+create table #lt_pvamts 
+(
+	debit  numeric (15, 2) NOT NULL,
+	credit numeric (15, 2) NOT NULL,
+	code   numeric (5,0) NOT NULL,
+	name varchar(50) NOT NULL
+)
+
+/**************************** Any Acccounting Transactions ********************************/
+
+insert #lt_pvamts
+select  IsNull( sum(gldetail.debit), 0),
+        IsNull( sum(gldetail.credit), 0),
+        custcode=gldetail.acccode	,
+	name=(select accounts.name from accounts where accounts.acccode=gldetail.acccode)
+	 
+from     glheader, gldetail , accounts 
+where    glheader.glvochcode = gldetail.glvochcode and 
+ 	 glheader.date < @ad_date  and
+	 glheader.posted = 'Y' and
+         gldetail.acccode NOT IN (select custcode from customer) and
+	 gldetail.acccode NOT IN (select suppcode from supplier) and
+	 gldetail.acccode=accounts.acccode and
+	 accounts.subCode=@ai_subacccode
+GROUP BY gldetail.acccode	 
+
+
+/******************************* Any Bills Receivables ***********************************/
+
+insert #lt_pvamts
+select  0,
+        IsNull( sum(notes.amount), 0),
+        custcode=notes.acccode,
+        name=(select accounts.name from accounts where accounts.acccode=notes.acccode)
+    
+	 
+from     notes,accounts
+where    notes.notecatcode = 1 and
+
+	 notes.posted = 'Y' and
+	 notes.postdate < @ad_date  and
+	  notes.acccode NOT IN (select custcode from customer) and
+	 notes.acccode NOT IN (select suppcode from supplier) and
+	 notes.acccode=accounts.acccode and
+	 accounts.subCode= @ai_subacccode 
+GROUP BY notes.acccode
+
+/******** Collecting the result and assigning to the relevent reference variable *********/
+
+delete from reportdata
+insert into reportdata(code1,name1,value1,value2,value3)
+select code,name,IsNull(sum(debit) - sum(credit),0),0,0
+	from   #lt_pvamts 
+	group by name,
+                 code 
+
+
+
+update 	reportdata
+set 	name1=accounts.name
+from 	accounts,reportdata
+
+where	reportdata.name1 IS Null and
+	reportdata.code1=accounts.acccode
+
+delete from #lt_pvamts
+
+/*-----------------------------For Transactions Within The Period----------------*/
+/*===============================================================================*/
+
+
+
+/**************************** Any Acccounting Transactions ********************************/
+
+insert #lt_pvamts
+select  IsNull( sum(gldetail.debit), 0),
+        IsNull( sum(gldetail.credit), 0),
+        custcode=gldetail.acccode	,
+
+	name=(select accounts.name from accounts where accounts.acccode=gldetail.acccode)
+ 
+from     glheader, gldetail ,accounts 
+where    glheader.glvochcode = gldetail.glvochcode and 
+ 	 glheader.date >= @ad_date  and
+	 glheader.date <= @ad_ldate  and
+	 glheader.posted = 'Y' and
+         gldetail.acccode NOT IN (select custcode from customer) and
+	 gldetail.acccode NOT IN (select suppcode from supplier) and
+	 gldetail.acccode=accounts.acccode and
+	 accounts.subCode= @ai_subacccode
+
+GROUP BY gldetail.acccode	 
+
+/******************************* Any Bills Receivables ***********************************/
+
+insert #lt_pvamts
+select  0,
+        IsNull( sum(notes.amount), 0),
+        custcode=notes.acccode,
+        name=(select accounts.name from accounts where accounts.acccode=notes.acccode)
+    
+	 
+from     notes,accounts
+where    notes.notecatcode = 1 and
+
+	 notes.posted = 'Y' and
+	 notes.postdate >= @ad_date  and
+         notes.postdate <= @ad_ldate  and
+	 notes.acccode NOT IN (select custcode from customer) and
+	 notes.acccode NOT IN (select suppcode from supplier) and
+	 notes.acccode=accounts.acccode and
+	 accounts.subCode=@ai_subacccode  
+GROUP BY notes.acccode
+
+
+
+/******** Collecting the result and assigning to the relevent reference variable *********/
+
+
+update reportdata
+
+set value2=A.ddebit,value3=A.dcredit
+
+from
+
+(select code,name,ddebit=IsNull(sum(debit) ,0),dcredit=IsNull(sum(credit),0)
+	from   #lt_pvamts 
+	group by name,
+                 code) as A
+
+
+where reportdata.code1=A.code
+ 
+drop table #lt_pvamts
+
+

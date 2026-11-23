@@ -1,0 +1,68 @@
+release 12.5;
+datawindow ( units=0 timer_interval=0 processing=1 color=67108864 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.printername=""  print.documentname=""  print.orientation=0 print.margin.left=110 print.margin.right=110 print.margin.top=96 print.margin.bottom=96 print.paper.size=0 print.paper.source=0 print.canusedefaultprinter=yes grid.lines=0 selected.mouse=yes hidegrayline=no showbackcoloronxp=no)
+header(height=80 color="536870912" )
+summary(height=0 color="536870912" )
+footer(height=0 color="536870912" )
+detail(height=80 color="536870912" )
+table(column=(type=long key=yes update=yes updatewhereclause=yes name=code dbname="VisitSymptoms.VisitCode"  )
+column=(type=long key=yes update=yes updatewhereclause=yes name=symptomcode dbname="VisitSymptoms.SymptomCode"  )
+column=(type=char(60) updatewhereclause=yes name=name dbname="Name"  )
+column=(type=char(1) updatewhereclause=yes name=selected dbname="Selected" 
+ values="	Y/	N"  )
+column=(type=long update=yes updatewhereclause=yes name=severitylevelcode dbname="VisitSymptoms.SeverityLevelCode" 
+ values=""  )
+column=(type=long key=yes updatewhereclause=yes name=rowid dbname="VisitSymptoms.RowID"  )
+column=(type=long update=yes updatewhereclause=yes name=duration dbname="VisitSymptoms.Duration"  )
+column=(type=char(400) update=yes updatewhereclause=yes name=details dbname="VisitSymptoms.Details"  )
+ retrieve="SELECT 
+	VisitCode, 
+	SymptomCode, 
+	Name = (SELECT Name FROM Symptom WHERE Symptom.SymptomCode = VisitSymptoms.SymptomCode),
+	Selected = 'Y',
+	SeverityLevelCode, 
+	RowID, 
+	Duration, 
+	Details 
+FROM 
+	VisitSymptoms
+WHERE 
+	VisitSymptoms.VisitCode = :ai_code
+UNION ALL
+SELECT 
+	VisitCode=:ai_code, 
+	SymptomCode, 
+	Name,
+	Selected = 'N',
+	SeverityLevelCode=1, 
+	RowID=0, 
+	Duration=1, 
+	Details=NULL 
+FROM 
+	Symptom
+WHERE 
+	Symptom.SymptomCode NOT IN (SELECT VisitSymptoms.SymptomCode FROM VisitSymptoms WHERE VisitSymptoms.VisitCode = :ai_code)
+ORDER BY Name"
+  update="VisitSymptoms" updatewhere=1 updatekeyinplace=yes
+  arguments=(("ai_code", number))
+ sort="name A"
+)
+text(name=selected_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="2" background.color="67108864" color="33554432" alignment="0" border="6" x="9" y="8" height="64" width="357" text="Selected" html.valueishtml="0" )
+text(name=name_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="2" border="6" x="375" y="8" height="64" width="914" text="Name" html.valueishtml="0" )
+text(name=severitylevelcode_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="2" border="6" x="1298" y="8" height="64" width="288" text="Severity" html.valueishtml="0" )
+text(name=duration_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="2" border="6" x="1595" y="8" height="64" width="238" text="Duration" html.valueishtml="0" )
+text(name=details_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="2" border="6" x="1842" y="8" height="64" width="2094" text="Condition Details" html.valueishtml="0" )
+column(name=severitylevelcode visible="1" band=detail id=5 x="1298" y="4" height="72" width="288" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" dddw.allowedit=no dddw.autohscroll=no dddw.autoretrieve=yes dddw.useasborder=yes dddw.datacolumn=severitylevelcode dddw.displaycolumn=name dddw.hscrollbar=no dddw.hsplitscroll=no dddw.imemode=0 dddw.limit=0 dddw.name=ddd_severitylevel dddw.nilisnull=yes dddw.percentwidth=0 dddw.required=yes dddw.showlist=no dddw.vscrollbar=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=20 )
+column(name=duration visible="1" band=detail id=7 x="1595" y="4" height="72" width="238" color="33554432" border="0" alignment="1" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=30 )
+column(name=details visible="1" band=detail id=8 x="1842" y="4" height="72" width="2094" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=400 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=40 )
+column(name=name visible="1" band=detail id=3 x="375" y="4" height="72" width="914" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=selected visible="1" band=detail id=4 x="9" y="4" height="72" width="357" color="33554432" border="0" alignment="2" format="[general]" html.valueishtml="0" checkbox.lefttext=no checkbox.scale=no checkbox.threed=yes checkbox.text="" checkbox.on="Y" checkbox.off="N" criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=10 )
+htmltable(border="1" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" encodeSelfLinkArgs="1" generateJavaScript="1" netscapeLayers="0" pagingMethod=0 )
+xhtmlgen() cssgen(sessionSpecific="0" )
+xmlgen(inline="0" )
+xsltgen()
+jsgen()
+export.xml(headGroups="1" includewhitespace="0" metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 distill.customPostScript="0" xslfop.print="0" )
+export.xhtml()

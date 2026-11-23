@@ -1,0 +1,322 @@
+release 12.5;
+datawindow ( units=2 timer_interval=0 processing=0 color=1073741824 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.printername=""  print.documentname=""  print.orientation=2 print.margin.left=0 print.margin.right=0 print.margin.top=0 print.margin.bottom=0 print.paper.size=1 print.paper.source=0 print.canusedefaultprinter=yes selected.mouse=no hidegrayline=no showbackcoloronxp=no)
+header(height=281 color="536870912" )
+summary(height=0 color="536870912" )
+footer(height=0 color="536870912" )
+detail(height=239 color="536870912" )
+table(column=(type=long updatewhereclause=yes name=invcode dbname="InvCode"  )
+column=(type=long updatewhereclause=yes name=icode dbname="ICode"  )
+column=(type=char(75) updatewhereclause=yes name=aliasname dbname="AliasName"  )
+column=(type=char(60) updatewhereclause=yes name=itemname dbname="ItemName"  )
+column=(type=decimal(2) updatewhereclause=yes name=qty dbname="Qty"  )
+column=(type=decimal(4) updatewhereclause=yes name=bonusqty dbname="BonusQty"  )
+column=(type=decimal(2) updatewhereclause=yes name=rate dbname="Rate"  )
+column=(type=decimal(6) updatewhereclause=yes name=discount dbname="Discount"  )
+column=(type=decimal(6) updatewhereclause=yes name=salestax dbname="SalesTax"  )
+column=(type=decimal(2) updatewhereclause=yes name=misccharges dbname="MiscCharges"  )
+column=(type=decimal(2) updatewhereclause=yes name=flatdisc dbname="FlatDisc"  )
+ retrieve="SELECT
+	InvCode = SL.SaleInvCode,
+	ICode = SD.ICode, 
+	AliasName = I.CustomICode,
+	ItemName = I.Name,
+	Qty = SUM(SD.LooseQty),
+	BonusQty = SUM(SD.BonusQty),
+	Rate = SD.SalePrice,
+	Discount = SUM( 
+		(SD.LooseQty * SD.ItemFlatDisc) + 
+		(SD.LooseQty * (SD.SalePrice - SD.ItemFlatDisc) * (SD.DiscPerc * 0.01)) + 
+		(SD.LooseQty * (SD.SalePrice - SD.ItemFlatDisc) * (1 - SD.DiscPerc * 0.01) * (SL.DiscPerc * 0.01))),
+	SalesTax = SUM( ((SD.LooseQty + SD.BonusQty) * SD.UnitSalesTax) + 
+		(SD.LooseQty * (SD.SalePrice - SD.ItemFlatDisc) * (1 - SD.DiscPerc * 0.01) * (SD.GSTPerc * 0.01))),
+	MiscCharges = SL.MiscCharges,
+	FlatDisc = SL.FlatDisc
+FROM
+	SaleLedger SL, 
+	SaleDetail SD,
+	Item I
+WHERE
+	:as_type = 'SV' AND
+	SL.SaleInvCode = :ai_invcode AND
+	SL.SaleInvCode = SD.SaleInvCode AND
+	SD.ICode = I.ICode
+GROUP BY
+	SL.SaleInvCode,
+	SL.MiscCharges,
+	SL.FlatDisc,
+	SD.ICode,
+	I.CustomICode,
+	I.Name,
+	SD.SalePrice
+UNION ALL
+SELECT 
+	InvCode = SL.SRInvCode,
+	ICode = SD.ICode, 
+	AliasName = I.CustomICode,
+	ItemName = I.Name,
+	Qty = SUM(SD.LooseQty),
+	BonusQty = SUM(SD.BonusQty),
+	Rate = SD.SRPrice,
+	Discount = SUM( 
+		(SD.LooseQty * SD.SRPrice * SD.DiscPerc * 0.01) + 
+		(SD.LooseQty * SD.SRPrice * (1 - SD.DiscPerc * 0.01) * (SL.DiscPerc * 0.01))),
+	SalesTax = SUM( ((SD.LooseQty + SD.BonusQty) * SD.UnitSalesTax) + 
+		(SD.LooseQty * SD.SRPrice * (1 - SD.DiscPerc * 0.01) * (SD.GSTPerc * 0.01))),
+	MiscCharges = SL.MiscCharges,
+	FlatDisc = SL.FlatDisc
+FROM
+	SRLedger SL, 
+	SRDetail SD,
+	Item I
+WHERE
+	:as_type = 'SR' AND
+	SL.SRInvCode = :ai_invcode AND
+	SL.SRInvCode = SD.SRInvCode AND
+	SD.ICode = I.ICode
+GROUP BY
+	SL.SRInvCode,
+	SL.MiscCharges,
+	SL.FlatDisc,
+	SD.ICode,
+	I.CustomICode,
+	I.Name,
+	SD.SRPrice
+UNION ALL
+SELECT 
+	InvCode = PL.PurInvCode,
+	ICode = PD.ICode, 
+	AliasName = I.CustomICode,
+	ItemName = I.Name,
+	Qty = SUM(PD.LooseQty + PD.PackQty),
+	BonusQty = SUM(PD.BonusQty),
+	Rate = PD.PurPrice,
+	Discount = SUM( 
+		(PD.LooseQty * PD.PurPrice * (PD.DiscPerc * 0.01)) + 
+		(PD.LooseQty * PD.PurPrice * (1 - PD.DiscPerc * 0.01) * (PL.DiscPerc * 0.01))),
+	SalesTax = SUM( ((PD.LooseQty + PD.BonusQty) * PD.UnitSalesTax) + 
+		(PD.LooseQty * PD.PurPrice * (1 - PD.DiscPerc * 0.01) * (PD.GSTPerc * 0.01))),
+	MiscCharges = PL.MiscCharges,
+	FlatDisc = PL.FlatDisc
+FROM
+	PurLedger PL, 
+	PurDetail PD,
+	Item I
+WHERE
+	:as_type = 'PV' AND
+	PL.PurInvCode = :ai_invcode AND
+	PL.PurInvCode = PD.PurInvCode AND
+	PD.ICode = I.ICode
+GROUP BY
+	PL.PurInvCode,
+	PL.MiscCharges,
+	PL.FlatDisc,
+	PD.ICode,
+	I.CustomICode,
+	I.Name,
+	PD.PurPrice
+UNION ALL
+SELECT 
+	InvCode = PL.PrInvCode,
+	ICode = PD.ICode, 
+	AliasName = I.CustomICode,
+	ItemName = I.Name,
+	Qty = SUM(PD.LooseQty),
+	BonusQty = SUM(PD.BonusQty),
+	Rate = PD.PrPrice,
+	Discount = SUM( 
+		(PD.LooseQty * PD.PrPrice * (PD.DiscPerc * 0.01)) + 
+		(PD.LooseQty * PD.PrPrice * (1 - PD.DiscPerc * 0.01) * (PL.DiscPerc * 0.01))),
+	SalesTax = SUM( ((PD.LooseQty + PD.BonusQty) * PD.UnitSalesTax) + 
+		(PD.LooseQty * PD.PrPrice * (1 - PD.DiscPerc * 0.01) * (PD.GSTPerc * 0.01))),
+	MiscCharges = PL.MiscCharges,
+	FlatDisc = PL.FlatDisc
+FROM
+	PrLedger PL, 
+	PrDetail PD,
+	Item I
+WHERE
+	:as_type = 'PR' AND
+	PL.PrInvCode = :ai_invcode AND
+	PL.PrInvCode = PD.PrInvCode AND
+	PD.ICode = I.ICode
+GROUP BY
+	PL.PrInvCode,
+	PL.MiscCharges,
+	PL.FlatDisc,
+	PD.ICode,
+	I.CustomICode,
+	I.Name,
+	PD.PrPrice
+UNION ALL
+SELECT
+	InvCode = SL.ServiceInvCode,
+	ICode = SD.ServiceCode, 
+	AliasName = I.AliasName,
+	ItemName = I.Name,
+	Qty = SUM(SD.Qty),
+	BonusQty = 0,
+	Rate = SD.Price,
+	Discount = SUM( 
+		(SD.Qty * SD.ServiceFlatDisc) + 
+		(SD.Qty * (SD.Price - SD.ServiceFlatDisc) * (SD.DiscPerc * 0.01)) + 
+		(SD.Qty * (SD.Price - SD.ServiceFlatDisc) * (1 - SD.DiscPerc * 0.01) * (SL.DiscPerc * 0.01))),
+	SalesTax = SUM( (SD.Qty * SD.ServiceFlatTax) + 
+		(SD.Qty * (SD.Price - SD.ServiceFlatDisc) * (1 - SD.DiscPerc * 0.01) * (SD.ServiceGSTPerc * 0.01))),
+	MiscCharges = SL.MiscCharges,
+	FlatDisc = SL.FlatDisc
+FROM
+	ServiceHeader SL, 
+	ServiceDetail SD,
+	Service I
+WHERE
+	:as_type = 'RS' AND
+	SL.ServiceInvCode = :ai_invcode AND
+	SL.ServiceInvCode = SD.ServiceInvCode AND
+	SD.ServiceCode = I.ServiceCode
+GROUP BY
+	SL.ServiceInvCode,
+	SL.MiscCharges,
+	SL.FlatDisc,
+	SD.ServiceCode,
+	I.AliasName,
+	I.Name,
+	SD.Price
+UNION ALL
+SELECT
+	InvCode = SL.ServiceRInvCode,
+	ICode = SD.ServiceCode, 
+	AliasName = I.AliasName,
+	ItemName = I.Name,
+	Qty = SUM(SD.Qty),
+	BonusQty = 0,
+	Rate = SD.ServicePrice,
+	Discount = SUM( 
+		(SD.Qty * SD.ServiceFlatDisc) + 
+		(SD.Qty * (SD.ServicePrice - SD.ServiceFlatDisc) * (SD.DiscPerc * 0.01)) + 
+		(SD.Qty * (SD.ServicePrice - SD.ServiceFlatDisc) * (1 - SD.DiscPerc * 0.01) * (SL.DiscPerc * 0.01))),
+	SalesTax = SUM( (SD.Qty * SD.ServiceFlatTax) + 
+		(SD.Qty * (SD.ServicePrice - SD.ServiceFlatDisc) * (1 - SD.DiscPerc * 0.01) * (SD.ServiceGSTPerc * 0.01))),
+	MiscCharges = SL.MiscCharges,
+	FlatDisc = SL.FlatDisc
+FROM
+	ServiceRHeader SL, 
+	ServiceRDetail SD,
+	Service I
+WHERE
+	:as_type = 'RR' AND
+	SL.ServiceRInvCode = :ai_invcode AND
+	SL.ServiceRInvCode = SD.ServiceRInvCode AND
+	SD.ServiceCode = I.ServiceCode
+GROUP BY
+	SL.ServiceRInvCode,
+	SL.MiscCharges,
+	SL.FlatDisc,
+	SD.ServiceCode,
+	I.AliasName,
+	I.Name,
+	SD.ServicePrice
+UNION ALL
+SELECT  
+	InvCode = P.ServicePurInvCode,
+	ICode = D.ServiceCode, 
+	AliasName = I.AliasName,
+	ItemName = I.Name,
+	Qty = SUM(D.Qty),
+	BonusQty = 0,
+	Rate = D.Price,
+	Discount=
+		SUM(D.Qty * (D.Price - D.serviceflatdisc) * 0.01 * D.discperc) + 
+		SUM(D.qty * (D.Price - D.serviceflatdisc) * (1- (0.01 * D.discperc)) * (0.01 * P.discperc)),
+	SalesTax = 0.00,
+	MiscCharges = P.MiscCharges,
+	FlatDisc = P.FlatDisc
+FROM
+	ServicePurHeader p,	 
+	ServicePurDetail D,
+	Service I
+WHERE   
+	:as_type = 'SP' AND
+	P.Posted = 'Y' AND 
+	P.ServicePurInvCode = D.ServicePurInvCode AND 
+	P.ServicePurInvCode = :ai_invcode AND
+	D.ServiceCode = I.ServiceCode
+GROUP BY 
+	P.ServicePurInvCode,
+	P.DiscPerc,
+	P.MiscCharges,
+	P.FlatDisc,
+	D.ServiceCode,
+	I.AliasName,
+	I.Name,
+	D.Price
+UNION ALL
+SELECT  
+	InvCode = P.ServicePrInvCode,
+	ICode = D.ServiceCode, 
+	AliasName = I.AliasName,
+	ItemName = I.Name,
+	Qty = SUM(D.Qty),
+	BonusQty = 0,
+	Rate = D.Price,
+	Discount=
+		SUM(D.Qty * (D.Price - D.serviceflatdisc) * 0.01 * D.discperc) + 
+		SUM(D.qty * (D.Price - D.serviceflatdisc) * (1- (0.01 * D.discperc)) * (0.01 * P.discperc)),
+	SalesTax = 0.00,
+	MiscCharges = P.MiscCharges,
+	FlatDisc = P.FlatDisc
+FROM
+	ServicePrHeader p,	 
+	ServicePrDetail D,
+	Service I
+WHERE   
+	:as_type = 'RP' AND
+	P.Posted = 'Y' AND 
+	P.ServicePRInvCode = D.ServicePRInvCode AND 
+	P.ServicePRInvCode = :ai_invcode AND
+	D.ServiceCode = I.ServiceCode
+GROUP BY 
+	P.ServicePRInvCode,
+	P.DiscPerc,
+	P.MiscCharges,
+	P.FlatDisc,
+	D.ServiceCode,
+	I.AliasName,
+	I.Name,
+	D.Price"
+  arguments=(("as_type", string), ("ai_invcode", number))
+)
+line(name=l_7 visible="1" band=header background.mode="2" background.color="16777215" pen.style="0" pen.width="10" pen.color="0" x1="20" y1="260" x2="4010" y2="260" )
+line(name=l_1 visible="1" band=header background.mode="2" background.color="16777215" pen.style="0" pen.width="10" pen.color="0" x1="20" y1="20" x2="4010" y2="20" )
+text(name=t_1 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="2" border="0" x="52" y="62" height="166" width="302" text="S.No." html.valueishtml="0" )
+line(name=l_10 visible="1" band=header background.mode="2" background.color="16777215" pen.style="0" pen.width="10" pen.color="0" x1="3989" y1="20" x2="3989" y2="333" )
+line(name=l_13 visible="1" band=header background.mode="2" background.color="16777215" pen.style="0" pen.width="10" pen.color="0" x1="2010" y1="20" x2="2010" y2="333" )
+line(name=l_15 visible="1" band=header background.mode="2" background.color="16777215" pen.style="0" pen.width="10" pen.color="0" x1="20" y1="20" x2="20" y2="333" )
+line(name=l_14 visible="1" band=header background.mode="2" background.color="16777215" pen.style="0" pen.width="10" pen.color="0" x1="385" y1="20" x2="385" y2="333" )
+text(name=t_2 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="2" border="0" x="427" y="62" height="166" width="1552" text="Item Name" html.valueishtml="0" )
+text(name=t_3 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="2" border="0" x="2052" y="62" height="166" width="447" text="Qty" html.valueishtml="0" )
+line(name=l_12 visible="1" band=header background.mode="2" background.color="16777215" pen.style="0" pen.width="10" pen.color="0" x1="2531" y1="20" x2="2531" y2="333" )
+text(name=t_4 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="2" border="0" x="2572" y="62" height="166" width="583" text="Price" html.valueishtml="0" )
+line(name=l_11 visible="1" band=header background.mode="2" background.color="16777215" pen.style="0" pen.width="10" pen.color="0" x1="3187" y1="20" x2="3187" y2="333" )
+text(name=t_5 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="2" border="0" x="3229" y="62" height="166" width="729" text="Total" html.valueishtml="0" )
+line(name=l_16 visible="1" band=detail background.mode="2" background.color="16777215" pen.style="0" pen.width="10" pen.color="0" x1="20" y1="219" x2="4010" y2="219" )
+compute(name=compute_2 visible="1" band=detail font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" x="62" y="10" height="177" width="281" format="[GENERAL]" expression="getrow()" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+column(name=itemname visible="1" band=detail id=4 x="427" y="10" height="177" width="1552" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+line(name=l_3 visible="1" band=detail background.mode="2" background.color="16777215" pen.style="0" pen.width="10" pen.color="0" x1="3989" y1="0" x2="3989" y2="271" )
+line(name=l_8 visible="1" band=detail background.mode="2" background.color="16777215" pen.style="0" pen.width="10" pen.color="0" x1="2010" y1="0" x2="2010" y2="271" )
+line(name=l_5 visible="1" band=detail background.mode="2" background.color="16777215" pen.style="0" pen.width="10" pen.color="0" x1="385" y1="0" x2="385" y2="271" )
+line(name=l_9 visible="1" band=detail background.mode="2" background.color="16777215" pen.style="0" pen.width="10" pen.color="0" x1="20" y1="0" x2="20" y2="271" )
+column(name=qty visible="1" band=detail id=5 x="2052" y="10" height="177" width="447" color="33554432" border="0" alignment="1" format="	f_SetColumnFormat('Qty')" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+line(name=l_6 visible="1" band=detail background.mode="2" background.color="16777215" pen.style="0" pen.width="10" pen.color="0" x1="2531" y1="0" x2="2531" y2="271" )
+column(name=rate visible="1" band=detail id=7 x="2572" y="10" height="177" width="583" color="33554432" border="0" alignment="1" format="###,###,##0.00" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+line(name=l_4 visible="1" band=detail background.mode="2" background.color="16777215" pen.style="0" pen.width="10" pen.color="0" x1="3187" y1="0" x2="3187" y2="271" )
+compute(name=compute_1 visible="1" band=detail font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" x="3229" y="10" height="177" width="729" format="###,###,##0.00" expression="qty * rate" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+htmltable(border="1" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" encodeSelfLinkArgs="1" generateJavaScript="1" netscapeLayers="0" pagingMethod=0 )
+xhtmlgen() cssgen(sessionSpecific="0" )
+xmlgen(inline="0" )
+xsltgen()
+jsgen()
+export.xml(headGroups="1" includewhitespace="0" metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 distill.customPostScript="0" xslfop.print="0" )
+export.xhtml()

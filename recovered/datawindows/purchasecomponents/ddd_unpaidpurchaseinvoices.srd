@@ -1,0 +1,88 @@
+release 12.5;
+datawindow ( units=0 timer_interval=0 processing=1 color=80269524 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.printername=""  print.documentname=""  print.orientation=0 print.margin.left=110 print.margin.right=110 print.margin.top=96 print.margin.bottom=96 print.paper.size=0 print.paper.source=0 print.canusedefaultprinter=yes grid.lines=0 selected.mouse=yes hidegrayline=no showbackcoloronxp=no)
+header(height=72 color="536870912" )
+summary(height=0 color="536870912" )
+footer(height=0 color="536870912" )
+detail(height=72 color="536870912" )
+table(column=(type=long updatewhereclause=yes name=purinvcode dbname="PurInvCode"  )
+column=(type=datetime updatewhereclause=yes name=date dbname="Date"  )
+column=(type=char(100) updatewhereclause=yes name=suppinvcode dbname="SuppInvCode"  )
+column=(type=char(100) updatewhereclause=yes name=grn dbname="GRN"  )
+column=(type=long updatewhereclause=yes name=suppcode dbname="SuppCode"  )
+column=(type=char(60) updatewhereclause=yes name=supplier dbname="Supplier"  )
+column=(type=char(12) updatewhereclause=yes name=aliasname dbname="AliasName"  )
+column=(type=decimal(2) updatewhereclause=yes name=outstandingamt dbname="OutstandingAmt"  )
+column=(type=decimal(2) updatewhereclause=yes name=invtotal dbname="InvTotal"  )
+ retrieve="SELECT 
+	PurInvCode,
+	Date,
+	SuppInvCode,
+	GRN,
+	SuppCode,
+	Supplier,
+	AliasName,
+	OutstandingAmt,
+	InvTotal
+FROM
+(SELECT 
+	PurLedger.PurInvCode,
+	PurLedger.Date,
+	PurLedger.SuppInvCode,
+	PurLedger.GRN,
+	PurLedger.SuppCode,
+	Supplier=Accounts.Name,
+	AliasName=Accounts.AliasName,
+	OutstandingAmt = PurLedger.OutstandingAmt + 
+		CASE :module
+		WHEN 'NP' THEN 
+			ISNULL((SELECT SUM(Amt) FROM NotesDetail 
+			Where NoteCode = :Code AND NotesDetail.InvoiceCode = PurLedger.PurInvCode), 0)
+		WHEN 'PRA' THEN 
+			ISNULL((SELECT SUM(Amt) FROM PRAllocationDetail 
+			Where PRAllocationCode = :Code AND PRAllocationDetail.PurInvCode = PurLedger.PurInvCode), 0)
+		ELSE 
+			ISNULL((SELECT SUM(Debit-Credit) FROM GLDetail 
+			Where GlVochCode = :Code AND GLDetail.InvoiceCode = PurLedger.PurInvCode), 0)
+		END,
+	PurLedger.InvTotal
+FROM 
+	PurLedger, Accounts
+WHERE
+	PurLedger.AccountFor = 'Y' AND
+	PurLedger.Marked = 'N' AND
+	PurLedger.Posted ='Y' AND
+	PurLedger.SuppCode = :suppcode AND
+	PurLedger.SuppCode = Accounts.AccCode) P
+WHERE
+	OutstandingAmt > 0
+ORDER BY
+	Date,   
+	PurInvCode"
+  arguments=(("suppcode", number), ("code", number), ("module", string))
+)
+text(name=purinvcode_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="2" border="6" x="9" y="8" height="60" width="279" text="Inv. Code" html.valueishtml="0" )
+text(name=date_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="2" border="6" x="297" y="8" height="60" width="421" text="Date" html.valueishtml="0" )
+text(name=invtotal_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="2" border="6" x="727" y="8" height="60" width="384" text="Net Amount" html.valueishtml="0" )
+text(name=outstandingamt_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="2" border="6" x="1120" y="8" height="60" width="421" text="Balance Amt." html.valueishtml="0" )
+text(name=suppinvcode_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="2" border="6" x="1550" y="8" height="60" width="421" text="Supp. Inv. Code" html.valueishtml="0" )
+text(name=grn_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="2" border="6" x="1979" y="8" height="60" width="517" text="GRN" html.valueishtml="0" )
+text(name=aliasname_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="2" border="6" x="2505" y="8" height="60" width="329" text="Alias Name" html.valueishtml="0" )
+text(name=supplier_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="2" border="6" x="2843" y="8" height="60" width="1463" text="Supplier Name" html.valueishtml="0" )
+column(name=purinvcode visible="1" band=detail id=1 x="9" y="4" height="64" width="279" color="0" border="0" alignment="1" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=date visible="1" band=detail id=2 x="297" y="4" height="64" width="421" color="0" border="0" alignment="0" format="dd/mm/yyyy hh:mm:ss" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=supplier visible="1" band=detail id=6 x="2843" y="4" height="64" width="1463" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=60 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=aliasname visible="1" band=detail id=7 x="2505" y="4" height="64" width="329" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=20 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=invtotal visible="1" band=detail id=9 x="727" y="4" height="64" width="384" color="0" border="0" alignment="1" format="###,###,###0.00" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=outstandingamt visible="1" band=detail id=8 x="1120" y="4" height="64" width="421" color="0" border="0" alignment="1" format="###,###,###0.00" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=suppinvcode visible="1" band=detail id=3 x="1550" y="4" height="64" width="421" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=grn visible="1" band=detail id=4 x="1979" y="4" height="64" width="517" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+htmltable(border="1" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" encodeSelfLinkArgs="1" generateJavaScript="1" netscapeLayers="0" pagingMethod=0 )
+xhtmlgen() cssgen(sessionSpecific="0" )
+xmlgen(inline="0" )
+xsltgen()
+jsgen()
+export.xml(headGroups="1" includewhitespace="0" metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 distill.customPostScript="0" xslfop.print="0" )
+export.xhtml()

@@ -1,0 +1,110 @@
+// window w_arg_customers_sinvcode_linvcode_v2 (reports_cust)  ancestor: w_popup_forselection_walias
+
+// w_arg_customers_sinvcode_linvcode_v2.create() returns 0
+	integer icurrent
+	call super::create
+	this.gb_2 = create gb_2
+	this.st_1 = create st_1
+	this.st_2 = create st_2
+	this.em_startdate = create em_startdate
+	this.em_enddate = create em_enddate
+	this.cbx_allcustomers = create cbx_allcustomers
+	this.dw_invrange = create dw_invrange
+	icurrent = upperbound(this.control)
+	this.control[icurrent + 1] = this.gb_2
+	this.control[icurrent + 2] = this.st_1
+	this.control[icurrent + 3] = this.st_2
+	this.control[icurrent + 4] = this.em_startdate
+	this.control[icurrent + 5] = this.em_enddate
+	this.control[icurrent + 6] = this.cbx_allcustomers
+	this.control[icurrent + 7] = this.dw_invrange
+
+// w_arg_customers_sinvcode_linvcode_v2.destroy() returns 0
+	call super::destroy
+	destroy this.gb_2
+	destroy this.st_1
+	destroy this.st_2
+	destroy this.em_startdate
+	destroy this.em_enddate
+	destroy this.cbx_allcustomers
+	destroy this.dw_invrange
+
+// w_arg_customers_sinvcode_linvcode_v2.open() returns long
+	long ancestorreturnvalue
+	date ld_currdate
+	string ls_text
+	ancestorreturnvalue = super::open()
+	ld_currdate = today()
+	ls_text = string(ld_currdate, "dd/mm/yyyy")
+	ls_text = trim(ls_text) + " 00:00:00"
+	this.em_startdate.text = ls_text
+	ls_text = string(ld_currdate, "dd/mm/yyyy")
+	ls_text = trim(ls_text) + " 23:59:59"
+	this.em_enddate.text = ls_text
+	this.dw_invrange.settransobject(sqlca)
+	this.dw_invrange.insertrow(0)
+	return ::message.returnvalue
+
+// w_arg_customers_sinvcode_linvcode_v2.ue_close() returns 0
+	closewithreturn(this, this.istr_arg)
+
+// cb_cancel.clicked() returns long
+	parent.post event ue_close()
+	return ::message.returnvalue
+
+// cb_ok.clicked() returns long
+	long ll_counter
+	long ll_totalrows
+	long ll_temp
+	if parent.cbx_allcustomers.checked = true then
+		parent.istr_arg.l_code1 = 1
+	else
+		if parent.id_selected.accepttext() = -1 then
+			parent.id_selected.setfocus()
+			return ::message.returnvalue
+		end if
+		if isnull(parent.id_selected.getitemstring(parent.id_selected.getrow(), "name")) then
+			messagebox("Name Validation", "Please enter valid value for Name.")
+			parent.id_selected.setcolumn(1)
+			parent.id_selected.setfocus()
+			return ::message.returnvalue
+		end if
+		parent.istr_arg.l_code2 = parent.id_selected.getitemnumber(1, "code")
+	end if
+	parent.em_startdate.getdata(parent.istr_arg.d_sdate)
+	parent.em_enddate.getdata(parent.istr_arg.d_edate)
+	parent.dw_invrange.accepttext()
+	parent.istr_arg.l_code3 = parent.dw_invrange.object.sinvcode[1]
+	parent.istr_arg.l_code4 = parent.dw_invrange.object.linvcode[1]
+	if parent.istr_arg.l_code3 > parent.istr_arg.l_code4 then
+		ll_temp = parent.istr_arg.l_code3
+		parent.istr_arg.l_code3 = parent.istr_arg.l_code4
+		parent.istr_arg.l_code4 = ll_temp
+	end if
+	parent.istr_arg.i_status = 1
+	parent.post event ue_close()
+	return ::message.returnvalue
+
+// em_startdate.ue_enterkey(keycode key, unsignedlong keyflags) returns long
+	if key = keyenter! then
+		send(handle(this), 256, 9, long(90))
+	end if
+	return ::message.returnvalue
+
+// em_enddate.ue_enterkey(keycode key, unsignedlong keyflags) returns long
+	if key = keyenter! then
+		send(handle(this), 256, 9, long(90))
+	end if
+	return ::message.returnvalue
+
+// cbx_allcustomers.ue_enterkey(keycode key, unsignedlong keyflags) returns long
+	if key = keyenter! then
+		send(handle(this), 256, 9, long(90))
+	end if
+	return ::message.returnvalue
+
+// dw_invrange.ue_enterkey() returns long
+	long ancestorreturnvalue
+	ancestorreturnvalue = super::ue_enterkey()
+	send(handle(this), 256, 9, long(90))
+	return 1

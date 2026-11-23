@@ -1,0 +1,342 @@
+release 12.5;
+datawindow ( units=2 timer_interval=60000 processing=0 color=16777215 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.printername=""  print.documentname=""  print.orientation=2 print.margin.left=0 print.margin.right=0 print.margin.top=0 print.margin.bottom=0 print.paper.size=1 print.paper.source=0 print.canusedefaultprinter=yes selected.mouse=no hidegrayline=no showbackcoloronxp=no)
+header(height=2033 color="536870912" )
+summary(height=416 color="536870912" )
+footer(height=0 color="536870912" )
+detail(height=200 color="536870912" )
+table(column=(type=long updatewhereclause=yes name=rowgroup dbname="RowGroup"  )
+column=(type=char(8) updatewhereclause=yes name=itemtype dbname="ItemType"  )
+column=(type=char(50) updatewhereclause=yes name=regno dbname="RegNo"  )
+column=(type=char(60) updatewhereclause=yes name=patient dbname="Patient"  )
+column=(type=long updatewhereclause=yes name=admissioncode dbname="AdmissionCode"  )
+column=(type=datetime updatewhereclause=yes name=admittedon dbname="AdmittedOn"  )
+column=(type=char(60) updatewhereclause=yes name=admittedby dbname="AdmittedBy"  )
+column=(type=datetime updatewhereclause=yes name=dischargedon dbname="DischargedOn"  )
+column=(type=char(60) updatewhereclause=yes name=dischargedby dbname="DischargedBy"  )
+column=(type=char(1) updatewhereclause=yes name=discharged dbname="PatientAdmission.Discharged"  )
+column=(type=long updatewhereclause=yes name=invcode dbname="InvCode"  )
+column=(type=datetime updatewhereclause=yes name=invdate dbname="InvDate"  )
+column=(type=char(75) updatewhereclause=yes name=aliasname dbname="AliasName"  )
+column=(type=char(100) updatewhereclause=yes name=item dbname="Item"  )
+column=(type=char(20) updatewhereclause=yes name=type dbname="Type"  )
+column=(type=decimal(2) updatewhereclause=yes name=qty dbname="Qty"  )
+column=(type=decimal(10) updatewhereclause=yes name=rate dbname="Rate"  )
+column=(type=decimal(2) updatewhereclause=yes name=value dbname="Value"  )
+ retrieve="SELECT 
+	RowGroup=1,
+	ItemType='MEDICINE',
+	RegNo = P.RegNo,
+	Patient=P.Name,  
+	AdmissionCode=SL.AdmissionCode,
+	AdmittedOn=PA.Date,
+	AdmittedBy=(SELECT USERS.UserName FROM USERS WHERE USERCODE = PA.UserCode),
+	DischargedOn=PA.DischargedOn,
+	DischargedBy=(SELECT USERS.UserName FROM USERS WHERE USERCODE = PA.DischargedBy),
+	PA.Discharged,
+	InvCode=SL.SaleInvCode,
+	InvDate=SL.Date,
+	AliasName= I.CustomICode,
+	Item=I.Name,
+	Type='SL',
+	Qty  = SUM(SD.looseQty),
+	Rate = (SD.SalePrice - SD.ItemFlatDisc) * (1 - SD.DiscPerc * .01) * (1 - SL.DiscPerc * .01),
+	Value= Round(SUM(SD.looseQty * (SD.SalePrice - SD.ItemFlatDisc) * (1 - SD.DiscPerc * .01) * (1 - SL.DiscPerc * .01)), 2)
+FROM 
+	Patient P,
+	PatientAdmission PA,
+	Saledetail SD,
+	SaleLedger SL,
+	Item I
+WHERE
+	( PA.AdmissionCode = :ar_admissioncode ) AND
+	( PA.PatientCode = P.PatientCode ) and  
+	( SL.AdmissionCode = PA.AdmissionCode ) and  
+	( SL.SaleInvCode = SD.SaleInvCode ) and
+	( SD.ICode = I.Icode )
+GROUP  BY
+	P.RegNo,
+	P.Name,
+	SL.AdmissionCode,
+	PA.Date,
+	PA.UserCode,
+	PA.DischargedOn,
+	PA.DischargedBy,
+	PA.Discharged,
+	SL.SaleInvCode,
+	SL.Date,
+	I.CustomICode,
+	I.Name,
+	SD.SalePrice,
+	SD.ItemFlatDisc,
+	SD.DiscPerc,
+	SL.DiscPerc
+UNION ALL
+SELECT 
+	RowGroup=2,
+	ItemType='MEDICINE',
+	RegNo = P.RegNo,
+	Patient=P.Name,
+	AdmissionCode=SL.AdmissionCode,
+	AdmittedOn=PA.Date,
+	AdmittedBy=(SELECT USERS.UserName FROM USERS WHERE USERCODE = PA.UserCode),
+	DischargedOn=PA.DischargedOn,
+	DischargedBy=(SELECT USERS.UserName FROM USERS WHERE USERCODE = PA.DischargedBy),
+	PA.Discharged,
+	InvCode=SL.SRInvCode,
+	InvDate=SL.Date,
+	AliasName= I.CustomICode,
+	Item=I.Name,
+	Type='SR',
+	Qty  = - SUM(SD.looseQty),
+	Rate = SD.SRPrice * (1 - SD.DiscPerc * .01) * (1 - SL.DiscPerc * .01),
+	Value= - Round(SUM(SD.looseQty * (SD.SRPrice) * (1 - SD.DiscPerc * .01) * (1 - SL.DiscPerc * .01)), 2)
+FROM 
+	Patient P,
+	PatientAdmission PA,
+	SRDetail SD,
+	SRLedger SL,
+	Item I
+WHERE
+	( PA.AdmissionCode = :ar_admissioncode ) AND
+	( PA.PatientCode = P.PatientCode ) and  
+	( SL.AdmissionCode = PA.AdmissionCode ) and  
+	( SL.SRInvCode = SD.SRInvCode ) and
+	( SD.ICode = I.Icode )
+GROUP  BY
+	P.RegNo,
+	P.Name,
+	SL.AdmissionCode,
+	PA.Date,
+	PA.UserCode,
+	PA.DischargedOn,
+	PA.DischargedBy,
+	PA.Discharged,
+	SL.SRInvCode,
+	SL.Date,
+	I.CustomICode,
+	I.Name,
+	SD.SRPrice,
+	SD.DiscPerc,
+	SL.DiscPerc
+UNION ALL
+SELECT 
+	RowGroup=3,
+	ItemType='SERVICES',
+	RegNo = P.RegNo,
+	Patient=P.Name,
+	AdmissionCode=SL.AdmissionCode,
+	AdmittedOn=PA.Date,
+	AdmittedBy=(SELECT USERS.UserName FROM USERS WHERE USERCODE = PA.UserCode),
+	DischargedOn=PA.DischargedOn,
+	DischargedBy=(SELECT USERS.UserName FROM USERS WHERE USERCODE = PA.DischargedBy),
+	PA.Discharged,
+	InvCode=SL.ServiceInvCode,
+	InvDate=SL.Date,
+	AliasName= '',
+	Item=S.Name,
+	Type='SV',
+	Qty  = SUM(SD.Qty),
+	Rate = (SD.Price - SD.ServiceFlatDisc) * (1 - SD.DiscPerc * .01) * (1 - SL.DiscPerc * .01),
+	Value= Round(SUM(SD.Qty * (SD.Price - SD.ServiceFlatDisc) * (1 - SD.DiscPerc * .01) * (1 - SL.DiscPerc * .01)), 2)
+FROM 
+	Patient P,
+	PatientAdmission PA,
+	Servicedetail SD,
+	ServiceHeader SL,
+	Service S
+WHERE
+	( PA.AdmissionCode = :ar_admissioncode ) AND
+	( PA.PatientCode = P.PatientCode ) and  
+	( SL.AdmissionCode = PA.AdmissionCode ) and  
+	( SL.ServiceInvCode = SD.ServiceInvCode ) and
+	( SD.ServiceCode = S.Servicecode )
+GROUP  BY
+	P.RegNo,
+	P.Name,
+	SL.AdmissionCode,
+	PA.Date,
+	PA.UserCode,
+	PA.DischargedOn,
+	PA.DischargedBy,
+	PA.Discharged,
+	SL.ServiceInvCode,
+	SL.Date,
+	S.Name,
+	SD.Price,
+	SD.ServiceFlatDisc, 
+	SD.DiscPerc,
+	SL.DiscPerc
+UNION ALL
+SELECT 
+	RowGroup=4,
+	ItemType='SERVICES',
+	RegNo = P.RegNo,
+	Patient=P.Name,
+	AdmissionCode=SL.AdmissionCode,
+	AdmittedOn=PA.Date,
+	AdmittedBy=(SELECT USERS.UserName FROM USERS WHERE USERCODE = PA.UserCode),
+	DischargedOn=PA.DischargedOn,
+	DischargedBy=(SELECT USERS.UserName FROM USERS WHERE USERCODE = PA.DischargedBy),
+	PA.Discharged,
+	InvCode=SL.ServiceRInvCode,
+	InvDate=SL.Date,
+	AliasName= '',
+	Item=S.Name,
+	Type='RS',
+	Qty  = - SUM(SD.Qty),
+	Rate = (SD.ServicePrice - SD.ServiceFlatDisc) * (1 - SD.DiscPerc * .01) * (1 - SL.DiscPerc * .01),
+	Value= - Round(SUM(SD.Qty * (SD.ServicePrice - SD.ServiceFlatDisc) * (1 - SD.DiscPerc * .01) * (1 - SL.DiscPerc * .01)), 2)
+FROM 
+	Patient P,
+	PatientAdmission PA,
+	ServiceRDetail SD,
+	ServiceRHeader SL,
+	Service S
+WHERE
+	( PA.AdmissionCode = :ar_admissioncode ) AND
+	( PA.PatientCode = P.PatientCode ) and  
+	( SL.AdmissionCode = PA.AdmissionCode ) and  
+	( SL.ServiceRInvCode = SD.ServiceRInvCode ) and
+	( SD.ServiceCode = S.Servicecode )
+GROUP  BY
+	P.RegNo,
+	P.Name,
+	SL.AdmissionCode,
+	PA.Date,
+	PA.UserCode,
+	PA.DischargedOn,
+	PA.DischargedBy,
+	PA.Discharged,
+	SL.ServiceRInvCode,
+	SL.Date,
+	S.Name,
+	SD.ServicePrice,
+	SD.ServiceFlatDisc, 
+	SD.DiscPerc,
+	SL.DiscPerc
+UNION ALL
+SELECT 
+	RowGroup=5,
+	ItemType='OTHERS',
+	RegNo = P.RegNo,
+	Patient=P.Name,
+	AdmissionCode=PA.AdmissionCode,
+	AdmittedOn=PA.Date,
+	AdmittedBy=(SELECT USERS.UserName FROM USERS WHERE USERCODE = PA.UserCode),
+	DischargedOn=PA.DischargedOn,
+	DischargedBy=(SELECT USERS.UserName FROM USERS WHERE USERCODE = PA.DischargedBy),
+	PA.Discharged,
+	InvCode=GL.GLVochCode,
+	InvDate=GL.Date,
+	AliasName= GD.CHKNO,
+	Item=GD.Remarks,
+	Type=VC.ShortName,
+	Qty  = NULL,
+	Rate = NULL,
+	Value= SUM(GD.Debit - Credit)
+FROM 
+	Patient P,
+	PatientAdmission PA,
+	GLDetail GD,
+	GLHeader GL,
+	VocherCategory VC
+WHERE
+	( PA.AdmissionCode = :ar_admissioncode ) AND
+	( PA.PatientCode = P.PatientCode ) AND
+	( GL.Posted = 'Y' ) AND
+	( GD.PatientCode = P.PatientCode ) AND
+	( GL.GLVochCode = GD.GLVochCode ) AND
+	( GL.VochCatCode = VC.VochCatCode ) AND
+	( GL.Date >= PA.Date ) AND
+	( GL.Date <= PA.DischargedOn )
+GROUP  BY
+	P.RegNo,
+	P.Name,
+	PA.AdmissionCode,
+	PA.Date,
+	PA.UserCode,
+	PA.DischargedOn,
+	PA.DischargedBy,
+	PA.Discharged,
+	GL.GLVochCode,
+	GL.Date,
+	VC.ShortName,
+	GD.CHKNO,
+	GD.Remarks
+ORDER BY
+	RowGroup,
+	ItemType,
+	RegNo,
+	Patient,
+	InvDate,
+	Type,
+	InvCode,
+	Item,
+	AliasName,
+	Qty,
+	Rate,
+	Value
+"
+  arguments=(("ar_admissioncode", number))
+ sort="rowgroup A, itemtype A, regno A, patient A, invdate A, type A, invcode A"
+)
+group(level=1 header.height=241 trailer.height=200 by=("itemtype"  ) header.color="536870912" trailer.color="536870912" )
+compute(name=compute_5 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="466" y="50" height="158" width="658" format="dd/mm/yyyy" expression="today()" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_6 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" background.mode="2" background.color="16777215" color="0" alignment="2" border="0" x="2408" y="33" height="166" width="2475" text="In-Patient Bill" html.valueishtml="0" )
+text(name=t_7 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="91" y="50" height="166" width="300" text="Date: " html.valueishtml="0" )
+text(name=t_8 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="91" y="800" height="158" width="591" text="Phone(s) :" html.valueishtml="0" )
+compute(name=c_phone visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="758" y="800" height="158" width="2675" format="[general]" expression="f_ReportHeaderInfo('phone')" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_9 visible="1	0" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="3466" y="800" height="158" width="316" text="Fax :" html.valueishtml="0" )
+compute(name=c_companyname visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" x="91" y="241" height="150" width="7000" format="[general]" expression="f_ReportHeaderInfo('clientname')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=c_address1 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="91" y="425" height="158" width="7000" format="[general]" expression="f_ReportHeaderInfo('address1')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=c_fax visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="3825" y="800" height="158" width="3266" format="[general]" expression="'Fax : '+f_ReportHeaderInfo('fax')" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_6 visible="1" band=header font.charset="0" font.face="Arial Narrow" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="5908" y="50" height="158" width="1183" format="[general]" expression="'Page ' + page() + ' of ' + pageCount()" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=c_address2 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="91" y="616" height="150" width="7000" format="[general]" expression="f_ReportHeaderInfo('address2')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=regno_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="91" y="1000" height="175" width="541" text="Reg. No.:" html.valueishtml="0" )
+text(name=patient_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="91" y="1208" height="175" width="541" text="Patient:" html.valueishtml="0" )
+text(name=admissioncode_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="4591" y="1000" height="175" width="991" text="Admission Code:" html.valueishtml="0" )
+text(name=admittedon_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="4591" y="1208" height="175" width="991" text="Admitted On:" html.valueishtml="0" )
+text(name=admittedby_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="4591" y="1416" height="175" width="991" text="Admittedby" html.valueishtml="0" )
+column(name=admissioncode visible="1" band=header id=5 x="5633" y="1000" height="175" width="1450" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=admittedon visible="1" band=header id=6 x="5633" y="1208" height="175" width="1450" color="0" border="0" alignment="0" format="dd/mm/yyyy hh:mm" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=admittedby visible="1" band=header id=7 x="5633" y="1416" height="175" width="1450" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+line(name=l_1 visible="1" band=header background.mode="2" background.color="16777215" pen.style="2" pen.width="8" pen.color="0" x1="91" y1="1625" x2="7091" y2="1625" )
+line(name=l_2 visible="1" band=header background.mode="2" background.color="16777215" pen.style="2" pen.width="8" pen.color="0" x1="91" y1="2008" x2="7091" y2="2008" )
+text(name=invcode_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="2" border="0" x="91" y="1666" height="308" width="566" text="Invoice
+Code" html.valueishtml="0" )
+text(name=invdate_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="2" border="0" x="716" y="1666" height="308" width="1033" text="Date" html.valueishtml="0" )
+text(name=item_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="2" border="0" x="1808" y="1666" height="158" width="2616" text="Description" html.valueishtml="0" )
+text(name=type_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="2" border="0" x="4491" y="1666" height="308" width="291" text="Type" html.valueishtml="0" )
+text(name=qty_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="1" border="0" x="4841" y="1666" height="308" width="491" text="Qty" html.valueishtml="0" )
+text(name=rate_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="1" border="0" x="5391" y="1666" height="308" width="641" text="Rate" html.valueishtml="0" )
+text(name=value_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="1" border="0" x="6100" y="1666" height="308" width="950" text="Value" html.valueishtml="0" )
+text(name=t_4 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="0" border="0" x="91" y="1416" height="158" width="4300" text="Legends: SL=Sale, SR=Sale Return, SV=Service Sale, RS=Service Return" html.valueishtml="0" )
+column(name=patient visible="1" band=header id=4 x="683" y="1208" height="175" width="3708" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=60 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=regno visible="1" band=header id=3 x="683" y="1000" height="175" width="3708" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=50 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+text(name=t_3 visible="1	if(discharged='Y',0,1)" band=summary font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="100" y="241" height="166" width="6958" text="Note: Patient not yet discharged, so this document should not be treated as Final Patient Bill." html.valueishtml="0" )
+text(name=dischargedon_t visible="1	if(discharged='Y',1,0)" band=summary font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="100" y="25" height="183" width="941" text="Discharged On:" html.valueishtml="0" )
+column(name=dischargedon visible="1	if(discharged='Y',1,0)" band=summary id=8 x="1083" y="25" height="183" width="1133" color="0" border="0" alignment="0" format="[shortdate] [time]" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+text(name=dischargedby_t visible="1	if(discharged='Y',1,0)" band=summary font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="2291" y="25" height="183" width="933" text="Discharged By:" html.valueishtml="0" )
+column(name=dischargedby visible="1	if(discharged='Y',1,0)" band=summary id=9 x="3266" y="25" height="183" width="1141" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+text(name=t_2 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-12" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="4625" y="25" height="183" width="891" text="Grand Total:" html.valueishtml="0" )
+compute(name=compute_2 visible="1	if(sum(value for all)=0,0,1)" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-12" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" x="5583" y="25" height="183" width="1466" format="###,###,###0.00" expression="sum(value for all)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+column(name=item visible="1" band=detail id=14 x="1808" y="8" height="166" width="2616" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=60 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=type visible="1" band=detail id=15 x="4491" y="8" height="166" width="291" color="0" border="0" alignment="2" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=2 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=qty visible="1" band=detail id=16 x="4825" y="8" height="166" width="516" color="0" border="0" alignment="1" format="	if( itemtype = 'SERVICES', f_setserviceqty_format(), f_SetColumnFormat('Qty'))" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=rate visible="1	if(rate=0,0,1)" band=detail id=17 x="5391" y="8" height="166" width="641" color="0" border="0" alignment="1" format="###,###,###0.00" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=value visible="1	if(value=0,0,1)" band=detail id=18 x="6100" y="8" height="166" width="950" color="0" border="0" alignment="1" format="###,###,###0.00;[RED](###,###,###0.00)" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=invdate visible="1" band=detail id=12 x="716" y="8" height="166" width="1033" color="0" border="0" alignment="0" format="dd/mm/yyyy hh:mm" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=invcode visible="1" band=detail id=11 x="100" y="8" height="166" width="566" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=itemtype visible="1" band=header.1 id=2 x="91" y="8" height="216" width="1658" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=8 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-12" font.pitch="2" font.weight="700" tabsequence=0 )
+compute(name=compute_1 visible="1	if(sum(value for group 1)=0,0,1)" band=trailer.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-12" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" x="5583" y="8" height="166" width="1466" format="###,###,###0.00" expression="sum(value for group 1)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_1 visible="1" band=trailer.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-12" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="4625" y="8" height="166" width="891" text="Sub. Total:" html.valueishtml="0" )
+htmltable(border="1" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" encodeSelfLinkArgs="1" generateJavaScript="1" netscapeLayers="0" pagingMethod=0 )
+xhtmlgen() cssgen(sessionSpecific="0" )
+xmlgen(inline="0" )
+xsltgen()
+jsgen()
+export.xml(headGroups="1" includewhitespace="0" metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 distill.customPostScript="0" xslfop.print="0" )
+export.xhtml()

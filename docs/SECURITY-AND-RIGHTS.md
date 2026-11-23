@@ -1,0 +1,18 @@
+# Security, rights and preferences
+
+## Users, groups, rights (tables)
+`Users` (`UserCode`, `UserName`, `Password` compared case-insensitively in plain text by the client, `Active` Y/N) - `UserGroups` (user <-> group) - `GroupRights` (group <-> right) - `UserRights` (per-user override with `Status`) - `Rights` (`RightCode`, `RightName`, `MenuName`, `LevelIndex`, `IndicesString`, `Object`).
+`Rights.Object`: **`A`** = a menu item (the `IndicesString` is the 1-based index path of the item inside the menu tree, e.g. `5,3,2,` = 5th top-level item, 3rd child, 2nd grand-child, separators counted); **`W`** = a window-level / action right looked up by code from the code.
+
+## How a user's rights are loaded
+`d_security(ar_user, ar_objectlevel)` = union of (a) rights granted through the user's groups (`Status = 1`) and (b) the user's own `UserRights` rows (`Status` 0 or 1), ordered by status. Loaded twice after login by `w_main.open`: `gds_security` (`'A'`) and `gds_securitywindow` (`'W'`).
+`m_mainmenu.mf_initsecurityapp(menu)` (and `w_main.wf_initsecurityapp`) loops over `gds_security`: for each row it descends `levelindex` levels using `wf_findindex(n, indicesstring)` and sets `item[..].visible` and `.enabled` to `status = 1`. Menu items are **created hidden** (`this.visible = false` in the `create` event of 693 of the 718 `m_mainmenu` items, `enabled = false` for 19); only items whose right is returned with `status = 1` become visible/enabled, a user-level row with `status = 0` keeps an item hidden. Each assignment is wrapped in `try ... catch` so a stale index path in the rights table is ignored.
+Window code asks `gds_securitywindow.find("rightcode = N")` for sub-rights, e.g. **515** = may see items marked `restricted`, **1118** = start-up (task list) window, per-button rights inside windows (`AssocRightCode` in the preference rows).
+Item/customer/voucher **category** rights: when preference `GroupCategoryRights = Y`, `d_usergroups` + `d_groupcatcode` fill `gi_catlist` (category codes the user's groups may see) and the cached item list (`gd_itemsinfo`) is retrieved filtered by those categories and by `f_getgroupcode(user)`. Group 5 (`gl_remotegroup = 5`) is the remote/sync group (no local item cache).
+
+## Preferences
+`SoftwarePreferences` rows (name, caption, data type, `PrefValue`, `PrefValue2`, category/sub-category tables `PreferencesCategory`, `PreferencesSubCategory`, `UsedObject`, `Visible`, `AssocPrefName`, `AssocRightCode`) are read through `d_general1` into `gds_preferences`; `f_stringpreferences("Name")` / `f_numberpreferences("Name")` look a value up there (hundreds of behaviour switches: rounding, price checks, group-category rights, report options ...). `w_preferences` edits them (menu *Maintenance > Preferences*). Column display preferences: `d_columnpreferences` -> `gds_colpref`.
+
+## Hard-coded or sensitive items found in the legacy code (do **not** copy into the rebuild)
+- The start-up code builds SQL Server `BACKUP/RESTORE ... MEDIAPASSWORD/PASSWORD` strings from fixed prefixes plus the server name (`traderappv1.wf_backupdatabase`, `open`); the database login is `sa` with a password taken from application settings (`gs_password`); `w_login1` contains a hard-coded password for one named remote server; the login compares plain-text passwords; licence helpers use obfuscated file names (`systemab.dll`, `tapi161.dll`). The rebuild must use hashed passwords, per-user DB roles or an API layer, and its own secret management.
+- Locations (by file, without values): `recovered/scripts/abuzarapp/traderappv1.pbs`, `recovered/scripts/abuzarapp/w_login1.pbs`, `recovered/scripts/abuzarapp/w_login.pbs`. The `recovered/` tree must never be published.

@@ -1,0 +1,28 @@
+# w_advancepurchase
+
+- title: Advanced Purchase (in Packs)
+- library: advancedpurchase (Purchase & stock)
+- ancestor: `w_multi_entry`
+- size: 3039 x 2656 PBU
+- reached from: (opened from code / other windows)
+- script size: 3937 lines; 21 events, 77 functions
+
+## Controls (3)
+
+- `tab_retrieve` (tab_retrieve)
+- `dw_purinvrep` (u_dwstandard) dataobject `d_purchaseinvreportstock_retailer`
+- `dw_changeprice_foritemlog` (datawindow) dataobject `d_purdetail_changeprice_foritemlog`
+
+## Data
+
+- DataWindows: `d_advpurinvno`, `d_groupallowedmoduleheader`, `d_normalpurchasedetail`, `d_populateditems_active`, `d_populateditems_active_and`, `d_populatepurorder`, `d_purchaseinvreportstock_retailer`, `d_purdetail_changeprice_foritemlog`
+- tables touched by embedded SQL: accounts, advpurdetail, advpurheader, alternateitemalias, currency, godown, godowndetail, groupallowedgodown, item, itemcategory, itemimage, itemsgroupcategory, manufacturer, measuringunit, purdetail, purledger, purorderdetail, purorderheader, supplier, usergroups
+- stored procedures: createpurchase_from_advpurchase, getfirstitemimagedetail, getglobalcode, getitemavgprice, getitemstockall, getitemstockbatch, getitemstockinallowedgodown, getitemstocktotal, getmaxutn, purchasebased_satisfydue, updateactivitymonitor, updateitemavgprice, updateitemstockbatch, updatetransitstock, virtualgl
+- global functions: f_datepreferences, f_drilldown_itemsearch, f_generateheaderinvcode, f_generateitemlog, f_getgroupcode, f_groupallowedgodowncount, f_groupgodownstrategy, f_islicenseexpire, f_newtableid, f_numberpreferences, f_setcolumnstyle, f_stringpreferences, f_validatedw, f_writeimgtofile
+- windows opened: w_account_ledger, w_amountoninvoice, w_arg_item_populate3, w_arg_sinvcode_linvcode, w_copypurinvoicefrom, w_gstcalculator, w_itemflatdiscountcalculator, w_itempurchasehistory, w_popup_responsivesearch_alternatealias, w_preview_invoices, w_pricecalculator_pur, w_purinv_slip, w_salesmanpassword, w_setquantity, w_summaccount_balance, w_unittaxcalculator, w_update_alternate_aliasname_form
+
+## Events and functions
+
+`w_advancepurchase.create`, `w_advancepurchase.destroy`, `w_advancepurchase.ue_save`, `w_advancepurchase.ue_newform`, `w_advancepurchase.ue_detail`, `w_advancepurchase.ue_newitem`, `w_advancepurchase.ue_deleteitem`, `w_advancepurchase.close`, `w_advancepurchase.ue_new`, `w_advancepurchase.ue_list`, `w_advancepurchase.ue_refreshddw`, `w_advancepurchase.ue_print`, `w_advancepurchase.ue_postopen`, `w_advancepurchase.open`, `w_advancepurchase.closequery`, `dw_footer.itemchanged`, `dw_detail.itemchanged`, `dw_detail.ue_dwnkey`, `dw_itemsdetail.itemchanged`, `dw_itemsdetail.ue_focusqty`, `dw_itemsdetail.ue_dwnkey`, `w_advancepurchase.wf_setsuppinfo`, `w_advancepurchase.wf_setsuppname`, `w_advancepurchase.wf_validateitem`, `w_advancepurchase.wf_protectdw`, `w_advancepurchase.wf_purchaseslip`, `w_advancepurchase.wf_releaselock`, `w_advancepurchase.wf_applycurrency`, `w_advancepurchase.wf_assigndatawindowobjects`, `w_advancepurchase.wf_fetchserverdate`, `w_advancepurchase.wf_findfullcode`, `w_advancepurchase.wf_findsuppcode`, `w_advancepurchase.wf_genfullcode`, `w_advancepurchase.wf_getitemsaleprice`, `w_advancepurchase.wf_getpomanfcode`, `w_advancepurchase.wf_initmodify`, `w_advancepurchase.wf_isinvoiceinuse`, `w_advancepurchase.wf_iteminfo`, `w_advancepurchase.wf_itempurchasehistory`, `w_advancepurchase.wf_lockpurchaseinvoice`, `w_advancepurchase.wf_lockpurinvoices`, `w_advancepurchase.wf_populatedetaildwfrompo`, `w_advancepurchase.wf_populatefiltereditems`, `w_advancepurchase.wf_populatepurorder`, `w_advancepurchase.wf_replacesalediscperc`, `w_advancepurchase.wf_retrievelist`, `w_advancepurchase.wf_retrievelistall`, `w_advancepurchase.wf_setamountoninvoice`, `w_advancepurchase.wf_setcurrency`, `w_advancepurchase.wf_setgodownoption`, `w_advancepurchase.wf_setpurchasetype`, `w_advancepurchase.wf_setpurorderinfo`, `w_advancepurchase.wf_setquantity`, `w_advancepurchase.wf_updateitemavgprice`, `w_advancepurchase.wf_updateitempurdisc`, `w_advancepurchase.wf_updaterecentpurprice`, `w_advancepurchase.wf_validatefullcode`, `w_advancepurchase.wf_selectprintreport`, `w_advancepurchase.wf_post`, `w_advancepurchase.wf_saveandpost`, `w_advancepurchase.wf_inititeminfo`, `w_advancepurchase.wf_grandtotal`, `w_advancepurchase.wf_allowpurchasemodification`, `w_advancepurchase.wf_apply_advancepurchase_pref`, `w_advancepurchase.wf_post_purchase`, `w_advancepurchase.wf_apply_measureunit`, `w_advancepurchase.wf_itemstockinfo`, `w_advancepurchase.wf_setiteminfo`, `w_advancepurchase.wf_setpurorderqty`, `w_advancepurchase.wf_updateitemstock`, `w_advancepurchase.wf_set_itemtotal_formatmask`, `w_advancepurchase.wf_post_adv_purchase`, `w_advancepurchase.wf_lock_adv_purchase_invoice`, `w_advancepurchase.wf_lock_actualpurchase`, `w_advancepurchase.wf_item_image_setting`, `w_advancepurchase.wf_set_itemimage`, `w_advancepurchase.wf_showaccountledger`, `w_advancepurchase.wf_showsummaryaccountbalance`, `w_advancepurchase.wf_filter_po_itemsonly`, `w_advancepurchase.wf_set_po_values`, `w_advancepurchase.wf_updateitemretailprice`, `w_advancepurchase.wf_updateitemsaleprice`, `w_advancepurchase.wf_updateitempurprice`, `w_advancepurchase.wf_discperccalc`, `w_advancepurchase.wf_discpricecalc`, `dw_footer.losefocus`, `dw_footer.itemfocuschanged`, `dw_footer.itemerror`, `dw_detail.itemerror`, `dw_detail.itemfocuschanged`, `dw_detail.editchanged`, `dw_itemsdetail.itemfocuschanged`, `dw_itemsdetail.rowfocuschanged`, `dw_itemsdetail.losefocus`, `dw_itemsdetail.editchanged`, `dw_itemsdetail.itemerror`, `dw_itemsdetail.getfocus`, `dw_itemsdetail.rowfocuschanging`
+
+Source: `recovered/scripts/advancedpurchase/w_advancepurchase.pbs`

@@ -1,0 +1,131 @@
+release 12.5;
+datawindow ( units=0 timer_interval=60000 processing=0 color=1073741824 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.printername=""  print.documentname=""  print.orientation=0 print.margin.left=110 print.margin.right=110 print.margin.top=96 print.margin.bottom=96 print.paper.size=0 print.paper.source=0 print.canusedefaultprinter=yes selected.mouse=no hidegrayline=no showbackcoloronxp=no)
+header(height=492 color="536870912" )
+summary(height=112 color="536870912" )
+footer(height=0 color="536870912" )
+detail(height=76 color="536870912" )
+table(column=(type=datetime updatewhereclause=yes name=date dbname="Date"  )
+column=(type=decimal(4) updatewhereclause=yes name=cashservice dbname="CashService"  )
+column=(type=decimal(4) updatewhereclause=yes name=creditservice dbname="CreditService"  )
+column=(type=decimal(4) updatewhereclause=yes name=totalservice dbname="TotalService"  )
+column=(type=decimal(4) updatewhereclause=yes name=cashservicereturn dbname="CashServiceReturn"  )
+column=(type=decimal(4) updatewhereclause=yes name=creditservicereturn dbname="CreditServiceReturn"  )
+column=(type=decimal(4) updatewhereclause=yes name=totalservicereturn dbname="TotalServiceReturn"  )
+column=(type=decimal(4) updatewhereclause=yes name=netservice dbname="NetService"  )
+column=(type=decimal(6) updatewhereclause=yes name=netshare dbname="NetShare"  )
+ retrieve="SELECT  
+	Date = CONVERT(DATETIME, CONVERT(varchar(10), T.Date, 101)),
+	CashService = SUM(CASE Type WHEN 1 THEN T.SvcAmt ELSE 0.00 END),
+	CreditService = SUM(CASE Type WHEN 2 THEN T.SvcAmt ELSE 0.00 END),
+	TotalService = SUM(CASE WHEN Type <= 2 THEN T.SvcAmt ELSE 0.00 END),
+	CashServiceReturn = SUM(CASE Type WHEN 3 THEN T.SvcRetAmt ELSE 0.00 END),
+	CreditServiceReturn = SUM(CASE Type WHEN 4 THEN T.SvcRetAmt ELSE 0.00 END),
+	TotalServiceReturn = SUM(CASE WHEN Type > 2 THEN T.SvcRetAmt ELSE 0.00 END),
+	NetService = SUM(T.SvcAmt - T.SvcRetAmt) - SUM(T.SvcShare - T.SvcRetShare),
+	NetShare = SUM(T.SvcShare - T.SvcRetShare)
+FROM
+	(SELECT 
+		InvCode = H.ServiceInvCode,
+		Date = H.Date,
+		Type = CASE H.ServiceCatCode WHEN 10 THEN 1 ELSE 2 END,
+		SvcAmt = ISNULL(SUM(D.Qty * (D.price - D.ServiceFlatDisc) * (1 - D.DiscPerc * 0.01) * (1 - H.DiscPerc * 0.01)) + MiscCharges - FlatDisc, 0) +
+			Round(Sum((D.qty * (D.price - D.ServiceFlatDisc) * (1 - D.discperc * 0.01)) * 0.01 * D.servicegstPerc) +
+			Sum(D.qty * D.serviceflattax ) +
+			Round((Sum(D.qty * (D.price - D.ServiceFlatDisc) * (1 - D.discperc * 0.01) * (1 - H.discperc * 0.01)) - H.flatdisc ) * 0.01 * H.serviceinvgstperc,2), 0),
+		SvcShare = ISNULL(SUM(D.Qty * (D.Commission - D.ServiceFlatDisc) * (1 - D.DiscPerc * 0.01) * (1 - H.DiscPerc * 0.01)), 0),
+		SvcRetAmt = 0.00,
+		SvcRetShare = 0.00
+	FROM 
+		ServiceHeader H, ServiceDetail D
+	WHERE 
+		H.Date BETWEEN :ad_startdate AND :ad_enddate AND
+		H.ServiceInvCode = D.ServiceInvCode 
+	GROUP BY
+		H.ServiceInvCode,
+		H.Date,
+		H.ServiceCatCode,
+		H.MiscCharges,
+		H.serviceinvgstperc,
+		H.FlatDisc
+	UNION ALL
+	SELECT 
+		InvCode = H.ServiceRInvCode,
+		Date = H.Date,
+		Type = CASE H.ServiceRCatCode WHEN 13 THEN 3 ELSE 4 END,
+		SvcAmt = 0.00,
+		SvcShare = 0.00,
+		SvcRetAmt = ISNULL(SUM(D.Qty * (D.ServicePrice - D.ServiceFlatDisc) * (1 - D.DiscPerc * 0.01) * (1 - H.DiscPerc * 0.01)) + MiscCharges - FlatDisc, 0) + 
+			Round(Sum((D.qty * (D.serviceprice - D.ServiceFlatDisc) * (1 - D.discperc * 0.01)) * 0.01 * D.servicegstPerc) +
+			Sum(D.qty * D.serviceflattax) + 
+			Round((Sum(D.qty * (D.serviceprice - D.ServiceFlatDisc) * (1 - D.discperc * 0.01) * (1 - H.discperc * 0.01)) - H.flatdisc ) * 0.01 * H.serviceinvgstperc, 2), 0),
+		SvcRetShare = ISNULL(SUM(D.Qty * (D.Commission - D.ServiceFlatDisc) * (1 - D.DiscPerc * 0.01) * (1 - H.DiscPerc * 0.01)), 0)
+	FROM 
+		ServiceRHeader H, ServiceRDetail D
+	WHERE 
+		H.Date BETWEEN :ad_startdate AND :ad_enddate AND
+		H.ServiceRInvCode = D.ServiceRInvCode 
+	GROUP BY
+		H.ServiceRInvCode,
+		H.Date,
+		H.ServiceRCatCode,
+		H.MiscCharges,
+		H.serviceinvgstperc,
+		H.FlatDisc) T
+GROUP BY
+	CONVERT(DATETIME, CONVERT(varchar(10), T.Date, 101))
+ORDER BY
+	Date"
+  arguments=(("ad_startdate", datetime), ("ad_enddate", datetime))
+)
+text(name=t_15 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="37" y="24" height="64" width="151" text="Date: " html.valueishtml="0" )
+compute(name=compute_1 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="178" y="24" height="60" width="640" format="dd/mm/yyyy" expression="today()" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_2 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="553648127" color="0" alignment="0" border="0" x="32" y="320" height="64" width="133" text="Date:" html.valueishtml="0" )
+text(name=t_3 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="1" border="0" x="736" y="320" height="64" width="91" text="TO:" html.valueishtml="0" )
+compute(name=c_startdate visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" x="165" y="320" height="60" width="507" format="dd/mm/yyyy" expression=" ad_startDate " alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=c_edate visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" x="846" y="320" height="60" width="507" format="dd/mm/yyyy" expression=" ad_EndDate " alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_creditservice visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="1" border="0" x="713" y="408" height="64" width="379" text="Credit Services" html.valueishtml="0" )
+text(name=t_totalservice visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="1" border="0" x="1106" y="408" height="64" width="384" text="Total Services" html.valueishtml="0" )
+text(name=t_cashservicereturn visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="2" border="0" x="1504" y="408" height="64" width="375" text="Cash S/Return" html.valueishtml="0" )
+text(name=t_creditservicereturn visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="1" border="0" x="1897" y="408" height="64" width="384" text="Credit S/Return" html.valueishtml="0" )
+text(name=t_totalservicereturn visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="1" border="0" x="2295" y="408" height="64" width="370" text="Total S/Return" html.valueishtml="0" )
+compute(name=c_address1 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="32" y="172" height="64" width="3424" format="[general]" expression="f_ReportHeaderInfo('address1')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=c_companyname visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" x="32" y="96" height="64" width="3424" format="[general]" expression="f_ReportHeaderInfo('clientname')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+line(name=l_1 visible="1" band=header background.mode="2" background.color="16777215" pen.style="2" pen.width="5" pen.color="0" x1="32" y1="392" x2="3456" y2="392" )
+line(name=l_2 visible="1" band=header background.mode="2" background.color="16777215" pen.style="2" pen.width="5" pen.color="0" x1="32" y1="484" x2="3456" y2="484" )
+text(name=t_12 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" background.mode="2" background.color="16777215" color="0" alignment="2" border="0" x="32" y="16" height="64" width="3424" text="Date Wise Service Summary Report" html.valueishtml="0" )
+compute(name=compute_2 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="2830" y="16" height="60" width="626" format="[general]" expression="'Page ' + page() + ' of ' + pageCount()" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_cashservice visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="1" border="0" x="334" y="408" height="64" width="361" text="Cash Services" html.valueishtml="0" )
+text(name=t_date visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="2" border="0" x="32" y="408" height="64" width="283" text="Date" html.valueishtml="0" )
+compute(name=c_address2 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="32" y="248" height="60" width="3424" format="[general]" expression="f_ReportHeaderInfo('address2')" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_netshare visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="1" border="0" x="2679" y="408" height="64" width="352" text="Net Share" html.valueishtml="0" )
+text(name=t_netservice visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="1" border="0" x="3045" y="408" height="64" width="402" text="Net Services" html.valueishtml="0" )
+line(name=l_3 visible="1" band=summary background.mode="2" background.color="16777215" pen.style="2" pen.width="5" pen.color="0" x1="32" y1="4" x2="3456" y2="4" )
+line(name=l_4 visible="1" band=summary background.mode="2" background.color="16777215" pen.style="2" pen.width="5" pen.color="0" x1="32" y1="100" x2="3456" y2="100" )
+text(name=t_1 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" alignment="0" border="0" x="59" y="20" height="64" width="201" text="Total:" html.valueishtml="0" )
+compute(name=compute_10 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" x="320" y="20" height="68" width="375" format="###,###,##0.00" expression="sum(cashservice for all)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_9 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" x="713" y="20" height="68" width="379" format="###,###,##0.00" expression="sum(creditservice for all)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_8 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" x="1106" y="20" height="68" width="384" format="###,###,##0.00" expression="sum(totalservice for all)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_7 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" x="1504" y="20" height="68" width="375" format="###,###,##0.00" expression="sum(cashservicereturn for all)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_6 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" x="1897" y="20" height="68" width="384" format="###,###,##0.00" expression="sum(creditservicereturn for all)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_5 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" x="2295" y="20" height="68" width="370" format="###,###,##0.00" expression="sum(totalservicereturn for all)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_3 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" x="2679" y="20" height="68" width="352" format="###,###,##0.00" expression="sum(netshare for all)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_4 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" x="3045" y="20" height="68" width="402" format="###,###,##0.00" expression="sum(netservice for all)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+column(name=creditservice visible="1" band=detail id=3 x="713" y="4" height="68" width="379" color="33554432" border="0" alignment="1" format="###,###,##0.00" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=totalservice visible="1" band=detail id=4 x="1106" y="4" height="68" width="384" color="33554432" border="0" alignment="1" format="###,###,##0.00" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=cashservicereturn visible="1" band=detail id=5 x="1504" y="4" height="68" width="375" color="33554432" border="0" alignment="1" format="###,###,##0.00" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=creditservicereturn visible="1" band=detail id=6 x="1897" y="4" height="68" width="384" color="33554432" border="0" alignment="1" format="###,###,##0.00" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=totalservicereturn visible="1" band=detail id=7 x="2295" y="4" height="68" width="370" color="33554432" border="0" alignment="1" format="###,###,##0.00" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=cashservice visible="1" band=detail id=2 x="334" y="4" height="68" width="361" color="33554432" border="0" alignment="1" format="###,###,##0.00" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=date visible="1" band=detail id=1 x="32" y="4" height="68" width="283" color="33554432" border="0" alignment="0" format="dd/mm/yyyy" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=netshare visible="1" band=detail id=9 x="2679" y="4" height="68" width="352" color="33554432" border="0" alignment="1" format="###,###,##0.00" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=netservice visible="1" band=detail id=8 x="3045" y="4" height="68" width="402" color="33554432" border="0" alignment="1" format="###,###,##0.00" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+htmltable(border="1" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" encodeSelfLinkArgs="1" generateJavaScript="1" netscapeLayers="0" pagingMethod=0 )
+xhtmlgen() cssgen(sessionSpecific="0" )
+xmlgen(inline="0" )
+xsltgen()
+jsgen()
+export.xml(headGroups="1" includewhitespace="0" metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 distill.customPostScript="0" xslfop.print="0" )
+export.xhtml()

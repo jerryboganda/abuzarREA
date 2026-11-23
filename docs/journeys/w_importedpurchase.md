@@ -1,0 +1,28 @@
+# w_importedpurchase
+
+- title: Imported Purchase (in Packs)
+- library: advancedpurchase (Purchase & stock)
+- ancestor: `w_multi_entry`
+- size: 3021 x 2192 PBU
+- reached from: (opened from code / other windows)
+- script size: 3698 lines; 25 events, 75 functions
+
+## Controls (3)
+
+- `tab_retrieve` (tab_retrieve)
+- `dw_purinvrep` (u_dwstandard) dataobject `d_imp_purchase_printout`
+- `dw_changeprice_foritemlog` (datawindow) dataobject `d_purdetail_changeprice_foritemlog`
+
+## Data
+
+- DataWindows: `d_groupallowedmoduleheader`, `d_groupwiseimpexptemplate`, `d_imp_purchase_printout`, `d_imp_purinvoices_for_posting`, `d_imppurinvno`, `d_normalpurchasedetail`, `d_populateditems_active`, `d_populateditems_active_and`, `d_populatepurorder`, `d_purdetail_changeprice_foritemlog`
+- tables touched by embedded SQL: accounts, currency, godown, godowndetail, groupallowedgodown, imppurdetail, imppurheader, item, itemcategory, itemimage, itemsgroupcategory, manufacturer, measuringunit, purdetail, purledger, purorderdetail, purorderheader, supplier, usergroups
+- stored procedures: createpurchase_from_imppur, createvoucher_from_imppur, finalizeimppur, getfirstitemimagedetail, getitemavgprice, getitemstockall, getitemstockbatch, getitemstockinallowedgodown, getitemstocktotal, getmaxutn, purchasebased_satisfydue, updateitemavgprice, updateitemstockbatch, updatetransitstock, virtualgl
+- global functions: f_datepreferences, f_drilldown_itemsearch, f_generateheaderinvcode, f_generateitemlog, f_getgroupcode, f_groupallowedgodowncount, f_groupgodownstrategy, f_islicenseexpire, f_newtableid, f_numberpreferences, f_setcolumnstyle, f_stringpreferences, f_validatedw, f_writeimgtofile
+- windows opened: w_arg_item_populate3, w_arg_sinvcode_linvcode, w_editpurchaseorderform, w_itempurchasehistory, w_preview_invoices, w_purinv_slip, w_salesmanpassword, w_setquantity, w_unittaxcalculator
+
+## Events and functions
+
+`w_importedpurchase.create`, `w_importedpurchase.destroy`, `w_importedpurchase.ue_save`, `w_importedpurchase.ue_newform`, `w_importedpurchase.ue_detail`, `w_importedpurchase.ue_newitem`, `w_importedpurchase.ue_deleteitem`, `w_importedpurchase.close`, `w_importedpurchase.ue_new`, `w_importedpurchase.ue_list`, `w_importedpurchase.ue_refreshddw`, `w_importedpurchase.ue_print`, `w_importedpurchase.ue_postopen`, `w_importedpurchase.open`, `w_importedpurchase.closequery`, `tabpage_detail.create`, `tabpage_detail.destroy`, `dw_footer.itemchanged`, `dw_footer.ue_dwnkey`, `dw_footer.ue_enterkey`, `dw_detail.itemchanged`, `dw_detail.ue_dwnkey`, `dw_itemsdetail.itemchanged`, `dw_itemsdetail.ue_focusqty`, `dw_itemsdetail.ue_dwnkey`, `w_importedpurchase.wf_setsuppinfo`, `w_importedpurchase.wf_setsuppname`, `w_importedpurchase.wf_validateitem`, `w_importedpurchase.wf_protectdw`, `w_importedpurchase.wf_purchaseslip`, `w_importedpurchase.wf_releaselock`, `w_importedpurchase.wf_applycurrency`, `w_importedpurchase.wf_fetchserverdate`, `w_importedpurchase.wf_findfullcode`, `w_importedpurchase.wf_findsuppcode`, `w_importedpurchase.wf_genfullcode`, `w_importedpurchase.wf_getitemsaleprice`, `w_importedpurchase.wf_getpomanfcode`, `w_importedpurchase.wf_initmodify`, `w_importedpurchase.wf_isinvoiceinuse`, `w_importedpurchase.wf_iteminfo`, `w_importedpurchase.wf_itempurchasehistory`, `w_importedpurchase.wf_lockpurchaseinvoice`, `w_importedpurchase.wf_populatedetaildwfrompo`, `w_importedpurchase.wf_populatefiltereditems`, `w_importedpurchase.wf_populatepurorder`, `w_importedpurchase.wf_replacesalediscperc`, `w_importedpurchase.wf_retrievelist`, `w_importedpurchase.wf_retrievelistall`, `w_importedpurchase.wf_setcurrency`, `w_importedpurchase.wf_setgodownoption`, `w_importedpurchase.wf_setpurchasetype`, `w_importedpurchase.wf_setpurorderinfo`, `w_importedpurchase.wf_setquantity`, `w_importedpurchase.wf_updateitemavgprice`, `w_importedpurchase.wf_updateitempurdisc`, `w_importedpurchase.wf_updateitempurprice`, `w_importedpurchase.wf_updateitemsaleprice`, `w_importedpurchase.wf_updaterecentpurprice`, `w_importedpurchase.wf_validatefullcode`, `w_importedpurchase.wf_post`, `w_importedpurchase.wf_saveandpost`, `w_importedpurchase.wf_inititeminfo`, `w_importedpurchase.wf_grandtotal`, `w_importedpurchase.wf_allowpurchasemodification`, `w_importedpurchase.wf_apply_measureunit`, `w_importedpurchase.wf_itemstockinfo`, `w_importedpurchase.wf_setiteminfo`, `w_importedpurchase.wf_setpurorderqty`, `w_importedpurchase.wf_updateitemstock`, `w_importedpurchase.wf_set_itemtotal_formatmask`, `w_importedpurchase.wf_post_adv_purchase`, `w_importedpurchase.wf_lock_adv_purchase_invoice`, `w_importedpurchase.wf_lock_actualpurchase`, `w_importedpurchase.wf_item_image_setting`, `w_importedpurchase.wf_set_itemimage`, `w_importedpurchase.wf_selectprintreport`, `w_importedpurchase.wf_adopt_impexpense_template`, `w_importedpurchase.wf_assigndatawindowobjects`, `w_importedpurchase.wf_finalize`, `w_importedpurchase.wf_lockinvoices`, `w_importedpurchase.wf_post_purchase`, `w_importedpurchase.wf_post_purchases`, `w_importedpurchase.wf_apply_imported_purchase_rights`, `w_importedpurchase.wf_check_group_import_exp_template`, `w_importedpurchase.wf_update_expenseratio`, `w_importedpurchase.wf_grandtotal_withnetrate`, `dw_footer.losefocus`, `dw_footer.itemfocuschanged`, `dw_footer.itemerror`, `dw_detail.itemerror`, `dw_detail.itemfocuschanged`, `dw_detail.editchanged`, `dw_itemsdetail.itemfocuschanged`, `dw_itemsdetail.rowfocuschanged`, `dw_itemsdetail.losefocus`, `dw_itemsdetail.editchanged`, `dw_itemsdetail.itemerror`, `dw_itemsdetail.getfocus`, `dw_itemsdetail.rowfocuschanging`
+
+Source: `recovered/scripts/advancedpurchase/w_importedpurchase.pbs`

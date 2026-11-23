@@ -1,0 +1,69 @@
+// window w_arg_transactionwindow (reports)  ancestor: w_arguements
+
+// w_arg_transactionwindow.create() returns 0
+	integer icurrent
+	call super::create
+	this.st_4 = create st_4
+	this.gb_2 = create gb_2
+	icurrent = upperbound(this.control)
+	this.control[icurrent + 1] = this.st_4
+	this.control[icurrent + 2] = this.gb_2
+
+// w_arg_transactionwindow.destroy() returns 0
+	call super::destroy
+	destroy this.st_4
+	destroy this.gb_2
+
+// w_arg_transactionwindow.ue_close(integer ai_stauts) returns 0
+	super::ue_close(ai_stauts)
+	closewithreturn(this, this.istr_arg)
+
+// w_arg_transactionwindow.open() returns long
+	long ancestorreturnvalue
+	long ll_rtcode
+	ancestorreturnvalue = super::open()
+	this.il_catcode = message.doubleparm
+	this.dw_control.settransobject(sqlca)
+	ll_rtcode = this.dw_control.getchild("documentcode", this.idc_list)
+	if ll_rtcode = -1 then
+		messagebox("Error", "Not a DataWindowChild")
+		close(this)
+		if not isvalid(message) then
+			return 0
+		end if
+		return message.returnvalue
+	end if
+	this.idc_list.settransobject(sqlca)
+	if this.idc_list.rowcount() <= 0 then
+		this.idc_list.insertrow(0)
+	end if
+	this.dw_control.insertrow(0)
+	this.dw_control.scrolltorow(0)
+	this.idc_list.retrieve(this.il_catcode)
+	this.dw_control.setfocus()
+	if not isvalid(message) then
+		return 0
+	end if
+	return message.returnvalue
+
+// cb_cancel.clicked() returns long
+	long ancestorreturnvalue
+	ancestorreturnvalue = super::clicked()
+	parent.post event ue_close(-1)
+	return ::message.returnvalue
+
+// cb_ok.clicked() returns long
+	long ancestorreturnvalue
+	ancestorreturnvalue = super::clicked()
+	parent.em_startdate.getdata(parent.istr_arg.d_sdate)
+	parent.em_enddate.getdata(parent.istr_arg.d_edate)
+	if parent.dw_control.object.documentcode[1] = 0 or isnull(parent.dw_control.object.documentcode[1]) then
+		messagebox("Transaction Code Validation", "Please Select some valid transaction", information!)
+		parent.dw_control.setcolumn("documentcode")
+		parent.dw_control.setfocus()
+		return ::message.returnvalue
+	end if
+	parent.istr_arg.l_code1 = parent.dw_control.object.documentcode[1]
+	parent.istr_arg.i_status = 1
+	parent.post event ue_close(1)
+	return ::message.returnvalue

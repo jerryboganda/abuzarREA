@@ -1,0 +1,52 @@
+// window w_emailtemplate_form (singleentry)  ancestor: w_single_entry
+
+// w_emailtemplate_form.wf_duplicatename(string as_name) returns boolean
+	long ll_count
+	boolean b_flag
+	as_name = trim(as_name)
+	SQL SELECT count ( *) INTO :ll_count FROM EmailTemplate WHERE Subject =:as_name USING sqlca;
+	if ll_count > 0 then
+		b_flag = true
+	end if
+	return b_flag
+
+// w_emailtemplate_form.create() returns 0 [event]
+	call super::create
+
+// w_emailtemplate_form.destroy() returns 0 [event]
+	call super::destroy
+	if isvalid(this.menuid) then
+		destroy this.menuid
+	end if
+
+// w_emailtemplate_form.activate() returns long [event]
+	long ancestorreturnvalue
+	ancestorreturnvalue = super::activate()
+	this.windowstate = maximized!
+	setredraw(true)
+	return ::message.returnvalue
+
+// w_emailtemplate_form.open() returns long [event]
+	long ancestorreturnvalue
+	ancestorreturnvalue = super::open()
+	this.is_tablename = "EmailTemplate"
+	return ::message.returnvalue
+
+// dw_detail.itemchanged(long row, dwobject dwo, string data) returns long [event]
+	long ancestorreturnvalue
+	ancestorreturnvalue = super::itemchanged(row, dwo, data)
+	choose case dwo.name
+	case "subject"
+		if wf_duplicatename(data) then
+			messagebox("Subject Validation", "Duplication Subject Error~n~rPlease Choose Some Other Subject")
+			return 1
+		end if
+	end choose
+	return ::message.returnvalue
+
+// dw_detail.ue_enterkey() returns long [event]
+	if getcolumnname() <> "body" then
+		send(handle(this), 256, 9, long(90))
+		return 1
+	end if
+	return ::message.returnvalue

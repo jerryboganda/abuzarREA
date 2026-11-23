@@ -1,0 +1,141 @@
+release 12.5;
+datawindow ( units=0 timer_interval=0 processing=1 color=80263581 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.printername=""  print.documentname=""  print.orientation=0 print.margin.left=110 print.margin.right=110 print.margin.top=97 print.margin.bottom=97 print.paper.size=0 print.paper.source=0 print.canusedefaultprinter=yes grid.lines=0 selected.mouse=yes hidegrayline=no showbackcoloronxp=no)
+header(height=132 color="536870912" )
+summary(height=0 color="536870912" )
+footer(height=0 color="536870912" )
+detail(height=72 color="536870912" )
+table(column=(type=long updatewhereclause=yes name=code dbname="Purledger.purinvcode"  )
+column=(type=datetime updatewhereclause=yes name=date dbname="Purledger.date"  )
+column=(type=char(100) updatewhereclause=yes name=suppinvcode dbname="Purledger.suppinvcode"  )
+column=(type=datetime updatewhereclause=yes name=suppinvdate dbname="Purledger.suppinvdate"  )
+column=(type=char(100) updatewhereclause=yes name=grn dbname="Purledger.GRN"  )
+column=(type=decimal(2) updatewhereclause=yes name=total dbname="Purledger.invtotal"  )
+column=(type=char(60) updatewhereclause=yes name=suppliername dbname="Accounts.name"  )
+column=(type=long updatewhereclause=yes name=printcounter dbname="printcounter"  )
+column=(type=char(60) updatewhereclause=yes name=username dbname="username"  )
+column=(type=char(1) updatewhereclause=yes name=posted dbname="posted"  )
+column=(type=char(60) updatewhereclause=yes name=postedby dbname="PostedBy"  )
+column=(type=char(60) updatewhereclause=yes name=modifiedby dbname="ModifiedBy"  )
+column=(type=char(100) updatewhereclause=yes name=remarks dbname="Remarks"  )
+ retrieve="SELECT  
+	purledger.purinvcode,
+	purledger.date,
+	dbo.purledger.suppinvcode, 
+	dbo.purledger.suppinvdate, 
+	dbo.purledger.GRN, 
+	dbo.purledger.invtotal,
+	accounts.name, 
+	printcounter=purledger.printcounter,
+	username=(select username from users where users.usercode=purledger.salesmancode),
+	posted = purledger.posted,
+	PostedBy = IsNull((Select username from users 
+		where dbo.purledger.postedby = dbo.users.usercode), ''),
+	ModifiedBy = IsNull((Select username from users 
+		where dbo.purledger.modifiedby = dbo.users.usercode), ''),
+	Remarks = purledger.remarks 
+FROM  
+	purledger ,  
+	accounts,
+	users
+WHERE  
+	( purledger.impactinventory = 'N' ) AND
+	( purledger.suppcode = accounts.acccode ) and 
+	( Posted IN (:as_Posted)) AND
+	( purledger.salesmancode = users.usercode ) and
+	( dbo.PurLedger.HeaderNo IS NULL OR
+	( dbo.PurLedger.HeaderNo IN 
+		(SELECT HeaderCode FROM GroupAllowedHeader 
+		WHERE GroupCode = :ai_GroupCode AND Module=:ai_Module)))  and
+	Exists (SELECT DBO.Fn_GetPreference('allowedgroupsinpurchaselist') 
+	WHERE DBO.Fn_GetPreference('allowedgroupsinpurchaselist') = 'N')
+UNION ALL
+SELECT  
+	purledger.purinvcode,
+	purledger.date,
+	dbo.purledger.suppinvcode, 
+	dbo.purledger.suppinvdate, 
+	dbo.purledger.GRN, 
+	dbo.purledger.invtotal,
+	accounts.name, 
+	printcounter=purledger.printcounter,
+	username=(select username from users where users.usercode=purledger.salesmancode),
+	posted = purledger.posted,
+	PostedBy = IsNull((Select username from users 
+		where dbo.purledger.postedby = dbo.users.usercode), ''),
+	ModifiedBy = IsNull((Select username from users 
+		where dbo.purledger.modifiedby = dbo.users.usercode), ''),
+	Remarks = purledger.remarks 
+FROM  
+	purledger ,  
+	accounts,
+	users
+WHERE  
+	( purledger.impactinventory = 'N' ) AND
+	( purledger.suppcode = accounts.acccode ) and 
+	( Posted IN (:as_Posted)) AND
+	( purledger.salesmancode = users.usercode ) and
+	( dbo.PurLedger.HeaderNo IS NULL OR
+	( dbo.PurLedger.HeaderNo IN 
+		(SELECT HeaderCode FROM GroupAllowedHeader 
+		WHERE GroupCode = :ai_GroupCode AND Module=:ai_Module)))  and
+	( PurLedger.salesmancode IN 
+		(
+				Select 	Distinct U.usercode
+				From   	Users U, UserGroups UG, GroupAllowedGroups GAG
+				Where  	U.UserCode = UG.UserCode And UG.GroupCode = GAG.AllowedGroupCode And 
+							GAG.GroupCode = :ai_groupcode And GAG.Module = :ai_module
+				Union 
+				Select   U.Usercode
+				From     Users U, UserGroups UG
+				Where    U.usercode = UG.usercode And UG.GroupCode = :ai_groupcode
+		  )
+	) And
+	Exists (SELECT DBO.Fn_GetPreference('allowedgroupsinpurchaselist') 
+	WHERE DBO.Fn_GetPreference('allowedgroupsinpurchaselist') = 'Y')"
+  arguments=(("as_Posted", stringlist), ("ai_GroupCode", number), ("ai_Module", number))
+)
+text(name=t_2 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80263581" color="0" alignment="2" border="6" x="9" y="8" height="120" width="247" text="Invoice
+No." html.valueishtml="0" )
+text(name=obj_4021472 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80263581" color="0" alignment="2" border="6" x="265" y="8" height="120" width="210" text="Posted" html.valueishtml="0" )
+text(name=t_1 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80263581" color="0" alignment="2" border="6" x="485" y="8" height="120" width="274" text=" Date
+" html.valueishtml="0" )
+text(name=t_3 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80263581" color="0" alignment="2" border="6" x="1065" y="8" height="120" width="1106" text="Supplier
+Name" html.valueishtml="0" )
+text(name=t_7 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="79741120" color="0" alignment="2" border="6" x="2181" y="8" height="120" width="425" text="Total" html.valueishtml="0" )
+text(name=t_11 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80269524" color="0" alignment="2" border="6" x="2615" y="8" height="120" width="389" text="Supplier
+Invoice Code" html.valueishtml="0" )
+text(name=t_12 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80269524" color="0" alignment="2" border="6" x="3013" y="8" height="120" width="425" text="Supplier
+Invoice Date" html.valueishtml="0" )
+text(name=t_13 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80269524" color="0" alignment="2" border="6" x="3447" y="8" height="120" width="366" text="GRN" html.valueishtml="0" )
+text(name=t_6 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="79741120" color="0" alignment="2" border="6" x="3822" y="8" height="120" width="558" text="User" html.valueishtml="0" )
+text(name=t_4 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80263581" color="0" alignment="2" border="6" x="4389" y="8" height="120" width="599" text="Posted
+
+by" html.valueishtml="0" )
+text(name=t_5 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80269524" color="0" alignment="2" border="6" x="4997" y="8" height="120" width="535" text="Modified
+By" html.valueishtml="0" )
+text(name=t_8 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80269524" color="0" alignment="2" border="6" x="5541" y="8" height="120" width="1243" text="Remarks" html.valueishtml="0" )
+text(name=printcounter_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="67108864" color="0" alignment="2" border="6" x="768" y="8" height="120" width="288" text="Print
+Counter" html.valueishtml="0" )
+column(name=suppliername visible="1" band=detail id=7 x="1065" y="4" height="64" width="1106" color="0" border="0" alignment="0" format="[general]" protect="0	1" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=date visible="1" band=detail id=2 x="485" y="4" height="64" width="274" color="0" border="0" alignment="0" format="d/m/yyyy hh:mm:ss" protect="0	1" html.valueishtml="0" editmask.focusrectangle=no editmask.autoskip=no editmask.required=no editmask.readonly=no editmask.codetable=no editmask.ddcalendar=no editmask.spin=no editmask.useformat=no editmask.mask="dd/mm/yyyy hh:mm:ss" editmask.imemode=0 editmask.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=code visible="1" band=detail id=1 x="9" y="4" height="64" width="247" color="0" border="0" alignment="0" format="[general]" protect="0	1" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=posted visible="1" band=detail id=10 x="265" y="4" height="64" width="210" color="0" border="0" alignment="2" format="[general]" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=postedby visible="1" band=detail id=11 x="4389" y="4" height="64" width="599" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=username visible="1" band=detail id=9 x="3822" y="4" height="64" width="558" color="0" border="0" alignment="2" format="[general]" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=suppinvcode visible="1" band=detail id=3 x="2615" y="4" height="64" width="389" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=suppinvdate visible="1" band=detail id=4 x="3013" y="4" height="64" width="425" color="0" border="0" alignment="0" format="dd/mm/yyyy" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=grn visible="1" band=detail id=5 x="3447" y="4" height="64" width="366" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=total visible="1" band=detail id=6 x="2181" y="4" height="64" width="425" color="0" border="0" alignment="1" format="###0.00" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=modifiedby visible="1" band=detail id=12 x="4997" y="4" height="64" width="535" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=remarks visible="1" band=detail id=13 x="5541" y="4" height="64" width="1243" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=printcounter visible="1" band=detail id=8 x="768" y="4" height="64" width="288" color="0" border="0" alignment="1" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+htmltable(border="0" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" encodeSelfLinkArgs="1" generateJavaScript="1" netscapeLayers="0" pagingMethod=0 )
+xhtmlgen() cssgen(sessionSpecific="0" )
+xmlgen(inline="0" )
+xsltgen()
+jsgen()
+export.xml(headGroups="1" includewhitespace="0" metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 distill.customPostScript="0" xslfop.print="0" )
+export.xhtml()

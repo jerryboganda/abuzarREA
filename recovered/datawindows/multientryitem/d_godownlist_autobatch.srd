@@ -1,0 +1,130 @@
+release 12.5;
+datawindow ( units=0 timer_interval=0 processing=1 color=80263581 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.printername=""  print.documentname=""  print.orientation=0 print.margin.left=110 print.margin.right=110 print.margin.top=97 print.margin.bottom=97 print.paper.size=0 print.paper.source=0 print.canusedefaultprinter=yes grid.lines=0 selected.mouse=yes hidegrayline=no showbackcoloronxp=no)
+header(height=76 color="536870912" )
+summary(height=0 color="536870912" )
+footer(height=0 color="536870912" )
+detail(height=76 color="536870912" )
+table(column=(type=char(100) key=yes update=yes updatewhereclause=yes name=batch dbname="GodownDetail.Batch"  )
+column=(type=datetime key=yes update=yes updatewhereclause=yes name=expiry dbname="GodownDetail.Expiry"  )
+column=(type=datetime update=yes updatewhereclause=yes name=manfdate dbname="GodownDetail.ManfDate"  )
+column=(type=long update=yes updatewhereclause=yes name=priority dbname="GodownDetail.Priority"  )
+column=(type=decimal(4) updatewhereclause=yes name=currqty dbname="GodownDetail.CurrQty"  )
+column=(type=long key=yes updatewhereclause=yes name=icode dbname="GodownDetail.ICode"  )
+column=(type=long key=yes updatewhereclause=yes name=gcode dbname="GodownDetail.GCode" 
+ values=""  )
+column=(type=long updatewhereclause=yes name=purinvcode dbname="Purledger.PurInvCode"  )
+column=(type=long updatewhereclause=yes name=purcatcode dbname="Purledger.PurCatCode"  )
+column=(type=datetime updatewhereclause=yes name=date dbname="Purledger.Date"  )
+column=(type=long updatewhereclause=yes name=currencycode dbname="Purledger.CurrencyCode" 
+ values=""  )
+column=(type=decimal(5) updatewhereclause=yes name=conversionfactor dbname="Purledger.ConversionFactor"  )
+column=(type=decimal(5) updatewhereclause=yes name=foreignprice dbname="Purdetail.ForeignPrice"  )
+column=(type=decimal(16) updatewhereclause=yes name=purprice dbname="PurPrice"  )
+ retrieve="SELECT 
+	GodownDetail.Batch,   
+	GodownDetail.Expiry,   
+	GodownDetail.ManfDate,
+	GodownDetail.Priority,   
+	GodownDetail.CurrQty,   
+	GodownDetail.ICode, 
+	GodownDetail.GCode,
+	P.PurInvCode,
+	P.PurCatCode,
+	P.Date,
+	P.CurrencyCode,
+	P.ConversionFactor,
+	D.ForeignPrice,
+	PurPrice = 
+	ROUND(D.PurPrice / 
+		CASE WHEN P.PurCatCode < 3 THEN 
+			CASE D.PackUnits WHEN 0 THEN 1 ELSE D.PackUnits END 
+		ELSE 1 END, 2) * (1 - D.DiscPerc * 0.01) * (1 - P.DiscPerc * 0.01)
+	
+FROM GodownDetail, PurDetail D, PurLedger P
+WHERE 
+	GodownDetail.ICode = :code AND
+	GodownDetail.GCode IN
+			(CASE (SELECT salegodownstrategy FROM Groups Where GroupCode = :ai_groupcode)
+			WHEN 2 THEN (SELECT DISTINCT G.GCode From Godown G WHERE G.Gcode = GodownDetail.GCode)
+			ELSE (SELECT DISTINCT GCode From GroupAllowedGodown
+				WHERE	GroupAllowedGodown.GroupCode = :ai_groupcode AND
+					/*GroupAllowedGodown.Module = 1 AND*/
+					GroupAllowedGodown.Module = :ai_module AND
+					GroupAllowedGodown.GCode = GodownDetail.GCode) END) AND
+	LEFT(GodownDetail.Batch, 1) = '»' AND
+	GodownDetail.ICode = D.ICode AND
+	GodownDetail.Batch = D.Batch AND
+	D.PurRowID IN 
+		(SELECT MAX(PD.PurRowID) 
+		FROM PurDetail PD 
+		WHERE PD.ICode = D.ICode AND PD.Batch=D.Batch) AND
+	D.PurInvCode = P.PurInvCode
+UNION
+SELECT 
+	GodownDetail.Batch,   
+	GodownDetail.Expiry,   
+	GodownDetail.ManfDate,
+	GodownDetail.Priority,   
+	GodownDetail.CurrQty,   
+	GodownDetail.ICode,   
+	GodownDetail.GCode,
+	PurInvCode=NULL,
+	PurCatCode=NULL,
+	Date=NULL,
+	Currency=NULL,
+	ConversionFactor=NULL,
+	ForeignPrice=NULL,
+	PurPrice = NULL
+FROM GodownDetail
+WHERE GodownDetail.ICode = :code AND
+	GodownDetail.GCode IN
+			(CASE (SELECT salegodownstrategy FROM Groups Where GroupCode = :ai_groupcode)
+			WHEN 2 THEN (SELECT DISTINCT G.GCode From Godown G WHERE G.Gcode = GodownDetail.GCode)
+			ELSE (SELECT DISTINCT GCode From GroupAllowedGodown
+				WHERE	GroupAllowedGodown.GroupCode = :ai_groupcode AND
+					/*GroupAllowedGodown.Module = 1 AND*/
+					GroupAllowedGodown.Module = :ai_module AND
+					GroupAllowedGodown.GCode = GodownDetail.GCode) END) AND
+	LEFT(GodownDetail.Batch, 1) <> '»'
+"
+  update="GodownDetail" updatewhere=1 updatekeyinplace=yes
+  arguments=(("code", number), ("ai_groupcode", number), ("ai_module", number))
+)
+text(name=t_1 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="2" background.color="80269524" color="0" alignment="2" border="6" x="9" y="8" height="64" width="411" text="Godown" html.valueishtml="0" )
+text(name=batch_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="2" background.color="80263581" color="0" alignment="2" border="6" x="430" y="8" height="64" width="462" text="Batch" html.valueishtml="0" )
+text(name=t_2 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="2" background.color="80269524" color="0" alignment="2" border="6" x="901" y="8" height="64" width="306" text="Pur. Inv. #" html.valueishtml="0" )
+text(name=currqty_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="2" background.color="80269524" color="0" alignment="2" border="6" x="1216" y="8" height="64" width="421" text="Stock in Hand" html.valueishtml="0" )
+text(name=priority_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="2" background.color="80263581" color="0" alignment="2" border="6" x="1646" y="8" height="64" width="215" text="Priority" html.valueishtml="0" )
+text(name=t_5 visible="1	0" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="2" background.color="80269524" color="0" alignment="2" border="6" x="1870" y="8" height="64" width="475" text="Date" html.valueishtml="0" )
+text(name=expiry_t visible="1	0" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="2" background.color="80263581" color="0" alignment="2" border="6" x="2354" y="8" height="64" width="366" text="Expiry" html.valueishtml="0" )
+text(name=t_3 visible="1	0" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="2" background.color="80269524" color="0" alignment="2" border="6" x="2729" y="8" height="64" width="320" text="Manf. Date" html.valueishtml="0" )
+text(name=t_9 visible="1	0" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="2" background.color="80269524" color="0" alignment="2" border="6" x="3058" y="8" height="64" width="466" text="Local Price" html.valueishtml="0" )
+text(name=t_4 visible="1	0" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="2" background.color="80269524" color="0" alignment="2" border="6" x="3534" y="8" height="64" width="425" text="Local Value" html.valueishtml="0" )
+text(name=t_6 visible="1	0" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="2" background.color="80269524" color="0" alignment="2" border="6" x="3968" y="8" height="64" width="384" text="Currency" html.valueishtml="0" )
+text(name=t_7 visible="1	0" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="2" background.color="80269524" color="0" alignment="2" border="6" x="4361" y="8" height="64" width="370" text="Conv/Factor" html.valueishtml="0" )
+text(name=t_8 visible="1	0" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="2" background.color="80269524" color="0" alignment="2" border="6" x="4741" y="8" height="64" width="448" text="Foreign Price" html.valueishtml="0" )
+text(name=t_10 visible="1	0" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="2" background.color="80269524" color="0" alignment="2" border="6" x="5198" y="8" height="64" width="434" text="Foreign Value" html.valueishtml="0" )
+column(name=batch visible="1" band=detail id=1 x="430" y="4" height="68" width="462" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=100 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=10 )
+column(name=gcode visible="1" band=detail id=7 x="9" y="4" height="68" width="411" color="0" border="0" alignment="0" format="[general]" protect="0	1" html.valueishtml="0" dddw.allowedit=no dddw.autohscroll=no dddw.autoretrieve=yes dddw.useasborder=no dddw.datacolumn=gcode dddw.displaycolumn=name dddw.hscrollbar=no dddw.hsplitscroll=no dddw.imemode=0 dddw.limit=0 dddw.name=ddd_godown dddw.nilisnull=no dddw.percentwidth=0 dddw.required=no dddw.showlist=no dddw.vscrollbar=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="80269524" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=currqty visible="1" band=detail id=5 x="1216" y="4" height="68" width="421" color="0" border="0" alignment="2" format="	f_SetColumnFormat('Qty')" protect="0	1" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=yes edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=yes edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="80269524" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=purinvcode visible="1" band=detail id=8 x="901" y="4" height="68" width="306" color="0" border="0" alignment="2" format="[general]" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="80269524" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=priority visible="1" tag="Specify the item proority" band=detail id=4 x="1646" y="4" height="68" width="215" color="0" border="0" alignment="1" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=20 )
+column(name=expiry visible="1	0" band=detail id=2 x="2354" y="4" height="68" width="366" color="0" border="0" alignment="0" format="dd/mm/yy" html.valueishtml="0" editmask.focusrectangle=no editmask.autoskip=no editmask.required=no editmask.readonly=no editmask.codetable=no editmask.ddcalendar=no editmask.spin=no editmask.useformat=no editmask.mask="dd/mm/yy " editmask.imemode=0 editmask.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="1090519039" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=30 )
+column(name=currencycode visible="1	0" band=detail id=11 x="3968" y="4" height="68" width="384" color="0" border="0" alignment="2" format="[general]" html.valueishtml="0" dddw.allowedit=no dddw.autohscroll=no dddw.autoretrieve=yes dddw.useasborder=no dddw.datacolumn=code dddw.displaycolumn=shortname dddw.hscrollbar=no dddw.hsplitscroll=no dddw.imemode=0 dddw.limit=0 dddw.name=ddd_currency dddw.nilisnull=no dddw.percentwidth=0 dddw.required=no dddw.showlist=no dddw.vscrollbar=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="80269524" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=conversionfactor visible="1	0" band=detail id=12 x="4361" y="4" height="68" width="370" color="0" border="0" alignment="1" format="######0.00000" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="80269524" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=purprice visible="1	0" band=detail id=14 x="3058" y="4" height="68" width="466" color="0" border="0" alignment="1" format="######0.00" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="80269524" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+compute(name=compute_1 visible="1	0" band=detail font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="2" background.color="80269524" color="0" x="3534" y="4" height="68" width="425" format="######0.00" expression=" purprice *  currqty " alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+column(name=foreignprice visible="1	0" band=detail id=13 x="4741" y="4" height="68" width="448" color="0" border="0" alignment="1" format="######0.00" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="80269524" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+compute(name=compute_2 visible="1	0" band=detail font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="2" background.color="80269524" color="0" x="5198" y="4" height="68" width="434" format="######0.00" expression="foreignprice * currqty" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+column(name=manfdate visible="1	0" band=detail id=3 x="2729" y="4" height="68" width="320" color="0" border="0" alignment="0" format="dd/mm/yy" html.valueishtml="0" editmask.focusrectangle=no editmask.autoskip=no editmask.required=no editmask.readonly=no editmask.codetable=no editmask.ddcalendar=no editmask.spin=no editmask.useformat=no editmask.mask="dd/mm/yy" editmask.imemode=0 editmask.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="33554431" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=40 )
+column(name=date visible="1	0" band=detail id=10 x="1870" y="4" height="68" width="475" color="0" border="0" alignment="0" format="dd/mm/yyyy hh:mm" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="80269524" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+htmltable(border="0" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" encodeSelfLinkArgs="1" generateJavaScript="1" netscapeLayers="0" pagingMethod=0 )
+xhtmlgen() cssgen(sessionSpecific="0" )
+xmlgen(inline="0" )
+xsltgen()
+jsgen()
+export.xml(headGroups="1" includewhitespace="0" metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 distill.customPostScript="0" xslfop.print="0" )
+export.xhtml()

@@ -1,0 +1,413 @@
+release 12.5;
+datawindow ( units=2 timer_interval=60000 processing=0 color=16777215 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.file=""  picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.printername=""  print.documentname=""  print.orientation=1 print.margin.left=200 print.margin.right=200 print.margin.top=200 print.margin.bottom=200 print.paper.size=1 print.paper.source=0 print.canusedefaultprinter=yes selected.mouse=no hidegrayline=no showbackcoloronxp=no)
+header(height=808 color="536870912" transparency="0" gradient.color="8421504" gradient.transparency="0" gradient.angle="0" brushmode="0" gradient.repetition.mode="0" gradient.repetition.length="100" gradient.repetition.count="0" gradient.focus="0" gradient.scale="100" gradient.spread="100" )
+summary(height=0 color="536870912" transparency="0" gradient.color="8421504" gradient.transparency="0" gradient.angle="0" brushmode="0" gradient.repetition.mode="0" gradient.repetition.length="100" gradient.repetition.count="0" gradient.focus="0" gradient.scale="100" gradient.spread="100" )
+footer(height=0 color="536870912" transparency="0" gradient.color="8421504" gradient.transparency="0" gradient.angle="0" brushmode="0" gradient.repetition.mode="0" gradient.repetition.length="100" gradient.repetition.count="0" gradient.focus="0" gradient.scale="100" gradient.spread="100" )
+detail(height=200 color="536870912" transparency="0" gradient.color="8421504" gradient.transparency="0" gradient.angle="0" brushmode="0" gradient.repetition.mode="0" gradient.repetition.length="100" gradient.repetition.count="0" gradient.focus="0" gradient.scale="100" gradient.spread="100" )
+table(column=(type=long updatewhereclause=yes name=acccode dbname="AccCode"  )
+column=(type=char(60) updatewhereclause=yes name=account dbname="Account"  )
+column=(type=long updatewhereclause=yes name=subcode dbname="SubCode"  )
+column=(type=char(60) updatewhereclause=yes name=source dbname="Source"  )
+column=(type=char(100) updatewhereclause=yes name=remarks dbname="Remarks"  )
+column=(type=decimal(2) updatewhereclause=yes name=subamount dbname="SubAmount"  )
+column=(type=decimal(2) updatewhereclause=yes name=amount dbname="Amount"  )
+column=(type=char(30) updatewhereclause=yes name=type dbname="Type"  )
+column=(type=char(20) updatewhereclause=yes name=checkno dbname="CheckNo"  )
+column=(type=long updatewhereclause=yes name=id dbname="ID"  )
+ retrieve="SELECT
+	BC.AccCode,
+	Account=(SELECT Accounts.Name FROM Accounts WHERE Accounts.AccCode = BC.AccCode),
+	SubCode =(SELECT Accounts.SubCode FROM Accounts WHERE Accounts.AccCode = BC.AccCode),
+	Source=CASE BC.Code 
+		WHEN -106 THEN 'Opening Balance' 
+		WHEN -105 THEN 'Cash From Sales' 
+		WHEN -104 THEN 'Cash From Service Sales' 
+		WHEN -103 THEN 'Cash Paid for Sales Returns' 
+		WHEN -102 THEN 'Cash Paid for Services Sales Returns' 
+		WHEN -101 THEN 'Cash Paid for Purchase ' 
+		WHEN -100 THEN 'Cash From Purchase Returns' 
+		WHEN -99 THEN 'Cashier Shift Excess/Short/Transfer' 
+		WHEN -1 THEN 'Credit Sales' 
+		WHEN -2 THEN 'Credit S/Return' 
+		ELSE (SELECT Accounts.Name FROM Accounts WHERE Accounts.AccCode = BC.Code) END,
+	BC.Remarks, 
+	SubAmount = CASE WHEN BC.Code = -1 OR BC.Code = -2 THEN BC.Amount ELSE 0.00 END,
+	Amount = CASE WHEN BC.Code = -1 OR BC.Code = -2 THEN 0.00 ELSE BC.Amount END,
+	BC.Type,
+	Bc.CheckNo,
+	BC.ID
+FROM
+	(SELECT V.AccCode, Remarks=SPACE(100), Code=-107, Amount = ISNULL(SUM(V.Debit-V.Credit), 0), 
+		Type='Opening Balance...............', CheckNo=Space(20), id=0
+	FROM VirtualGL V
+	WHERE
+		V.Date < :ar_startdate AND
+		V.AccCode IN
+			(SELECT AccCode 
+			FROM Accounts 
+			WHERE SUBCODE IN 
+				(SELECT Code FROM Global WHERE Name = LOWER('GT_CashSub') AND (:ar_cashbank=1 OR :ar_cashbank=3)
+				UNION
+				SELECT Code FROM Global WHERE Name = LOWER('GT_BankSub') AND (:ar_cashbank=2 OR :ar_cashbank=3)
+				UNION
+				SELECT Code FROM Global WHERE Name IN (LOWER('GT_CashSub'), LOWER('GT_BankSub')) AND :ar_cashbank=3))
+	GROUP BY V.AccCode
+	UNION ALL
+	SELECT 	V.AccCode, Remarks=SPACE(100), Code=-99, Amount = ISNULL(Sum(V.Debit), 0), 
+		Type='Cashier Shift', CheckNo='', Id=1
+	FROM VirtualGl V
+	WHERE
+		V.DocumentType = 'CSHIFT' AND
+		V.Debit > 0 AND
+		V.Date >= :ar_startdate AND V.Date <= :ar_enddate AND
+		V.AccCode IN
+			(SELECT AccCode FROM Accounts WHERE SUBCODE IN 
+				(SELECT Code FROM Global WHERE Name = LOWER('GT_CashSub') AND (:ar_cashbank=1 OR :ar_cashbank=3)
+				UNION
+				SELECT Code FROM Global WHERE Name = LOWER('GT_BankSub') AND (:ar_cashbank=2 OR :ar_cashbank=3)
+				UNION
+				SELECT Code FROM Global WHERE Name IN (LOWER('GT_CashSub'), LOWER('GT_BankSub')) AND :ar_cashbank=3))
+	GROUP BY V.AccCode
+	UNION ALL
+	SELECT 	V.AccCode, Remarks=SPACE(100), Code=-99, Amount = - ISNULL(Sum(V.Credit), 0), 
+		Type='Cashier Shift', CheckNo='', Id=1
+	FROM VirtualGl V
+	WHERE
+		V.DocumentType = 'CSHIFT' AND
+		V.Credit > 0 AND
+		V.Date >= :ar_startdate AND V.Date <= :ar_enddate AND
+		V.AccCode IN
+			(SELECT AccCode FROM Accounts WHERE SUBCODE IN 
+				(SELECT Code FROM Global WHERE Name = LOWER('GT_CashSub') AND (:ar_cashbank=1 OR :ar_cashbank=3)
+				UNION
+				SELECT Code FROM Global WHERE Name = LOWER('GT_BankSub') AND (:ar_cashbank=2 OR :ar_cashbank=3)
+				UNION
+				SELECT Code FROM Global WHERE Name IN (LOWER('GT_CashSub'), LOWER('GT_BankSub')) AND :ar_cashbank=3))
+	GROUP BY V.AccCode
+	UNION ALL
+	SELECT 	V.AccCode, Remarks=SPACE(100), Code=-105, Amount = ISNULL(Sum(V.Debit), 0), 
+		Type='Receipts', CheckNo='', Id=1
+	FROM VirtualGl V
+	WHERE
+		V.DocumentType = 'SV' AND
+		V.Debit > 0 AND
+		V.Date >= :ar_startdate AND V.Date <= :ar_enddate AND
+		V.AccCode IN
+			(SELECT AccCode FROM Accounts WHERE SUBCODE IN 
+				(SELECT Code FROM Global WHERE Name = LOWER('GT_CashSub') AND (:ar_cashbank=1 OR :ar_cashbank=3)
+				UNION
+				SELECT Code FROM Global WHERE Name = LOWER('GT_BankSub') AND (:ar_cashbank=2 OR :ar_cashbank=3)
+				UNION
+				SELECT Code FROM Global WHERE Name IN (LOWER('GT_CashSub'), LOWER('GT_BankSub')) AND :ar_cashbank=3))
+	GROUP BY V.AccCode
+	UNION ALL
+	SELECT 	V.AccCode, Remarks=SPACE(100), Code=-104, Amount = ISNULL(Sum(V.Debit), 0), 
+		Type='Receipts', CheckNo='', Id=2
+	FROM VirtualGl V
+	WHERE
+		V.DocumentType = 'RS' AND
+		V.Debit > 0 AND
+		V.Date >= :ar_startdate AND V.Date <= :ar_enddate AND
+		V.AccCode IN
+			(SELECT AccCode FROM Accounts WHERE SUBCODE IN 
+				(SELECT Code FROM Global WHERE Name = LOWER('GT_CashSub') AND (:ar_cashbank=1 OR :ar_cashbank=3)
+				UNION
+				SELECT Code FROM Global WHERE Name = LOWER('GT_BankSub') AND (:ar_cashbank=2 OR :ar_cashbank=3)
+				UNION
+				SELECT Code FROM Global WHERE Name IN (LOWER('GT_CashSub'), LOWER('GT_BankSub')) AND :ar_cashbank=3))
+	GROUP BY V.AccCode
+	UNION ALL
+	SELECT 	V.AccCode, Remarks=SPACE(100), Code=-103, Amount = - ISNULL(Sum(V.Credit), 0), 
+		Type='Payments', CheckNo='', Id=50
+	FROM VirtualGl V
+	WHERE
+		V.DocumentType = 'SR' AND
+		V.Credit > 0 AND
+		V.Date >= :ar_startdate AND V.Date <= :ar_enddate AND
+		V.AccCode IN
+			(SELECT AccCode FROM Accounts WHERE SUBCODE IN 
+				(SELECT Code FROM Global WHERE Name = LOWER('GT_CashSub') AND (:ar_cashbank=1 OR :ar_cashbank=3)
+				UNION
+				SELECT Code FROM Global WHERE Name = LOWER('GT_BankSub') AND (:ar_cashbank=2 OR :ar_cashbank=3)
+				UNION
+				SELECT Code FROM Global WHERE Name IN (LOWER('GT_CashSub'), LOWER('GT_BankSub')) AND :ar_cashbank=3))
+	GROUP BY V.AccCode
+	UNION ALL
+	SELECT 	AccCode=(SELECT MIN(C.CashAccCode) FROM (SELECT GroupCode, CashAccCode FROM GroupCashAccount WHERE ModuleID=11) C, UserGroups UG WHERE UG.GroupCode = C.GroupCode AND UG.UserCode=S.SalesmanCode), 
+		Remarks=' (' + LTRIM(RTRIM(STR(COUNT(DISTINCT S.SaleInvCode),10))) + ')', 
+		Code=-1, Amount = ISNULL(Sum(S.InvTotal), 0),
+		Type='Receipts', CheckNo='', Id=101
+	FROM SaleLedger S
+	WHERE
+		S.SaleCatCode = 2 AND
+		S.Date BETWEEN :ar_startdate AND :ar_enddate AND
+		S.SalesmanCode IN
+			(SELECT UG.UserCode
+			FROM
+				(SELECT GroupCode, CashAccCode FROM GroupCashAccount WHERE ModuleID=11) C,
+				UserGroups UG
+			WHERE 
+				UG.GroupCode = C.GroupCode)
+	GROUP BY S.SalesmanCode
+	UNION ALL
+	SELECT 	AccCode=(SELECT MIN(C.CashAccCode) FROM (SELECT GroupCode, CashAccCode FROM GroupCashAccount WHERE ModuleID=11) C, UserGroups UG WHERE UG.GroupCode = C.GroupCode AND UG.UserCode=S.SalesmanCode), 
+		Remarks=' (' + LTRIM(RTRIM(STR(COUNT(DISTINCT S.SRInvCode),10))) + ')', 
+		Code=-2, Amount = - ISNULL(Sum(S.InvTotal), 0),
+		Type='Payments', CheckNo='', Id=102
+	FROM SRLedger S
+	WHERE
+		S.SRCatCode = 7 AND
+		S.Date BETWEEN :ar_startdate AND :ar_enddate AND
+		S.SalesmanCode IN
+			(SELECT UG.UserCode
+			FROM
+				(SELECT GroupCode, CashAccCode FROM GroupCashAccount WHERE ModuleID=11) C,
+				UserGroups UG
+			WHERE 
+				UG.GroupCode = C.GroupCode)
+	GROUP BY S.SalesmanCode
+	UNION ALL
+	SELECT 	V.AccCode, Remarks=SPACE(100), Code=-102, Amount = - ISNULL(Sum(V.Credit), 0), 
+		Type='Payments', CheckNo='', Id=50
+	FROM VirtualGl V
+	WHERE
+		V.DocumentType = 'RR' AND
+		V.Credit > 0 AND
+		V.Date >= :ar_startdate AND V.Date <= :ar_enddate AND
+		V.AccCode IN
+			(SELECT AccCode FROM Accounts WHERE SUBCODE IN 
+				(SELECT Code FROM Global WHERE Name = LOWER('GT_CashSub') AND (:ar_cashbank=1 OR :ar_cashbank=3)
+				UNION
+				SELECT Code FROM Global WHERE Name = LOWER('GT_BankSub') AND (:ar_cashbank=2 OR :ar_cashbank=3)
+				UNION
+				SELECT Code FROM Global WHERE Name IN (LOWER('GT_CashSub'), LOWER('GT_BankSub')) AND :ar_cashbank=3))
+	GROUP BY V.AccCode
+	UNION ALL
+	SELECT 	V.AccCode, Remarks=SPACE(100), Code=-101, Amount = - ISNULL(Sum(V.Credit), 0), 
+		Type='Payments', CheckNo='', Id=50
+	FROM VirtualGl V
+	WHERE
+		V.DocumentType = 'PV' AND
+		V.Credit > 0 AND
+		V.Date >= :ar_startdate AND V.Date <= :ar_enddate AND
+		V.AccCode IN
+			(SELECT AccCode FROM Accounts WHERE SUBCODE IN 
+				(SELECT Code FROM Global WHERE Name = LOWER('GT_CashSub') AND (:ar_cashbank=1 OR :ar_cashbank=3)
+				UNION
+				SELECT Code FROM Global WHERE Name = LOWER('GT_BankSub') AND (:ar_cashbank=2 OR :ar_cashbank=3)
+				UNION
+				SELECT Code FROM Global WHERE Name IN (LOWER('GT_CashSub'), LOWER('GT_BankSub')) AND :ar_cashbank=3))
+	GROUP BY V.AccCode
+	UNION ALL
+	SELECT 	V.AccCode, Remarks=SPACE(100), Code=-100, Amount = ISNULL(Sum(V.Debit), 0), 
+		Type='Receipts', CheckNo='', Id=3
+	FROM VirtualGl V
+	WHERE
+		V.DocumentType = 'PR' AND
+		V.Debit > 0 AND
+		V.Date >= :ar_startdate AND V.Date <= :ar_enddate AND
+		V.AccCode IN
+			(SELECT AccCode FROM Accounts WHERE SUBCODE IN 
+				(SELECT Code FROM Global WHERE Name = LOWER('GT_CashSub') AND (:ar_cashbank=1 OR :ar_cashbank=3)
+				UNION
+				SELECT Code FROM Global WHERE Name = LOWER('GT_BankSub') AND (:ar_cashbank=2 OR :ar_cashbank=3)
+				UNION
+				SELECT Code FROM Global WHERE Name IN (LOWER('GT_CashSub'), LOWER('GT_BankSub')) AND :ar_cashbank=3))
+	GROUP BY V.AccCode, V.Remarks
+	UNION ALL
+	SELECT 	GL.AccCode,	/*Cash/Bank Receipts & Payments Customized For CASH/BANK (Other than JV)*/
+		GD.Remarks, Code=GD.AccCode, Amount = ISNULL(GD.Credit - GD.Debit, 0), 
+		Type=CASE WHEN GD.Credit - GD.Debit > 0 THEN 'Receipts' ELSE 'Payments' END, 
+		CheckNo=ISNULL(GD.ChkNo, ''), Id=CASE WHEN GD.Credit - GD.Debit > 0  THEN 11 ELSE 51 END
+	FROM GlDetail GD, GlHeader GL, VocherCategory VC
+	WHERE
+		GL.Posted='Y' AND
+		GL.Date >= :ar_startdate AND GL.Date <= :ar_enddate AND
+		GL.GlVochCode = GD.GlVochCode AND
+		GL.VochCatCode = VC.VochCatCode AND
+		VC.JournalVoucher=0 AND
+		GL.AccCode <> GD.AccCode AND	
+		GL.AccCode IN
+			(SELECT AccCode FROM Accounts WHERE SUBCODE IN 
+				(SELECT Code FROM Global WHERE Name = LOWER('GT_CashSub') AND (:ar_cashbank=1 OR :ar_cashbank=3)
+				UNION
+				SELECT Code FROM Global WHERE Name = LOWER('GT_BankSub') AND (:ar_cashbank=2 OR :ar_cashbank=3)
+				UNION
+				SELECT Code FROM Global WHERE Name IN (LOWER('GT_CashSub'), LOWER('GT_BankSub')) AND :ar_cashbank=3))
+	UNION ALL
+	SELECT GD.AccCode,	/*Cash/Bank Receipts & Payments Customized For CASH/BANK (Other than JV) CONTRA AFFECT*/
+		GD.Remarks,
+		Code=GL.AccCode, 
+		Amount = ISNULL(GD.Debit - GD.Credit, 0), 
+		Type=CASE WHEN GD.Debit - GD.Credit > 0 THEN 'Receipts' ELSE 'Payments' END, 
+		CheckNo=ISNULL(GD.ChkNo, ''),
+		Id=CASE WHEN GD.Debit - GD.Credit > 0 THEN 12 ELSE 52 END
+	FROM GlDetail GD, GlHeader GL, VocherCategory VC
+	WHERE
+		GL.POsted='Y' AND
+		GL.Date >= :ar_startdate AND GL.Date <= :ar_enddate AND
+		GL.GlVochCode = GD.GlVochCode AND
+		GL.VochCatCode = VC.VochCatCode AND
+		VC.JournalVoucher=0 AND
+		GL.AccCode <> GD.AccCode AND
+		GD.AccCode IN
+			(SELECT AccCode FROM Accounts WHERE SUBCODE IN 
+				(SELECT Code FROM Global WHERE Name = LOWER('GT_CashSub') AND (:ar_cashbank=1 OR :ar_cashbank=3)
+				UNION
+				SELECT Code FROM Global WHERE Name = LOWER('GT_BankSub') AND (:ar_cashbank=2 OR :ar_cashbank=3)
+				UNION
+				SELECT Code FROM Global WHERE Name IN (LOWER('GT_CashSub'), LOWER('GT_BankSub')) AND :ar_cashbank=3)) AND
+		GL.AccCode IN
+			(SELECT AccCode FROM Accounts WHERE SUBCODE IN 
+				(SELECT Code FROM Global WHERE Name = LOWER('GT_CashSub') AND (:ar_cashbank=1 OR :ar_cashbank=3)
+				UNION
+				SELECT Code FROM Global WHERE Name = LOWER('GT_BankSub') AND (:ar_cashbank=2 OR :ar_cashbank=3)
+				UNION
+				SELECT Code FROM Global WHERE Name IN (LOWER('GT_CashSub'), LOWER('GT_BankSub')) AND :ar_cashbank=3))
+	UNION ALL
+	SELECT GD.AccCode,	/*Cash/Bank Receipts & Payments (Other than JV) NOT Customized For CASH/BANK*/
+		GD.Remarks,
+		Code=GL.AccCode, 
+		Amount = ISNULL(GD.Debit - GD.Credit, 0), 
+		Type=CASE WHEN GD.Debit > 0 THEN 'Receipts' ELSE 'Payments' END, 
+		CheckNo=ISNULL(GD.ChkNo, ''),
+		Id=CASE WHEN GD.Debit > 0 THEN 13 ELSE 53 END
+	FROM GlDetail GD, GlHeader GL, VocherCategory VC
+	WHERE
+		GL.POsted='Y' AND
+		GL.Date >= :ar_startdate AND GL.Date <= :ar_enddate AND
+		GL.VochCatCode = VC.VochCatCode AND
+		VC.JournalVoucher=0 AND
+		GL.GlVochCode = GD.GlVochCode AND
+		GD.AccCode IN
+			(SELECT AccCode FROM Accounts WHERE SUBCODE IN 
+				(SELECT Code FROM Global WHERE Name = LOWER('GT_CashSub') AND (:ar_cashbank=1 OR :ar_cashbank=3)
+				UNION
+				SELECT Code FROM Global WHERE Name = LOWER('GT_BankSub') AND (:ar_cashbank=2 OR :ar_cashbank=3)
+				UNION
+				SELECT Code FROM Global WHERE Name IN (LOWER('GT_CashSub'), LOWER('GT_BankSub')) AND :ar_cashbank=3)) AND
+		GL.AccCode NOT IN
+			(SELECT AccCode FROM Accounts WHERE SUBCODE IN 
+				(SELECT Code FROM Global WHERE Name = LOWER('GT_CashSub') AND (:ar_cashbank=1 OR :ar_cashbank=3)
+				UNION
+				SELECT Code FROM Global WHERE Name = LOWER('GT_BankSub') AND (:ar_cashbank=2 OR :ar_cashbank=3)
+				UNION
+				SELECT Code FROM Global WHERE Name IN (LOWER('GT_CashSub'), LOWER('GT_BankSub')) AND :ar_cashbank=3))
+	UNION ALL
+	SELECT GD.AccCode,	/*Journal Vocher Cash/Bank Receipts OR Payments*/
+		GD.Remarks,
+		Code=(SELECT MAX(VG.AccCode) FROM VirtualGL VG WHERE VG.DocumentType = VC.ShortName AND VG.DocumentCode=GL.GLVochCode AND VG.AccCode <> GD.AccCode), 
+		Amount = ISNULL(GD.Debit - GD.Credit, 0), 
+		Type= CASE WHEN Debit > 0 THEN 'Receipts' ELSE 'Payments' END,
+		CheckNo=ISNULL(GD.ChkNo, ''),
+		Id= CASE WHEN Debit > 0 THEN 14 ELSE 54 END
+	FROM GlDetail GD, GlHeader GL, VocherCategory VC
+	WHERE
+		GL.POsted='Y' AND
+		GL.Date >= :ar_startdate AND GL.Date <= :ar_enddate AND
+		GL.VochCatCode = VC.VochCatCode AND
+		VC.JournalVoucher=1 AND
+		GL.GlVochCode = GD.GlVochCode AND
+		GD.AccCode IN
+			(SELECT AccCode FROM Accounts WHERE SUBCODE IN 
+				(SELECT Code FROM Global WHERE Name = LOWER('GT_CashSub') AND (:ar_cashbank=1 OR :ar_cashbank=3)
+				UNION
+				SELECT Code FROM Global WHERE Name = LOWER('GT_BankSub') AND (:ar_cashbank=2 OR :ar_cashbank=3)
+				UNION
+				SELECT Code FROM Global WHERE Name IN (LOWER('GT_CashSub'), LOWER('GT_BankSub')) AND :ar_cashbank=3))
+	UNION ALL
+	SELECT 	V.AccCode,
+		V.Remarks,
+		Code=(SELECT MAX(VG.AccCode) FROM VirtualGL VG WHERE VG.DocumentType IN ('NR', 'NP') AND VG.DocumentCode=V.DocumentCode AND VG.AccCode <> V.AccCode), 
+		Amount = ISNULL(V.Debit - V.Credit, 0), 
+		Type=CASE WHEN ISNULL(V.Debit - V.Credit, 0) > 0 THEN 'Receipts' ELSE 'Payments' END, 
+		CheckNo=ISNULL(V.CheckNo, ''),
+		Id=CASE WHEN V.Debit > 0 THEN 15 ELSE 55 END
+	FROM VirtualGl V
+	WHERE
+		V.DocumentType IN ('NR', 'NP') AND
+		V.Date >= :ar_startdate AND V.Date <= :ar_enddate AND
+		V.AccCode IN
+			(SELECT AccCode FROM Accounts WHERE SUBCODE IN 
+				(SELECT Code FROM Global WHERE Name = LOWER('GT_CashSub') AND (:ar_cashbank=1 OR :ar_cashbank=3)
+				UNION
+				SELECT Code FROM Global WHERE Name = LOWER('GT_BankSub') AND (:ar_cashbank=2 OR :ar_cashbank=3)
+				UNION
+				SELECT Code FROM Global WHERE Name IN (LOWER('GT_CashSub'), LOWER('GT_BankSub')) AND :ar_cashbank=3))) BC
+WHERE BC.AccCode IN 
+	(SELECT DISTINCT AccCode FROM VirtualGL WHERE DATE BETWEEN :ar_startdate AND :ar_enddate AND :ar_transacconly=1
+	UNION
+	SELECT AccCode FROM Accounts WHERE :ar_transacconly=0 AND 
+		SUBCODE IN 
+			(SELECT Code FROM Global WHERE Name = LOWER('GT_CashSub') AND (:ar_cashbank=1 OR :ar_cashbank=3)
+			UNION
+			SELECT Code FROM Global WHERE Name = LOWER('GT_BankSub') AND (:ar_cashbank=2 OR :ar_cashbank=3)
+			UNION
+			SELECT Code FROM Global WHERE Name IN (LOWER('GT_CashSub'), LOWER('GT_BankSub')) AND :ar_cashbank=3))
+ORDER BY
+	Account,
+	id,
+	TYPE Desc,
+	source
+"
+  arguments=(("ar_startdate", datetime), ("ar_enddate", datetime), ("ar_cashbank", number), ("ar_transacconly", number))
+)
+group(level=1 header.height=475 trailer.height=475 by=("account"  ) header.color="536870912" header.transparency="0" header.gradient.color="8421504" header.gradient.transparency="0" header.gradient.angle="0" header.brushmode="0" header.gradient.repetition.mode="0" header.gradient.repetition.length="100" header.gradient.repetition.count="0" header.gradient.focus="0" header.gradient.scale="100" header.gradient.spread="100" trailer.color="536870912" trailer.transparency="0" trailer.gradient.color="8421504" trailer.gradient.transparency="0" trailer.gradient.angle="0" trailer.brushmode="0" trailer.gradient.repetition.mode="0" trailer.gradient.repetition.length="100" trailer.gradient.repetition.count="0" trailer.gradient.focus="0" trailer.gradient.scale="100" trailer.gradient.spread="100" )
+compute(name=compute_2 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" x="8558" y="50" height="158" width="1441" format="[general]" expression="'Page ' + page() + ' of ' + pageCount()" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_2 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" alignment="0" border="0" x="6766" y="50" height="166" width="366" text="Date: " html.valueishtml="0" )
+compute(name=compute_1 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" x="7175" y="50" height="166" width="1333" format="dd/mm/yyyy hh:mm:ss" expression="today()" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_6 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" alignment="2" border="0" x="91" y="250" height="166" width="9916" text="Cash/Bank Book	if(ar_cashbank=1, 'Cash', if(ar_cashbank=2, 'Bank', 'Cash & Bank')) + ' Book'" html.valueishtml="0" )
+compute(name=c_companyname visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" x="91" y="450" height="150" width="9916" format="[general]" expression="f_ReportHeaderInfo('clientname')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_1 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" alignment="0" border="0" x="91" y="633" height="166" width="741" text="From Date:" html.valueishtml="0" )
+text(name=t_7 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" alignment="0" border="0" x="2841" y="633" height="166" width="575" text="To Date:" html.valueishtml="0" )
+compute(name=compute_3 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="33554432" x="825" y="633" height="166" width="1966" format="dddd dd/mmm/yyyy hh:mm" expression=" ar_startdate " alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_4 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="33554432" x="3425" y="633" height="166" width="1966" format="dddd dd/mmm/yyyy hh:mm" expression=" ar_startdate " alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_7 visible="0	if(amount > 0, 1, 0)" band=detail font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="33554432" x="3958" y="8" height="166" width="1016" format="###,###,###,##0.00" expression="if(amount > 0, amount, 0)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_8 visible="0	if(amount < 0, 1, 0)" band=detail font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="33554432" x="8950" y="8" height="166" width="1016" format="###,###,###,##0.00" expression="if(amount < 0, abs( amount ), 0)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_9 visible="0	if(amount < 0, 1, 0)" band=detail font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="33554432" x="5083" y="8" height="166" width="3766" format="[GENERAL]" expression="source" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+line(name=l_9 visible="1" band=detail background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="0" pen.width="8" pen.color="0" x1="8891" y1="0" x2="8891" y2="258" )
+line(name=l_12 visible="1" band=detail background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="0" pen.width="8" pen.color="0" x1="10016" y1="0" x2="10016" y2="258" )
+line(name=l_4 visible="1" band=detail background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="0" pen.width="8" pen.color="0" x1="5016" y1="0" x2="5016" y2="258" )
+line(name=l_14 visible="1" band=detail background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="0" pen.width="8" pen.color="0" x1="3916" y1="0" x2="3916" y2="258" )
+line(name=l_17 visible="1" band=detail background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="0" pen.width="8" pen.color="0" x1="91" y1="0" x2="91" y2="258" )
+compute(name=compute_6 visible="0	if(amount > 0, 1, 0)" band=detail font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="33554432" x="141" y="8" height="166" width="3725" format="[GENERAL]" expression="source" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=amount_t visible="1" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="33554432" alignment="2" border="0" x="3958" y="258" height="166" width="1016" text="Debit Amount" html.valueishtml="0" )
+text(name=t_3 visible="1" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="33554432" alignment="2" border="0" x="8950" y="258" height="166" width="1016" text="Credit Amount" html.valueishtml="0" )
+text(name=t_4 visible="1" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="33554432" alignment="2" border="0" x="5083" y="258" height="166" width="3766" text="Description" html.valueishtml="0" )
+line(name=l_10 visible="1" band=header.1 background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="0" pen.width="8" pen.color="0" x1="8891" y1="225" x2="8891" y2="492" )
+line(name=l_1 visible="1" band=header.1 background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="0" pen.width="8" pen.color="0" x1="91" y1="458" x2="10033" y2="458" )
+line(name=l_3 visible="1" band=header.1 background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="0" pen.width="8" pen.color="0" x1="5016" y1="225" x2="5016" y2="492" )
+line(name=l_15 visible="1" band=header.1 background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="0" pen.width="8" pen.color="0" x1="3916" y1="225" x2="3916" y2="492" )
+line(name=l_2 visible="1" band=header.1 background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="0" pen.width="8" pen.color="0" x1="91" y1="225" x2="10033" y2="225" )
+text(name=account_t visible="1" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="33554432" alignment="2" border="0" x="141" y="258" height="166" width="1908" text="Description" html.valueishtml="0" )
+line(name=l_21 visible="1" band=header.1 background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="0" pen.width="8" pen.color="0" x1="91" y1="8" x2="10033" y2="8" )
+text(name=t_8 visible="1" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="33554432" alignment="0" border="0" x="133" y="42" height="166" width="633" text="A/c Title:" html.valueishtml="0" )
+compute(name=compute_5 visible="1" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="33554432" x="808" y="42" height="166" width="4533" format="[GENERAL]" expression=" account " alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+line(name=l_18 visible="1" band=header.1 background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="0" pen.width="8" pen.color="0" x1="91" y1="17" x2="91" y2="492" )
+line(name=l_11 visible="1" band=header.1 background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="0" pen.width="8" pen.color="0" x1="10016" y1="17" x2="10016" y2="492" )
+line(name=l_5 visible="1" band=trailer.1 background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="0" pen.width="8" pen.color="0" x1="91" y1="0" x2="10033" y2="0" )
+line(name=l_6 visible="1" band=trailer.1 background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="0" pen.width="8" pen.color="0" x1="91" y1="225" x2="10033" y2="225" )
+compute(name=compute_11 visible="1" band=trailer.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="33554432" x="8950" y="42" height="166" width="1016" format="###,###,###,##0.00" expression="sum(if(amount < 0, abs( amount ), 0) for group 1)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_14 visible="0	if(if(sum(amount for group 1) > 0, sum(amount for group 1), 0) >0, 1, 0)" band=trailer.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="33554432" x="8950" y="283" height="166" width="1016" format="###,###,###,##0.00" expression="if(sum(amount for group 1) > 0, sum(amount for group 1), 0)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+line(name=l_19 visible="1" band=trailer.1 background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="0" pen.width="8" pen.color="0" x1="91" y1="0" x2="91" y2="458" )
+line(name=l_16 visible="1" band=trailer.1 background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="0" pen.width="8" pen.color="0" x1="3916" y1="0" x2="3916" y2="458" )
+line(name=l_7 visible="1" band=trailer.1 background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="0" pen.width="8" pen.color="0" x1="5016" y1="0" x2="5016" y2="458" )
+line(name=l_8 visible="1" band=trailer.1 background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="0" pen.width="8" pen.color="0" x1="8891" y1="0" x2="8891" y2="458" )
+line(name=l_13 visible="1" band=trailer.1 background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="0" pen.width="8" pen.color="0" x1="10016" y1="0" x2="10016" y2="458" )
+line(name=l_20 visible="1" band=trailer.1 background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="0" pen.width="8" pen.color="0" x1="91" y1="458" x2="10033" y2="458" )
+compute(name=compute_10 visible="1" band=trailer.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="33554432" x="3958" y="42" height="166" width="1016" format="###,###,###,##0.00" expression="sum(if(amount > 0, amount, 0) for group 1)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_13 visible="0	if(if(sum(amount for group 1) < 0, ABS(sum(amount for group 1)),0) > 0, 1, 0)" band=trailer.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="33554432" x="3958" y="267" height="166" width="1016" format="###,###,###,##0.00" expression="if(sum(amount for group 1) < 0, ABS(sum(amount for group 1)),0)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_10 visible="1" band=trailer.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="2" background.color="16777215" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" alignment="0" border="0" x="8341" y="33" height="166" width="491" text="Total:" html.valueishtml="0" )
+text(name=t_12 visible="0	if(if(sum(amount for group 1) > 0, sum(amount for group 1), 0) >0, 1, 0)" band=trailer.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="2" background.color="16777215" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" alignment="1" border="0" x="7383" y="267" height="166" width="1450" text="Closing Balance: Dr." html.valueishtml="0" )
+text(name=t_9 visible="1" band=trailer.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="2" background.color="16777215" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" alignment="0" border="0" x="3375" y="33" height="166" width="491" text="Total:" html.valueishtml="0" )
+text(name=t_11 visible="0	if(if(sum(amount for group 1) < 0, ABS(sum(amount for group 1)),0) > 0, 1, 0)" band=trailer.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="2" background.color="16777215" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" alignment="1" border="0" x="2358" y="267" height="166" width="1508" text="Closing Balance: Cr." html.valueishtml="0" )
+htmltable(border="1" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" encodeSelfLinkArgs="1" generateDDDWFrames="1" generateJavaScript="1" netscapeLayers="0" pagingMethod=0 )
+xhtmlgen() cssgen(sessionSpecific="0" )
+xmlgen(inline="0" )
+xsltgen()
+jsgen()
+export.xml(headGroups="1" includewhitespace="0" metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 distill.customPostScript="0" xslfop.print="0" )
+export.xhtml()

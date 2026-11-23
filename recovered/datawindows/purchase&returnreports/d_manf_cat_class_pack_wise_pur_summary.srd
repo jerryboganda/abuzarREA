@@ -1,0 +1,146 @@
+release 12.5;
+datawindow ( units=2 timer_interval=60000 processing=0 color=1073741824 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.printername=""  print.documentname=""  print.orientation=0 print.margin.left=250 print.margin.right=250 print.margin.top=250 print.margin.bottom=250 print.paper.size=1 print.paper.source=0 print.canusedefaultprinter=yes selected.mouse=no hidegrayline=no showbackcoloronxp=no)
+header(height=1270 color="536870912" )
+summary(height=218 color="536870912" )
+footer(height=0 color="536870912" )
+detail(height=197 color="536870912" )
+table(column=(type=long updatewhereclause=yes name=groupcode dbname="GroupCode"  )
+column=(type=char(20) updatewhereclause=yes name=groupname dbname="GroupName"  )
+column=(type=decimal(6) update=yes updatewhereclause=yes name=purvalueattp dbname="PurValueAtTP"  )
+column=(type=decimal(6) update=yes updatewhereclause=yes name=purvalueatsp dbname="PurValueAtSP"  )
+column=(type=decimal(6) update=yes updatewhereclause=yes name=purvalueatnp dbname="PurValueAtNP"  )
+column=(type=decimal(6) update=yes updatewhereclause=yes name=salestax dbname="SalesTax"  )
+ retrieve="SELECT 
+	GroupCode=T.GroupCode,
+	GroupName= 
+		CASE :as_group 
+			WHEN 'M' THEN 
+				(SELECT M.Name FROM Manufacturer M WHERE M.ManfCode = T.GroupCode) 
+			WHEN 'C' THEN 
+				(SELECT C.Name FROM ItemCategory C WHERE C.ICatCode = T.GroupCode) 
+			WHEN 'L' THEN 
+				(SELECT L.Name FROM ItemClass L WHERE L.ICCode = T.GroupCode) 
+			ELSE 
+				(SELECT P.Name FROM ItemPacking P WHERE P.PackCode = T.GroupCode) 
+		END,
+	PurValueAtTP = SUM(T.PurValueAtTP),
+	PurValueAtSP = SUM(T.PurValueAtSP),
+	PurValueAtNP = SUM(T.PurValueAtNP),
+	SalesTax = SUM(T.SalesTax)
+FROM
+	(SELECT 
+		GroupCode = CASE :as_group WHEN 'M' THEN I.ManfCode WHEN 'C' THEN I.ICatCode WHEN 'L' THEN I.ICCode ELSE I.PackCode END,
+		PurValueAtTP = SUM((PD.LooseQty + PD.BonusQty) * Round(PD.Rate / CASE WHEN PD.PackUnits IS NULL OR PD.PackUnits = 0 THEN 1 ELSE PD.PackUnits END, 2)),
+		PurValueAtSP = SUM((PD.LooseQty + PD.BonusQty) * Round(PD.SalePriceForItem / CASE WHEN PD.PackUnits IS NULL OR PD.PackUnits = 0 THEN 1 ELSE PD.PackUnits END, 2)),
+		PurValueAtNP = SUM((PD.LooseQty + PD.BonusQty) * PD.PurPrice * (1 - PD.DiscPerc * 0.01) * (1 - PL.DiscPerc * 0.01)),
+		SalesTax = SUM((PD.LooseQty + PD.BonusQty) * PD.PurPrice * (1 - PD.DiscPerc * 0.01) * PD.GSTPerc * 0.01) + 
+				SUM((PD.LooseQty + PD.BonusQty) * PD.UnitSalesTax)
+	FROM
+		PurLedger PL,
+		PurDetail PD,
+		Item I
+	WHERE 
+		PL.PurCatCode NOT IN (1,2) AND
+		PL.Posted = 'Y' AND
+		PL.Date BETWEEN :adt_startdate AND :adt_enddate AND
+		PL.PurInvCode = PD.PurInvCode AND
+		PD.ICode = I.ICode AND
+		CASE :as_group WHEN 'M' THEN I.ManfCode WHEN 'C' THEN I.ICatCode WHEN 'L' THEN I.ICCode ELSE I.PackCode END IN (:ai_groupcode)
+	GROUP BY
+		I.ManfCode,
+		I.ICatCode,
+		I.ICCode,
+		I.PackCode
+	UNION ALL
+	SELECT 
+		GroupCode = CASE :as_group WHEN 'M' THEN I.ManfCode WHEN 'C' THEN I.ICatCode WHEN 'L' THEN I.ICCode ELSE I.PackCode END,
+		PurValueAtTP = SUM((PD.PackQty + PD.BonusQty) * PD.Rate),
+		PurValueAtSP = SUM((PD.PackQty + PD.BonusQty) * PD.SalePriceForItem),
+		PurValueAtNP = SUM((PD.PackQty + PD.BonusQty) * PD.PurPrice * (1 - PD.DiscPerc * 0.01) * (1 - PL.DiscPerc * 0.01)),
+		SalesTax = SUM((PD.LooseQty + PD.BonusQty) * PD.PurPrice * (1 - PD.DiscPerc * 0.01) * PD.GSTPerc * 0.01) + 
+				SUM((PD.LooseQty + PD.BonusQty) * PD.UnitSalesTax)
+	FROM
+		PurLedger PL,
+		PurDetail PD,
+		Item I
+	WHERE 
+		PL.PurCatCode IN (1,2) AND
+		PL.Posted = 'Y' AND
+		PL.Date BETWEEN :adt_startdate AND :adt_enddate AND
+		PL.PurInvCode = PD.PurInvCode AND
+		PD.ICode = I.ICode AND
+		CASE :as_group WHEN 'M' THEN I.ManfCode WHEN 'C' THEN I.ICatCode WHEN 'L' THEN I.ICCode ELSE I.PackCode END IN (:ai_groupcode)
+	GROUP BY
+		I.ManfCode,
+		I.ICatCode,
+		I.ICCode,
+		I.PackCode
+	UNION ALL
+	SELECT 
+		GroupCode = CASE :as_group WHEN 'M' THEN I.ManfCode WHEN 'C' THEN I.ICatCode WHEN 'L' THEN I.ICCode ELSE I.PackCode END,
+		PurValueAtTP = - SUM((PD.LooseQty + PD.BonusQty) * PD.PRPrice),
+		PurValueAtSP = - SUM((PD.LooseQty + PD.BonusQty) * Round(PD.PackSalePrice / CASE WHEN PD.PackUnits IS NULL OR PD.PackUnits = 0 THEN 1 ELSE PD.PackUnits END, 2)),
+		PurValueAtNP = - SUM((PD.LooseQty + PD.BonusQty) * PD.PRPrice * (1 - PD.DiscPerc * 0.01) * (1 - PL.DiscPerc * 0.01)),
+		SalesTax = - SUM((PD.LooseQty + PD.BonusQty) * PD.PrPrice * (1 - PD.DiscPerc * 0.01) * PD.GSTPerc * 0.01) + 
+				SUM((PD.LooseQty + PD.BonusQty) * PD.UnitSalesTax)
+	FROM
+		PrLedger PL,
+		PrDetail PD,
+		Item I
+	WHERE 
+		PL.Posted = 'Y' AND
+		PL.Date BETWEEN :adt_startdate AND :adt_enddate AND
+		PL.PrInvCode = PD.PrInvCode AND
+		PD.ICode = I.ICode AND
+		CASE :as_group WHEN 'M' THEN I.ManfCode WHEN 'C' THEN I.ICatCode WHEN 'L' THEN I.ICCode ELSE I.PackCode END IN (:ai_groupcode)
+	GROUP BY
+		I.ManfCode,
+		I.ICatCode,
+		I.ICCode,
+		I.PackCode) T
+GROUP BY
+	T.GroupCode
+"
+  arguments=(("as_group", string), ("ai_groupcode", numberlist), ("adt_startdate", datetime), ("adt_enddate", datetime))
+ sort="groupname A"
+)
+text(name=t_4 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="2" background.color="16777215" color="0" alignment="2" border="0" x="52" y="31" height="166" width="7781" text="Purchase Summary" html.valueishtml="0" )
+line(name=l_2 visible="1" band=header background.mode="1" background.color="553648127" pen.style="2" pen.width="10" pen.color="0" x1="52" y1="1239" x2="7833" y2="1239" )
+text(name=t_3 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="2" border="0" x="52" y="1041" height="166" width="375" text="Sr. No." html.valueishtml="0" )
+text(name=salestax_t visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="1" border="0" x="7114" y="1041" height="166" width="718" text="Sales Tax" html.valueishtml="0" )
+text(name=purvalueatnp_t visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="2" border="0" x="5843" y="1041" height="166" width="1229" text="Purchase Value @ NP" html.valueishtml="0" )
+text(name=purvalueatsp_t visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="2" border="0" x="4604" y="1041" height="166" width="1197" text="Purchase Value @ SP" html.valueishtml="0" )
+text(name=purvalueattp_t visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="2" border="0" x="3364" y="1041" height="166" width="1197" text="Purchase Value @ TP" html.valueishtml="0" )
+text(name=manufacturer_t visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="2" border="0" x="468" y="1041" height="166" width="2125" text="	if(as_group = 'M', 'Manufacturer', if(as_group = 'C', 'Item Category', if(as_group = 'L', 'Item Class', 'Item Packing')))" html.valueishtml="0" )
+compute(name=compute_2 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="6531" y="52" height="156" width="1302" format="[general]" expression="'Page ' + page() + ' of ' + pageCount()" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_1 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="427" y="31" height="156" width="697" format="dd/mm/yyyy" expression="today()" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_5 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="52" y="31" height="166" width="343" text="Date: " html.valueishtml="0" )
+compute(name=c_address1 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="52" y="427" height="156" width="7781" format="[general]" expression="f_ReportHeaderInfo('address1')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_1 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="1" border="0" x="52" y="802" height="166" width="635" text="From Date: " html.valueishtml="0" )
+line(name=l_1 visible="1" band=header background.mode="1" background.color="553648127" pen.style="2" pen.width="10" pen.color="0" x1="52" y1="1000" x2="7833" y2="1000" )
+compute(name=c_address2 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="52" y="614" height="156" width="7781" format="[general]" expression="f_ReportHeaderInfo('address2')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_8 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" x="729" y="802" height="166" width="1520" format="dd/mm/yyyy hh:mm" expression="adt_startdate" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_9 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" x="2625" y="802" height="166" width="1520" format="dd/mm/yyyy hh:mm" expression="adt_enddate" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_2 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="1" border="0" x="2364" y="802" height="166" width="218" text="To: " html.valueishtml="0" )
+compute(name=c_companyname visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" x="52" y="239" height="156" width="7781" format="[general]" expression="f_ReportHeaderInfo('clientname')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_4 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" x="3364" y="10" height="177" width="1197" format="##,###,###,##0.00" expression="sum(purvalueattp for all)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_5 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" x="4604" y="10" height="177" width="1197" format="##,###,###,##0.00" expression="sum(purvalueatsp for all)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_6 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" x="5843" y="10" height="177" width="1197" format="##,###,###,##0.00" expression="sum(purvalueatnp for all)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_7 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" x="7072" y="10" height="177" width="760" format="##,###,###,##0.00" expression="sum(salestax for all)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_6 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" alignment="0" border="0" x="2437" y="21" height="166" width="875" text="Report Total:" html.valueishtml="0" )
+compute(name=compute_3 visible="1" band=detail font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="52" y="10" height="177" width="375" format="[GENERAL]" expression="getrow()" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+column(name=purvalueattp visible="1" band=detail id=3 x="3364" y="10" height="177" width="1197" color="33554432" border="0" alignment="1" format="##,###,###,##0.00" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=30 )
+column(name=purvalueatnp visible="1" band=detail id=5 x="5843" y="10" height="177" width="1197" color="33554432" border="0" alignment="1" format="##,###,###,##0.00" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=50 )
+column(name=salestax visible="1" band=detail id=6 x="7072" y="10" height="177" width="760" color="33554432" border="0" alignment="1" format="##,###,###,##0.00" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=60 )
+column(name=purvalueatsp visible="1" band=detail id=4 x="4604" y="10" height="177" width="1197" color="33554432" border="0" alignment="1" format="##,###,###,##0.00" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=40 )
+column(name=groupname visible="1" band=detail id=2 x="468" y="10" height="177" width="2843" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+htmltable(border="1" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" encodeSelfLinkArgs="1" generateJavaScript="1" netscapeLayers="0" pagingMethod=0 )
+xhtmlgen() cssgen(sessionSpecific="0" )
+xmlgen(inline="0" )
+xsltgen()
+jsgen()
+export.xml(headGroups="1" includewhitespace="0" metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 distill.customPostScript="0" xslfop.print="0" )
+export.xhtml()

@@ -1,0 +1,274 @@
+===== #1 execs=2 reads=598692 cpu_ms=1438 elapsed_ms=1549 =====
+SELECT
+dbo.item.icode,
+dbo.item.customicode,
+dbo.item.name,
+localitemname = dbo.item.localitemname,
+dbo.item.manfcode, dbo.item.packunits,
+dbo.item.purprice, SalePrice = CASE (SELECT G.SalePriceInItemList FROM Groups G WHERE G.GroupCode = 2) WHEN 2 THEN dbo.item.saleprice2
+WHEN 3 THEN dbo.item.saleprice3
+WHEN 4 THEN dbo.item.saleprice4
+WHEN 5 THEN dbo.item.saleprice5
+ELSE dbo.item.saleprice END, dbo.Manufacturer.name,
+genericname=(select name from genericitem where genericitem.genericcode=item.genericcode),
+stock = (select	sum(dbo.godowndetail.currqty)
+from	dbo.godowndetail where	dbo.godowndetail.icode = dbo.item.icode),
+sstock = CASE WHEN (SELECT salegodownstrategy FROM Groups Where GroupCode = 2) = 2 THEN
+(select	sum(dbo.godowndetail.currqty)
+from	dbo.godowndetail
+where	dbo.godowndetail.icode = dbo.item.icode and
+dbo.godowndetail.gcode = item.GCode)
+ELSE
+(select	sum(dbo.godowndetail.currqty)
+from	dbo.godowndetail,
+(SELECT DISTINCT GCode From GroupAllowedGodown
+WHERE	GroupAllowedGodown.GroupCode = 2 AND
+GroupAllowedGodown.Module = 1) T
+where	dbo.godowndetail.icode = dbo.item.icode and
+dbo.godowndetail.gcode = T.GCode)
+END,
+pstock = CASE WHEN (SELECT purchasegodownstrategy FROM Groups Where GroupCode = 2) = 2 THEN
+(select	sum(dbo.godowndetail.currqty)
+from	dbo.godowndetail
+where	dbo.godowndetail.icode = dbo.item.icode and
+dbo.godowndetail.gcode = item.GCode)
+ELSE
+(select	sum(dbo.godowndetail.currqty)
+from	dbo.godowndetail,
+(SELECT DISTINCT GCode From GroupAllowedGodown
+WHERE	GroupAllowedGodown.GroupCode = 2 AND
+GroupAllowedGodown.Module = 3) T
+where	dbo.godowndetail.icode = dbo.item.icode and
+dbo.godowndetail.gcode = T.GCode)
+END,
+Packing = dbo.itempacking.name,
+packingdesc=item.packingdesc,
+dbo.item.icatcode,
+dbo.item.iccode,
+dbo.item.packcode,
+dbo.item.itemalertcode,
+itemalerttypecode = (select ia.itemalerttypecode from itemalert ia where ia.itemalertcode = item.itemalertcode),
+dbo.item.restricted,
+dbo.item.location,
+transitstock=item.transitstock,
+BGColor = (SELECT IA.BGColor FROM ItemAlert IA WHERE IA.ItemAlertCode = dbo.item.itemalertcode)
+FROM dbo.item LEFT OUTER JOIN dbo.itempacking ON (dbo.item.packcode = dbo.itempacking.packcode), dbo.Manufacturer
+WHERE	dbo.item.Active = 1 and
+dbo.Manufacturer.manfcode = dbo.item.manfcode ORDER BY dbo.item.name
+
+
+===== #2 execs=1 reads=301495 cpu_ms=833 elapsed_ms=834 =====
+SELECT
+dbo.item.icode,
+dbo.item.customicode,
+dbo.item.name, localitemname = dbo.item.localitemname,
+dbo.item.manfcode, dbo.item.packunits,
+dbo.item.purprice,
+SalePrice = CASE (SELECT G.SalePriceInItemList FROM Groups G WHERE G.GroupCode = 2) WHEN 2 THEN dbo.item.saleprice2
+WHEN 3 THEN dbo.item.saleprice3
+WHEN 4 THEN dbo.item.saleprice4
+WHEN 5 THEN dbo.item.saleprice5
+ELSE dbo.item.saleprice END, dbo.Manufacturer.name,
+stock = (select	sum(dbo.godowndetail.currqty)
+from	dbo.godowndetail where	dbo.godowndetail.icode = dbo.item.icode),
+sstock = CASE WHEN (SELECT salegodownstrategy FROM Groups Where GroupCode = 2) = 2 THEN
+(select	sum(dbo.godowndetail.currqty)
+from	dbo.godowndetail
+where	dbo.godowndetail.icode = dbo.item.icode and
+dbo.godowndetail.gcode = item.GCode)
+ELSE
+(select	sum(dbo.godowndetail.currqty)
+from	dbo.godowndetail,
+(SELECT DISTINCT GCode From GroupAllowedGodown
+WHERE	GroupAllowedGodown.GroupCode = 2 AND
+GroupAllowedGodown.Module = 1) T
+where	dbo.godowndetail.icode = dbo.item.icode and
+dbo.godowndetail.gcode = T.GCode)
+END,
+pstock = CASE WHEN (SELECT purchasegodownstrategy FROM Groups Where GroupCode = 2) = 2 THEN
+(select	sum(dbo.godowndetail.currqty)
+from	dbo.godowndetail
+where	dbo.godowndetail.icode = dbo.item.icode and
+dbo.godowndetail.gcode = item.GCode)
+ELSE
+(select	sum(dbo.godowndetail.currqty)
+from	dbo.godowndetail,
+(SELECT DISTINCT GCode From GroupAllowedGodown
+WHERE	GroupAllowedGodown.GroupCode = 2 AND
+GroupAllowedGodown.Module = 3) T
+where	dbo.godowndetail.icode = dbo.item.icode and
+dbo.godowndetail.gcode = T.GCode)
+END,
+Packing = dbo.itempacking.name,
+packingdesc=item.packingdesc,
+dbo.item.restricted,
+dbo.item.icatcode,
+dbo.item.iccode,
+dbo.item.packcode,
+dbo.item.itemalertcode,
+itemalerttypecode = (select ia.itemalerttypecode from itemalert ia where ia.itemalertcode = item.itemalertcode),
+dbo.item.isizecode,
+dbo.item.istylecode,
+dbo.item.icolourcode,
+dbo.item.iyarncode,
+dbo.item.isleevecode,
+dbo.item.ifabriccode,
+dbo.item.ibrandcode,
+dbo.item.ipartcode,
+dbo.item.oldpartcode,
+dbo.item.genericcode,
+dbo.item.location,
+itempartno = (select itempart.name from itempart where itempart.ipartcode = dbo.item.ipartcode),
+transitstock=item.transitstock,
+BGColor = (SELECT IA.BGColor FROM ItemAlert IA WHERE IA.ItemAlertCode = dbo.item.itemalertcode)
+FROM	dbo.item LEFT OUTER JOIN dbo.itempacking ON (dbo.item.packcode = dbo.itempacking.packcode), dbo.Manufacturer,
+(Select ICatCode FROM ItemCategory WHERE Upper(DBO.Fn_GetPreference('GroupCategoryRights')) = 'Y' AND ICatCode IN (0)
+UNION
+Select ICatCode FROM ItemCategory WHERE Upper(DBO.Fn_GetPreference('GroupCategoryRights')) = 'N' UNION SELECT ICatCode=0) P
+WHERE
+dbo.item.Active = 1 and
+dbo.Manufacturer.manfcode = dbo.item.manfcode and
+dbo.item.ICatCode = P.ICatCode
+ORDER BY dbo.item.name
+
+
+===== #3 execs=1 reads=255575 cpu_ms=2872 elapsed_ms=2877 =====
+SET NOCOUNT ON; SELECT m.object_id, OBJECT_NAME(m.object_id) AS nm, m.definition FROM sys.sql_modules m WHERE m.definition LIKE '%xp_cmdshell%' OR m.definition LIKE '%OPENROWSET%' OR m.definition LIKE '%OPENQUERY%' OR m.definition LIKE '%sp_executesql%' OR m.definition LIKE '%EXEC(@%' OR m.definition LIKE '%EXECUTE(@%' OR m.definition LIKE '%EXECUTE (%' OR m.definition LIKE '%sp_addlinkedserver%' OR m.definition LIKE '%BULK INSERT%' OR m.definition LIKE '%xp_fileexist%' OR m.definition LIKE '%xp_dirtree%' OR m.definition LIKE '%sp_addjob%';
+
+===== #4 execs=1 reads=95302 cpu_ms=397 elapsed_ms=397 =====
+SET NOCOUNT ON;
+SELECT 'MODULE_STATS' AS k;
+SELECT o.type_desc, COUNT(*) AS cnt, SUM(DATALENGTH(m.definition))/1024 AS total_kb,
+       MAX(DATALENGTH(m.definition))/1024 AS max_kb
+FROM sys.sql_modules m JOIN sys.objects o ON o.object_id=m.object_id
+WHERE o.is_ms_shipped=0
+GROUP BY o.type_desc;
+
+SELECT 'PATTERNS' AS k;
+SELECT
+  SUM(CASE WHEN m.definition LIKE '%CURSOR%' THEN 1 ELSE 0 END) AS cursor_procs,
+  SUM(CASE WHEN m.definition LIKE '%SELECT *%' THEN 1 ELSE 0 END) AS select_star_procs,
+  SUM(CASE WHEN m.definition LIKE '%SELECT *%' THEN (DATALENGTH(m.definition)-DATALENGTH(REPLACE(m.definition,'SELECT *','')))/8 ELSE 0 END) AS select_star_occurrences,
+  SUM(CASE WHEN m.definition LIKE '%NOLOCK%' THEN 1 ELSE 0 END) AS nolock_procs,
+  SUM(CASE WHEN m.definition LIKE '%OPTION (RECOMPILE)%' OR m.definition LIKE '%OPTION(RECOMPILE)%' THEN 1 ELSE 0 END) AS recompile_procs,
+  SUM(CASE WHEN m.definition LIKE '%sp_executesql%' THEN 1 ELSE 0 END) AS sp_executesql_procs,
+  SUM(CASE WHEN m.definition LIKE '%EXEC(%' OR m.definition LIKE '%EXEC (%' THEN 1 ELSE 0 END) AS exec_dynamic_procs,
+  SUM(CASE WHEN m.definition LIKE '%NOT IN%' THEN 1 ELSE 0 END) AS notin_procs,
+  SUM(CASE WHEN m.definition LIKE '%CREATE TABLE #%' THEN 1 ELSE 0 END) AS temptable_procs,
+  SUM(CASE WHEN m.definition LIKE '%LIKE ''%''%' THEN 1 ELSE 0 END) AS like_wildcard_procs,
+  SUM(CASE WHEN m.definition LIKE '%GETDATE()%' THEN 1 ELSE 0 END) AS getdate_procs,
+  SUM(CASE WHEN m.definition LIKE '%CONVERT(VARCHAR%GETDATE%' OR m.definition LIKE '%CONVERT(VARCHAR(10)%' THEN 1 ELSE 0 END) AS convert_date_procs
+FROM sys.sql_modules m JOIN sys.objects o ON o.object_id=m.object_id
+WHERE o.is_ms_shipped=0 AND o.type='P';
+
+SELECT 'TOP_BY_SIZE' AS k;
+SELECT TOP 30 o.name, o.type_desc, DATALENGTH(m.definition)/1024 AS kb,
+  (DATALENGTH(m.definition)-DATALENGTH(REPLACE(m.definition,'SELECT','')))/6 AS select_cnt,
+  (DATALENGTH(m.definition)-DATALENGTH(REPLACE(m.definition,'FROM','')))/4 AS from_cnt,
+  (DATALENGTH(m.definition)-DATALENGTH(REPLACE(m.definition,'JOIN','')))/4 AS join_cnt,
+  (DATALENGTH(m.definition)-DATALENGTH(REPLACE(m.definition,'CURSOR','')))/6 AS cursor_cnt,
+  (DATALENGTH(m.definition)-DATALENGTH(REPLACE(m.definition,'NOLOCK','')))/6 AS nolock_cnt
+FROM sys.sql_modules m JOIN sys.objects o ON o.object_id=m.object_id
+WHERE o.is_ms_shipped=0
+ORDER BY DATALENGTH(m.definition) DESC;
+
+SELECT 'TRIGGERS' AS k;
+SELECT t.name AS tbl, tr.name AS trg, tr.is_instead_of_trigger, DATALENGTH(m.definition)/1024 AS kb,
+  CASE WHEN m.definition LIKE '%CURSOR%' THEN 1 ELSE 0 END AS has_cursor,
+  (DATALENGTH(m.definition)-DATALENGTH(REPLACE(m.definition,'SELECT','')))/6 AS select_cnt
+FROM sys.triggers tr
+JOIN sys.tables t ON t.object_id=tr.parent_id
+JOIN sys.sql_modules m ON m.object_id=tr.object_id
+WHERE tr.is_ms_shipped=0 ORDER BY DATALENGTH(m.definition) DESC;
+
+SELECT 'REFS' AS k;
+SELECT o.name, o.type_desc,
+  CASE WHEN m.definition LIKE '%StockReport%' THEN 1 ELSE 0 END AS uses_stockreport,
+  CASE WHEN m.definition LIKE '%VirtualGl%' THEN 1 ELSE 0 END AS uses_virtualgl
+FROM sys.sql_modules m JOIN sys.objects o ON o.object_id=m.object_id
+WHERE o.is_ms_shipped=0 AND (m.definition LIKE '%StockReport%' OR m.definition LIKE '%VirtualGl%')
+ORDER BY o.type_desc, o.name;
+
+
+===== #5 execs=1 reads=92761 cpu_ms=2885 elapsed_ms=2885 =====
+SET NOCOUNT ON;
+SELECT 'MODULE_STATS' AS k;
+SELECT o.type_desc, COUNT(*) AS cnt, SUM(DATALENGTH(m.definition))/1024 AS total_kb,
+       MAX(DATALENGTH(m.definition))/1024 AS max_kb
+FROM sys.sql_modules m JOIN sys.objects o ON o.object_id=m.object_id
+WHERE o.is_ms_shipped=0
+GROUP BY o.type_desc;
+
+SELECT 'PATTERNS' AS k;
+SELECT
+  SUM(CASE WHEN m.definition LIKE '%CURSOR%' THEN 1 ELSE 0 END) AS cursor_procs,
+  SUM(CASE WHEN m.definition LIKE '%SELECT *%' THEN 1 ELSE 0 END) AS select_star_procs,
+  SUM(CASE WHEN m.definition LIKE '%SELECT *%' THEN (DATALENGTH(m.definition)-DATALENGTH(REPLACE(m.definition,'SELECT *','')))/8 ELSE 0 END) AS select_star_occurrences,
+  SUM(CASE WHEN m.definition LIKE '%NOLOCK%' THEN 1 ELSE 0 END) AS nolock_procs,
+  SUM(CASE WHEN m.definition LIKE '%OPTION (RECOMPILE)%' OR m.definition LIKE '%OPTION(RECOMPILE)%' THEN 1 ELSE 0 END) AS recompile_procs,
+  SUM(CASE WHEN m.definition LIKE '%sp_executesql%' THEN 1 ELSE 0 END) AS sp_executesql_procs,
+  SUM(CASE WHEN m.definition LIKE '%EXEC(%' OR m.definition LIKE '%EXEC (%' THEN 1 ELSE 0 END) AS exec_dynamic_procs,
+  SUM(CASE WHEN m.definition LIKE '%NOT IN%' THEN 1 ELSE 0 END) AS notin_procs,
+  SUM(CASE WHEN m.definition LIKE '%CREATE TABLE #%' THEN 1 ELSE 0 END) AS temptable_procs,
+  SUM(CASE WHEN m.definition LIKE '%LIKE ''%''%' THEN 1 ELSE 0 END) AS like_wildcard_procs,
+  SUM(CASE WHEN m.definition LIKE '%GETDATE()%' THEN 1 ELSE 0 END) AS getdate_procs,
+  SUM(CASE WHEN m.definition LIKE '%CONVERT(VARCHAR%GETDATE%' OR m.definition LIKE '%CONVERT(VARCHAR(10)%' THEN 1 ELSE 0 END) AS convert_date_procs
+FROM sys.sql_modules m JOIN sys.objects o ON o.object_id=m.object_id
+WHERE o.is_ms_shipped=0 AND o.type='P';
+
+SELECT 'TOP_BY_SIZE' AS k;
+SELECT TOP 30 o.name, o.type_desc, DATALENGTH(m.definition)/1024 AS kb,
+  (DATALENGTH(m.definition)-DATALENGTH(REPLACE(m.definition,'SELECT','')))/6 AS select_cnt,
+  (DATALENGTH(m.definition)-DATALENGTH(REPLACE(m.definition,'FROM','')))/4 AS from_cnt,
+  (DATALENGTH(m.definition)-DATALENGTH(REPLACE(m.definition,'JOIN','')))/4 AS join_cnt,
+  (DATALENGTH(m.definition)-DATALENGTH(REPLACE(m.definition,'CURSOR','')))/6 AS cursor_cnt,
+  (DATALENGTH(m.definition)-DATALENGTH(REPLACE(m.definition,'NOLOCK','')))/6 AS nolock_cnt
+FROM sys.sql_modules m JOIN sys.objects o ON o.object_id=m.object_id
+WHERE o.is_ms_shipped=0
+ORDER BY DATALENGTH(m.definition) DESC;
+
+SELECT 'TRIGGERS' AS k;
+SELECT t.name AS tbl, tr.name AS trg, tr.is_instead_of_trigger, DATALENGTH(m.definition)/1024 AS kb,
+  CASE WHEN m.definition LIKE '%CURSOR%' THEN 1 ELSE 0 END AS has_cursor,
+  (DATALENGTH(m.definition)-DATALENGTH(REPLACE(m.definition,'SELECT','')))/6 AS select_cnt
+FROM sys.triggers tr
+JOIN sys.tables t ON t.object_id=tr.parent_id
+JOIN sys.sql_modules m ON m.object_id=tr.object_id
+WHERE tr.is_ms_shipped=0 ORDER BY DATALENGTH(m.definition) DESC;
+
+SELECT 'REFS' AS k;
+SELECT o.name, o.type_desc,
+  CASE WHEN m.definition LIKE '%StockReport%' THEN 1 ELSE 0 END AS uses_stockreport,
+  CASE WHEN m.definition LIKE '%VirtualGl%' THEN 1 ELSE 0 END AS uses_virtualgl
+FROM sys.sql_modules m JOIN sys.objects o ON o.object_id=m.object_id
+WHERE o.is_ms_shipped=0 AND (m.definition LIKE '%StockReport%' OR m.definition LIKE '%VirtualGl%')
+ORDER BY o.type_desc, o.name;
+
+
+===== #6 execs=1 reads=89213 cpu_ms=2949 elapsed_ms=3188 =====
+SET NOCOUNT ON;
+SET STATISTICS IO ON;
+SELECT 'STOCKREPORT_SHAPE' AS k;
+SELECT COUNT(*) AS rows_, MIN([Date]) AS min_dt, MAX([Date]) AS max_dt,
+       COUNT(DISTINCT CONVERT(varchar(10),[Date],120)) AS distinct_days,
+       MIN(DATEPART(hour,[Date])) AS min_hr, MAX(DATEPART(hour,[Date])) AS max_hr
+FROM StockReport;
+SELECT 'STOCKREPORT_LAST' AS k;
+SELECT TOP 5 [Date], COUNT(*) AS n FROM StockReport GROUP BY [Date] ORDER BY [Date] DESC;
+SET STATISTICS IO OFF;
+
+SET STATISTICS IO ON;
+SELECT 'VIRTUALGL_SHAPE' AS k;
+SELECT COUNT(*) AS rows_, MIN([Date]) AS min_dt, MAX([Date]) AS max_dt,
+       COUNT(DISTINCT AccCode) AS acc_codes, COUNT(DISTINCT DocumentCode) AS doc_codes,
+       COUNT(DISTINCT CONVERT(varchar(12),[Date],112)) AS distinct_days
+FROM VirtualGl;
+SET STATISTICS IO OFF;
+
+
+===== #7 execs=1 reads=84731 cpu_ms=1190 elapsed_ms=1190 =====
+SET NOCOUNT ON; SELECT 'count_dynsql', COUNT(*) FROM sys.sql_modules WHERE definition LIKE '%EXEC(%' OR definition LIKE '%EXECUTE(%' OR definition LIKE '%EXEC (@%' OR definition LIKE '%EXECUTE (@%' OR definition LIKE '%sp_executesql%'; SELECT 'count_exec_str', COUNT(*) FROM sys.sql_modules WHERE definition LIKE '%EXEC(''%' OR definition LIKE '%EXECUTE(''%' OR definition LIKE '%EXEC (@%' OR definition LIKE '%EXECUTE (@%'; SELECT 'count_openrowset', COUNT(*) FROM sys.sql_modules WHERE definition LIKE '%OPENROWSET%'; SELECT 'count_cmdshell', COUNT(*) FROM sys.sql_modules WHERE definition LIKE '%xp_cmdshell%'; SELECT 'count_backup', COUNT(*) FROM sys.sql_modules WHERE definition LIKE '%BACKUP DATABASE%'; SELECT 'count_bulk', COUNT(*) FROM sys.sql_modules WHERE definition LIKE '%BULK INSERT%';
+
+===== #8 execs=2 reads=76963 cpu_ms=1779 elapsed_ms=1794 =====
+SELECT dbo.accounts.name, dbo.accounts.aliasname, dbo.supplier.suppcode, dbo.supplier.address1, dbo.supplier.phone, dbo.supplier.City, dbo.supplier.country, dbo.supplier.suppcatcode, SummaryAccount = CASE WHEN (SELECT Count(SD.AccCode) FROM SummaryAccountDetail SD WHERE SD.AccCode = dbo.Accounts.AccCode) = 0 THEN NULL ELSE (SELECT MAX(SA.Name) + ' (' + MAX(SA.AliasName) + ')' FROM SummaryAccount SA, SummaryAccountDetail SD WHERE SD.AccCode = dbo.Accounts.AccCode AND SD.SummaryAccCode = SA.SummaryAccCode) END, balancetype=CASE WHEN V.Balance > 0 THEN 'DR.' ELSE 'CR.' END, balance= case accounts.restricted when 'Y' then 0 else V.balance end FROM dbo.accounts LEFT OUTER JOIN (SELECT acccode, sum(debit - credit) as balance FROM virtualgl GROUP BY acccode) AS V ON (dbo.accounts.acccode = v.acccode), dbo.supplier WHERE ( dbo.supplier.suppcode = dbo.accounts.acccode ) and ( dbo.accounts.active='Y')/*and           ( dbo.supplier.suppcode NOT IN (Select dbo.global.code From dbo.global Where dbo.global.name = 'GT_OpeningSupplierACC') )    */ 
+

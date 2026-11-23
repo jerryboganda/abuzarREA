@@ -1,0 +1,112 @@
+release 12.5;
+datawindow ( units=2 timer_interval=0 processing=4 color=16777215 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.printername=""  print.documentname=""  print.orientation=1 print.margin.left=0 print.margin.right=0 print.margin.top=0 print.margin.bottom=0 print.paper.size=1 print.paper.source=0 print.canusedefaultprinter=yes grid.lines=0 grid.columnmove=no selected.mouse=no hidegrayline=no showbackcoloronxp=no crosstab.dynamic=yes)
+header[1](height=1156 color="536870912" )
+header[2](height=354 color="536870912" )
+summary(height=0 color="536870912" )
+footer(height=0 color="536870912" )
+detail(height=197 color="536870912" )
+table(column=(type=char(20) updatewhereclause=yes name=aliasname dbname="aliasname"  )
+column=(type=char(20) updatewhereclause=yes name=itemname dbname="itemname"  )
+column=(type=number updatewhereclause=yes name=purqty dbname="purqty"  )
+column=(type=number updatewhereclause=yes name=quotedqty dbname="quotedqty"  )
+ retrieve="SELECT
+	PD.ICode, AliasName=I.CustomICode, ItemName=I.Name, 
+	PurQty=PD.LooseQty + PD.PackQty + PD.BonusQty, 
+	QuotedQty=QD.Qty, 
+	CutAlias=(SELECT A.AliasName FROM Accounts A WHERE A.AccCode=QH.CustCode) + ' ' + LTRIM(RTRIM(STR(QH.QuotationCode)))
+FROM 
+	PurDetail PD, PurLedger P, Item I,
+	PurOrderDetail POD, PurOrderHeader POH, 
+	SaleOrderDetail SOD, 
+	QuotationDetail QD, QuotationHeader QH
+WHERE 
+	P.PurInvCode=:ai_code AND 
+	P.PurInvCode = PD.PurInvCode AND 
+	PD.ICode=I.ICode AND
+	P.POCode = POH.POCode AND 
+	POH.POCode = POD.POCode AND
+	PD.ICode = POD.ICode AND 
+	POH.SaleOrderCode = SOD.SaleOrderCode AND
+	SOD.ICode=POD.ICode AND SOD.QuotationRowID = QD.RowID AND
+	QD.QuotationCode=QH.QuotationCode
+UNION ALL
+SELECT
+	PD.ICode, AliasName=I.CustomICode, ItemName=I.Name, 
+	PurQty=PD.LooseQty + PD.PackQty + PD.BonusQty, 
+	QuotedQty=0.00, 
+	CutAlias=NULL
+FROM 
+	PurDetail PD, PurLedger P, Item I
+WHERE 
+	P.PurInvCode=:ai_code AND 
+	P.PurInvCode = PD.PurInvCode AND 
+	PD.ICode=I.ICode AND
+	I.ICode NOT IN 
+		(SELECT
+			DISTINCT PD.ICode
+		FROM 
+			PurDetail PD, PurLedger P, Item I,
+			PurOrderDetail POD, PurOrderHeader POH, 
+			SaleOrderDetail SOD, 
+			QuotationDetail QD, QuotationHeader QH
+		WHERE 
+			P.PurInvCode=:ai_code AND 
+			P.PurInvCode = PD.PurInvCode AND 
+			PD.ICode=I.ICode AND
+			P.POCode = POH.POCode AND 
+			POH.POCode = POD.POCode AND
+			PD.ICode = POD.ICode AND 
+			POH.SaleOrderCode = SOD.SaleOrderCode AND
+			SOD.ICode=POD.ICode AND SOD.QuotationRowID = QD.RowID AND
+			QD.QuotationCode=QH.QuotationCode)
+ORDER BY ItemName
+"
+  arguments=(("ai_code", number))
+ sort="aliasname A, itemname A, purqty A"
+)
+group(level=1 header.height=0 trailer.height=0 by=("aliasname"  ) header.color="536870912" trailer.color="536870912" )
+group(level=2 header.height=0 trailer.height=0 by=("itemname"  ) header.color="536870912" trailer.color="536870912" )
+compute(name=compute_27 visible="1" moveable=1 band=background font.charset="0" font.face="Times New Roman" font.family="1" font.height="-14" font.pitch="2" font.weight="700" background.mode="2" background.color="16777215" color="0" x="0" y="41" height="218" width="7718" format="[GENERAL]" expression="~"Purchase Distribution Estimate~"" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_26 visible="1" moveable=1 band=background font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" x="6156" y="31" height="166" width="1468" format="[GENERAL]" expression="'Page ' + page() + ':' + pageAcross() + ' of ' + pageCount() + ':' + pageCountAcross()" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=c_companyname visible="1" moveable=1 band=background font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="0" y="291" height="187" width="7718" format="[GENERAL]" expression="f_ReportHeaderInfo('clientname')" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=c_address1 visible="1" moveable=1 band=background font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="0" y="510" height="187" width="7718" format="[GENERAL]" expression="f_ReportHeaderInfo('address1')" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=c_address2 visible="1" moveable=1 band=background font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="0" y="729" height="187" width="7718" format="[GENERAL]" expression="f_ReportHeaderInfo('address2')" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_11 visible="1" moveable=1 band=background font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" x="0" y="947" height="187" width="7718" format="[GENERAL]" expression="~"Purchase Invoice Code : ~" + STRING(ai_code)" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=itemname_t visible="1" band=header[2] font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="2" border="2" x="270" y="10" height="333" width="2020" text="Item
+Name" html.valueishtml="0" )
+text(name=grand_sum_quotedqty_t visible="1" band=header[2] font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="2" border="2" x="3166" y="10" height="333" width="468" text="Grand
+Total " html.valueishtml="0" )
+text(name=aliasname_t visible="1" band=header[2] font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="2" border="2" x="239" y="10" height="333" width="10" text="Alias
+Name" html.valueishtml="0" )
+text(name=t_1 visible="1" band=header[2] font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="2" border="2" x="20" y="10" height="333" width="197" text="Sr.
+No." html.valueishtml="0" )
+text(name=purqty_t visible="1" band=header[2] font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="2" border="2" x="2312" y="10" height="333" width="385" text="Pur.
+Qty" html.valueishtml="0" )
+text(name=quotedqty_t visible="1" band=header[2] font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" alignment="2" border="2" x="2718" y="10" height="333" width="427" text="@cutalias" html.valueishtml="0" )
+compute(name=compute_8 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" x="2718" y="10" height="197" width="427" format="[general]" expression="sum(quotedqty for all )" alignment="1" border="2" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_9 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" x="3166" y="10" height="197" width="468" format="[general]" expression="sum(grand_sum_quotedqty for all )" alignment="1" border="2" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_7 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" x="239" y="10" height="197" width="10" format="[general]" expression="~"Grand Total~"" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+column(name=purqty visible="1" band=detail id=3 x="2312" y="10" height="177" width="385" color="33554432" border="2" alignment="1" format="	f_SetColumnFormat('Qty')" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=yes edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="0" background.color="536870912	if(grand_sum_quotedqty >  purqty, RGB(200,100,100), if(grand_sum_quotedqty <  purqty, RGB(100,200,100), RGB(255,255,255)))" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-9" font.pitch="2" font.weight="400" font.escapement="0	if(grand_sum_quotedqty >  purqty, RGB(200,100,100), if(grand_sum_quotedqty <  purqty, RGB(100,200,100), RGB(255,255,255)))" tabsequence=0 )
+column(name=quotedqty visible="1" band=detail id=4 x="2718" y="10" height="177" width="427" color="33554432" border="2" alignment="1" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=yes edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=yes background.mode="0" background.color="536870912	if(grand_sum_quotedqty >  purqty, RGB(200,100,100), if(grand_sum_quotedqty <  purqty, RGB(100,200,100), RGB(255,255,255)))" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-9" font.pitch="2" font.weight="400" font.escapement="0	if(grand_sum_quotedqty >  purqty, RGB(200,100,100), if(grand_sum_quotedqty <  purqty, RGB(100,200,100), RGB(255,255,255)))" tabsequence=0 )
+compute(name=grand_sum_quotedqty visible="1" band=detail font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" font.escapement="0	if(grand_sum_quotedqty >  purqty, RGB(200,100,100), if(grand_sum_quotedqty <  purqty, RGB(100,200,100), RGB(255,255,255)))" background.mode="0" background.color="536870912	if(grand_sum_quotedqty >  purqty, RGB(200,100,100), if(grand_sum_quotedqty <  purqty, RGB(100,200,100), RGB(255,255,255)))" color="33554432" x="3166" y="10" height="177" width="468" format="" expression="crosstabsum(1)" alignment="1" border="2" html.valueishtml="0" crosstab.repeat=no )
+column(name=itemname visible="1" band=detail id=2 x="270" y="10" height="177" width="2020" color="33554432" border="2" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=yes edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=60 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="0" background.color="536870912	if(grand_sum_quotedqty >  purqty, RGB(200,100,100), if(grand_sum_quotedqty <  purqty, RGB(100,200,100), RGB(255,255,255)))" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-9" font.pitch="2" font.weight="400" font.escapement="0	if(grand_sum_quotedqty >  purqty, RGB(200,100,100), if(grand_sum_quotedqty <  purqty, RGB(100,200,100), RGB(255,255,255)))" tabsequence=0 )
+column(name=aliasname visible="1" band=detail id=1 x="239" y="10" height="177" width="10" color="33554432" border="2" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=yes edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=75 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="0" background.color="536870912	if(grand_sum_quotedqty >  purqty, RGB(200,100,100), if(grand_sum_quotedqty <  purqty, RGB(100,200,100), RGB(255,255,255)))" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-9" font.pitch="2" font.weight="400" font.escapement="0	if(grand_sum_quotedqty >  purqty, RGB(200,100,100), if(grand_sum_quotedqty <  purqty, RGB(100,200,100), RGB(255,255,255)))" tabsequence=0 )
+compute(name=compute_10 visible="1" band=detail font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" font.escapement="0	if(grand_sum_quotedqty >  purqty, RGB(200,100,100), if(grand_sum_quotedqty <  purqty, RGB(100,200,100), RGB(255,255,255)))" background.mode="0" background.color="536870912	if(grand_sum_quotedqty >  purqty, RGB(200,100,100), if(grand_sum_quotedqty <  purqty, RGB(100,200,100), RGB(255,255,255)))" color="33554432" x="20" y="10" height="177" width="197" format="[GENERAL]" expression="getrow()" alignment="0" border="2" html.valueishtml="0" crosstab.repeat=no )
+crosstab(columns="cutalias" rows="aliasname, itemname, purqty" values="sum(quotedqty for crosstab)" sourcenames = "purdetail_icode, aliasname, itemname, purqty, quotedqty, cutalias" crosstabonly=yes  band=foreground )
+compute(name=compute_6 visible="1" band=trailer.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" x="3166" y="11" height="197" width="468" format="[general]" expression="sum(grand_sum_quotedqty for group 1)" alignment="1" border="2" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_5 visible="1" band=trailer.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" x="2718" y="11" height="197" width="427" format="[general]" expression="sum(quotedqty for group 1)" alignment="1" border="2" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_4 visible="1" band=trailer.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" x="239" y="11" height="197" width="10" format="[general]" expression="aliasname + ~" Total~"" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_3 visible="1" band=trailer.2 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" x="3166" y="11" height="197" width="468" format="[general]" expression="sum(grand_sum_quotedqty for group 2)" alignment="1" border="2" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_2 visible="1" band=trailer.2 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" x="2718" y="11" height="197" width="427" format="[general]" expression="sum(quotedqty for group 2)" alignment="1" border="2" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_1 visible="1" band=trailer.2 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" x="270" y="11" height="197" width="2020" format="[general]" expression="itemname + ~" Total~"" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+sparse(names="aliasname	itemname")
+htmltable(border="0" cellPadding="1" cellSpacing="1" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" encodeSelfLinkArgs="1" generateJavaScript="1" netscapeLayers="0" pagingMethod=0 )
+xhtmlgen() cssgen(sessionSpecific="0" )
+xmlgen(inline="0" )
+xsltgen()
+jsgen()
+export.xml(headGroups="1" includewhitespace="0" metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 distill.customPostScript="0" xslfop.print="0" )
+export.xhtml()

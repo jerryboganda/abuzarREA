@@ -1,0 +1,79 @@
+release 12.5;
+datawindow ( units=0 timer_interval=0 processing=0 color=1073741824 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.printername=""  print.documentname=""  print.orientation=0 print.margin.left=110 print.margin.right=110 print.margin.top=96 print.margin.bottom=96 print.paper.size=0 print.paper.source=0 print.canusedefaultprinter=yes selected.mouse=no hidegrayline=no showbackcoloronxp=no)
+header(height=84 color="536870912" )
+summary(height=0 color="536870912" )
+footer(height=0 color="536870912" )
+detail(height=84 color="536870912" )
+table(column=(type=long updatewhereclause=yes name=dstbidlen dbname="DSTBIDLEN"  )
+column=(type=char(6) updatewhereclause=yes name=dstbid dbname="DSTBID"  )
+column=(type=long updatewhereclause=yes name=prdidlen dbname="PRDIDLEN"  )
+column=(type=char(8000) updatewhereclause=yes name=prdid dbname="PRDID"  )
+column=(type=long updatewhereclause=yes name=prdlen dbname="PRDLEN"  )
+column=(type=char(8000) updatewhereclause=yes name=prd dbname="PRD"  )
+column=(type=long updatewhereclause=yes name=batchnolen dbname="BatchNoLEN"  )
+column=(type=char(8000) updatewhereclause=yes name=batchno dbname="BatchNo"  )
+column=(type=long updatewhereclause=yes name=cldatelen dbname="CLDATELEN"  )
+column=(type=char(10) updatewhereclause=yes name=cldate dbname="CLDATE"  )
+column=(type=long updatewhereclause=yes name=clqtylen dbname="CLQTYLEN"  )
+column=(type=char(12) updatewhereclause=yes name=clqty dbname="CLQTY"  )
+column=(type=long updatewhereclause=yes name=trnqtylen dbname="TRNQTYLEN"  )
+column=(type=char(12) updatewhereclause=yes name=trnqty dbname="TRNQTY"  )
+column=(type=long updatewhereclause=yes name=expirylen dbname="ExpiryLEN"  )
+column=(type=char(7) updatewhereclause=yes name=expiry dbname="Expiry"  )
+ retrieve="SELECT
+	DSTBIDLEN=6,
+	DSTBID=:as_distcode + REPLICATE(' ', 6 - LEN(:as_distcode)),
+	PRDIDLEN=9,
+	PRDID=SUBSTRING(LTRIM(RTRIM(I.CustomICode)), 1, 9) + REPLICATE(' ', 9 - LEN(LTRIM(RTRIM(SUBSTRING(I.CustomICode, 1, 9))))),
+	PRDLEN=50,
+	PRD = LTRIM(RTRIM(SUBSTRING(I.NAME, 1, 50))) + REPLICATE(' ', 50 - LEN(LTRIM(RTRIM(SUBSTRING(I.NAME, 1, 50))))),
+	BatchNoLEN=10,
+	BatchNo= ISNULL(GD.Batch, '.') + REPLICATE(' ', 10 - LEN(LTRIM(RTRIM(SUBSTRING(ISNULL(GD.Batch, '.'), 1, 10))))),
+	CLDATELEN=10,
+	CLDATE=Convert(varchar(10), :ar_enddate, 103),
+	CLQTYLEN=12,
+	CLQTY=STR(SUM(ISNULL(GD.CurrQty, 0)), 12),
+	TRNQTYLEN=12,
+	TRNQTY=STR(0, 12),
+	ExpiryLEN=7,
+	Expiry= RIGHT(Convert(varchar(10), GD.Expiry, 103), 7)
+FROM
+	Item I LEFT OUTER JOIN GodownDetail AS GD ON (I.ICode = GD.ICode)
+WHERE
+	I.ManfCode = :manfcode
+GROUP BY
+	I.ICode,
+	I.Name,
+	I.CustomICode,
+	GD.Batch,
+	GD.Expiry
+ORDER BY
+	PRDID"
+  arguments=(("manfcode", number), ("as_distcode", string), ("ar_enddate", datetime))
+)
+text(name=dstbid_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="2" border="0" x="18" y="12" height="64" width="279" text="Dstbid" html.valueishtml="0" )
+text(name=prdid_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="2" border="0" x="329" y="12" height="64" width="320" text="Prdid" html.valueishtml="0" )
+text(name=prd_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="2" border="0" x="681" y="12" height="64" width="1234" text="Prd" html.valueishtml="0" )
+text(name=batchno_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="2" border="0" x="1947" y="12" height="64" width="434" text="Batchno" html.valueishtml="0" )
+text(name=stockdate_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="2" border="0" x="2414" y="12" height="64" width="302" text="CL Date" html.valueishtml="0" )
+text(name=quantity_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="2" border="0" x="2747" y="12" height="64" width="288" text="Qty" html.valueishtml="0" )
+text(name=t_1 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="2" border="0" x="3067" y="12" height="64" width="325" text="TrnQty" html.valueishtml="0" )
+text(name=t_2 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="2" border="0" x="3424" y="12" height="64" width="288" text="Expiry" html.valueishtml="0" )
+column(name=dstbid visible="1" band=detail id=2 x="18" y="4" height="76" width="279" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=8000 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=prdid visible="1" band=detail id=4 x="329" y="4" height="76" width="320" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=9 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=prd visible="1" band=detail id=6 x="681" y="4" height="76" width="1234" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=8000 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=batchno visible="1" band=detail id=8 x="1947" y="4" height="76" width="434" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=8000 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=cldate visible="1" band=detail id=10 x="2414" y="4" height="76" width="302" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=clqty visible="1" band=detail id=12 x="2747" y="4" height="76" width="288" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=trnqty visible="1" band=detail id=14 x="3072" y="4" height="76" width="325" color="33554432" border="0" alignment="2" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=expiry visible="1" band=detail id=16 x="3429" y="4" height="76" width="288" color="33554432" border="0" alignment="2" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+htmltable(border="1" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" encodeSelfLinkArgs="1" generateJavaScript="1" netscapeLayers="0" pagingMethod=0 )
+xhtmlgen() cssgen(sessionSpecific="0" )
+xmlgen(inline="0" )
+xsltgen()
+jsgen()
+export.xml(headGroups="1" includewhitespace="0" metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 distill.customPostScript="0" xslfop.print="0" )
+export.xhtml()

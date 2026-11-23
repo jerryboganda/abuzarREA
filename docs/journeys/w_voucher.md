@@ -1,0 +1,30 @@
+# w_voucher
+
+- title: (set at run time)
+- library: accounts (Accounts & cash)
+- ancestor: `w_multi_entry`
+- size: 3040 x 2228 PBU
+- reached from: Transactions > Accounting Vouchers
+- script size: 3558 lines; 21 events, 73 functions
+
+## Controls (5)
+
+- `tab_retrieve` (tab_retrieve)
+- `dw_voucherrep` (u_dwstandard) dataobject `d_voucherprint_half`
+- `dw_vocherdetail` (datawindow) dataobject `d_voucherdetail_hidden`
+- `dw_voucherreceipt` (datawindow)
+- `dw_document` (datawindow) dataobject `d_gldocument`
+
+## Data
+
+- DataWindows: `d_VoucherDetail_hidden`, `d_VoucherDetail_jv_hidden`, `d_albadarautos_receipt_slip_print`, `d_britishcomm_receipt_slip_print`, `d_creditsaleinvoices_balance`, `d_creditsaleinvoices_outstanding`, `d_creditsaleinvoices_outstanding2`, `d_dawnautos_receipt_slip_print`, `d_executiveclub_receipt_slip_print`, `d_fmdistributor_receipt_slip_print`, `d_gldocument`, `d_malikarifjwlry_slip_print`, `d_marj2_receipt_slip_print`, `d_marj_receipt_slip_print`, `d_mediwaysph_receipt_slip_print`, `d_popup_customerselectionareawise`, `d_purinvoices_balance`, `d_purinvoices_outstanding`, `d_receipt_slip_print`, `d_serviceinvoices_balance`, `d_serviceinvoices_outstanding`, `d_servicepurinvoices_balance`, `d_servicepurinvoices_outstanding`, `d_student_outstanding_service`, `d_swatph_receipt_slip_print`, `d_thesupermart_receipt_slip_print`, `d_voucherdetail_hidden`, `d_voucherprint_half`
+- tables touched by embedded SQL: _utn, accounts, currency, customer, gldetail, gldocument, glheader, groupcashaccount, groupsuppliercategory, guest, guestcheckin, into, patient, patientadmission, purledger, saleledger, serviceheader, servicepurheader, student, supplier, virtualgl, vochercategory, vochercategoryheader
+- stored procedures: checkunpostedpurinvintransactions, checkunpostedsaleinvintransactions, checkunpostedserviceinvintransactions, checkunpostedservicepurinvintransactions, getallowedgroupcustomercategory, getallowedgroupsuppliercategory, getglobalcode, getmaxutn, getpurinvbalance, getsaleinvbalance, getserviceinvbalance, getservicepurinvbalance, isallowedcustomergroupcategory, lockpurinvoice, locksaleinvoice, lockserviceinvoice, lockservicepurinvoice, postgeneralledger, updateactivitymonitor, updatepurinvbalance, updatesaleinvbalance, updateserviceinvbalance, updateservicepurinvbalance, virtualgl
+- global functions: f_getgroupcode, f_numberpreferences, f_rightexists, f_stringpreferences, f_validatedw
+- windows opened: w_account_ledger, w_arg_areas, w_arg_cust_period_outstanding_inv, w_arg_cust_period_outstanding_serviceinv, w_arg_cust_sinv_linv, w_arg_sinvcode_linvcode, w_arg_subareas_areabased, w_arg_supp_period_outstanding_inv, w_arg_supp_period_outstanding_serviceinv, w_arg_supp_sinv_linv, w_gldocument, w_gldocument_gallery, w_patient_ledger, w_patientdiscount, w_popup_areaselection, w_popup_customerselectionareawise_vocher, w_popup_partialsearch_selection_acc, w_preview_invoices, w_salesmanpassword, w_select_invoicepopulation_voucher, w_student_fine_waiver, w_student_ledger, w_studentsearch, w_studentsearchresult, w_summaccount_balance, w_voucherreceipt_printbalance
+
+## Events and functions
+
+`w_voucher.create`, `w_voucher.destroy`, `w_voucher.ue_newform`, `w_voucher.ue_save`, `w_voucher.ue_detail`, `w_voucher.ue_newitem`, `w_voucher.ue_refreshddw`, `w_voucher.ue_list`, `w_voucher.ue_postopen`, `w_voucher.ue_print`, `w_voucher.ue_deleteitem`, `tabpage_detail.create`, `tabpage_detail.destroy`, `dw_detail.itemchanged`, `dw_itemsdetail.itemchanged`, `dw_itemsdetail.ue_dwnkey`, `dw_itemsdetail.ue_enterkey`, `rb_creditors.clicked`, `rb_debitors.clicked`, `rb_other.clicked`, `rb_all.clicked`, `w_voucher.wf_assigndatawindowobjects`, `w_voucher.wf_cleargroupbox`, `w_voucher.wf_deleteallemptydetailrows`, `w_voucher.wf_deleteemptydetailrow`, `w_voucher.wf_deletevoucher`, `w_voucher.wf_filter`, `w_voucher.wf_findfullcode`, `w_voucher.wf_getbalance`, `w_voucher.wf_getfullcode`, `w_voucher.wf_getinvinfo`, `w_voucher.wf_initglobalconstants`, `w_voucher.wf_initmodify`, `w_voucher.wf_lockinvoice`, `w_voucher.wf_lockvouchers`, `w_voucher.wf_post`, `w_voucher.wf_protectdw`, `w_voucher.wf_returnvoucher`, `w_voucher.wf_setaccountname`, `w_voucher.wf_setbalance`, `w_voucher.wf_setcustomerareawise`, `w_voucher.wf_setpatientname`, `w_voucher.wf_validatedate`, `w_voucher.wf_validategroupcustcat`, `w_voucher.wf_validatepatient`, `w_voucher.wf_validateregno`, `w_voucher.wf_populatedetail`, `w_voucher.wf_validateinvcode`, `w_voucher.wf_populateinvoices`, `w_voucher.wf_showsummaryaccountbalance`, `w_voucher.wf_setvouchercategorysettings`, `w_voucher.wf_setvouchertype`, `w_voucher.wf_selectprintout`, `w_voucher.wf_accountledger`, `w_voucher.wf_retrievelist`, `w_voucher.wf_retrievelistall`, `w_voucher.wf_check_unique_refno`, `w_voucher.wf_show_patientdiscount_window`, `w_voucher.wf_isvoucherinuse`, `w_voucher.wf_saveandpost`, `w_voucher.wf_search_account`, `w_voucher.wf_populate_outstanding_invoices`, `w_voucher.wf_print_receipt`, `w_voucher.wf_setinvoicedetail`, `w_voucher.wf_setguestname`, `w_voucher.wf_setstudentname`, `w_voucher.wf_validateguest`, `w_voucher.wf_validatestudent`, `w_voucher.wf_validate_guestregno`, `w_voucher.wf_validate_studentregno`, `w_voucher.wf_search_student_receivables`, `w_voucher.wf_show_student_fine_waiver`, `w_voucher.wf_show_studentledger`, `w_voucher.wf_validate_headercashaccount`, `w_voucher.wf_setcurrency`, `w_voucher.wf_apply_currency`, `w_voucher.wf_editpostedinvoice`, `w_voucher.wf_lockvoucher`, `w_voucher.wf_validate_group_suppliercategory`, `w_voucher.wf_getnewvouchercode`, `w_voucher.wf_attach_document`, `w_voucher.wf_show_documentgallery`, `w_voucher.wf_update_document`, `w_voucher.wf_populate_document`, `w_voucher.wf_get_document`, `w_voucher.wf_image_setting`, `w_voucher.wf_show_patientledger`, `w_voucher.wf_set_filter_all`, `tab_retrieve.selectionchanged`, `dw_itemsdetail.rowfocuschanged`, `dw_itemsdetail.itemfocuschanged`, `dw_itemsdetail.getfocus`, `dw_itemsdetail.itemerror`, `dw_itemsdetail.editchanged`
+
+Source: `recovered/scripts/accounts/w_voucher.pbs`

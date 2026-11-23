@@ -1,0 +1,583 @@
+release 12.5;
+datawindow ( units=2 timer_interval=60000 processing=0 color=16777215 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.file=""  picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.printername=""  print.documentname=""  print.orientation=0 print.margin.left=0 print.margin.right=0 print.margin.top=0 print.margin.bottom=0 print.paper.size=1 print.paper.source=0 print.canusedefaultprinter=yes selected.mouse=no hidegrayline=no showbackcoloronxp=no)
+header(height=575 color="536870912" transparency="0" gradient.color="8421504" gradient.transparency="0" gradient.angle="0" brushmode="0" gradient.repetition.mode="0" gradient.repetition.length="100" gradient.repetition.count="0" gradient.focus="0" gradient.scale="100" gradient.spread="100" )
+summary(height=208 color="536870912" transparency="0" gradient.color="8421504" gradient.transparency="0" gradient.angle="0" brushmode="0" gradient.repetition.mode="0" gradient.repetition.length="100" gradient.repetition.count="0" gradient.focus="0" gradient.scale="100" gradient.spread="100" )
+footer(height=0 color="536870912" transparency="0" gradient.color="8421504" gradient.transparency="0" gradient.angle="0" brushmode="0" gradient.repetition.mode="0" gradient.repetition.length="100" gradient.repetition.count="0" gradient.focus="0" gradient.scale="100" gradient.spread="100" )
+detail(height=158 color="536870912" transparency="0" gradient.color="8421504" gradient.transparency="0" gradient.angle="0" brushmode="0" gradient.repetition.mode="0" gradient.repetition.length="100" gradient.repetition.count="0" gradient.focus="0" gradient.scale="100" gradient.spread="100"  height.autosize=yes)
+table(column=(type=decimal(2) updatewhereclause=yes initial="0" name=debit dbname="debit"  )
+column=(type=datetime updatewhereclause=yes initial="today" name=date dbname="date"  )
+column=(type=char(100) updatewhereclause=yes name=type dbname="type"  )
+column=(type=char(100) updatewhereclause=yes name=remarks dbname="remarks"  )
+column=(type=char(163) updatewhereclause=yes name=acc dbname="acc"  )
+column=(type=char(163) updatewhereclause=yes name=accounthead dbname="accounthead"  )
+column=(type=char(100) updatewhereclause=no name=regno dbname="RegNo"  )
+column=(type=decimal(2) updatewhereclause=yes initial="0" name=credit dbname="credit"  )
+column=(type=long updatewhereclause=yes name=priority dbname="priority"  )
+column=(type=long updatewhereclause=yes name=opening dbname="Opening"  )
+ retrieve="SELECT /*opening balance*/
+	debit=CASE WHEN b.bal >= 0 THEN b.bal ELSE 0 END,
+	date = :ad_startDate, 
+	type = SPACE(100),
+	remarks='Opening Balance',
+	acc=SPACE(100),
+	accounthead=SPACE(100),
+	RegNo=SPACE(100),
+	credit=CASE WHEN b.bal >= 0 THEN 0 ELSE ABS(b.bal) END,
+	priority= -1,
+	Opening=1
+FROM
+	(SELECT bal=sum(Debit-Credit) 
+	FROM VirtualGl
+	WHERE acccode in (select acccode from accounts where acccode IN (:ai_acccode)) and
+		date < :ad_startDate) B
+UNION ALL
+SELECT /*Transaction Details debit=credit and credit=debit*/
+	debit=d.credit,
+	date = h.date,
+	type = RTRIM(LTRIM(VC.SHORTNAME)) + '-' + RTRIM(LTRIM(CONVERT(VARCHAR(7), h.glvochcode))),
+	remarks=d.remarks,
+	acc=(SELECT name FROM accounts WHERE accounts.acccode = h.acccode),
+	accounthead= 
+		CASE WHEN d.studentcode IS NULL THEN
+			(SELECT name FROM accounts WHERE accounts.acccode = d.acccode) 
+		ELSE 
+			(SELECT name + ' (' + regno + ')' FROM student WHERE student.studentcode = d.studentcode)
+		END,
+	RegNo=
+		CASE WHEN d.studentcode IS NULL THEN NULL
+		ELSE 
+			(SELECT regno FROM student WHERE student.studentcode = d.studentcode)
+		END,
+	credit=d.debit,
+	priority=0,
+	Opening=0
+FROM
+	glheader h,
+	gldetail d,
+	vochercategory vc,
+	accounts a
+WHERE
+	h.posted = 'Y' and
+	h.glvochcode = d.glvochcode and
+	h.vochcatcode = vc.vochcatcode and
+	vc.journalvoucher = 0 and
+	h.acccode in (:ai_acccode) and
+	h.acccode <> d.acccode and 
+	d.acccode = a.acccode and
+	h.date BETWEEN :ad_StartDate and :ad_endDate
+UNION ALL
+SELECT /*transaction involving cash in detail but not a cash voucher category*/
+	debit=d.debit,
+	date = h.date,
+	type = RTRIM(LTRIM(VC.SHORTNAME)) + '-' + RTRIM(LTRIM(CONVERT(VARCHAR(7), h.glvochcode))),
+	remarks=d.remarks,
+	acc=
+		CASE WHEN d.studentcode IS NULL THEN
+			(SELECT name FROM accounts WHERE accounts.acccode = d.acccode) 
+		ELSE 
+			(SELECT name + ' (' + regno + ')' FROM student WHERE student.studentcode = d.studentcode)
+		END,
+	accounthead=(SELECT name FROM accounts WHERE accounts.acccode = h.acccode),
+	RegNo=
+		CASE WHEN d.studentcode IS NULL THEN NULL
+		ELSE 
+			(SELECT regno FROM student WHERE student.studentcode = d.studentcode)
+		END,
+	credit=d.credit,
+	priority=0,
+	Opening=0
+FROM
+	glheader h,
+	gldetail d,
+	vochercategory vc,
+	accounts a
+WHERE
+	h.posted = 'Y' and
+	h.glvochcode = d.glvochcode and
+	h.vochcatcode = vc.vochcatcode and
+	vc.journalvoucher = 0 and
+	h.acccode not in (:ai_acccode) and
+	d.acccode in (:ai_acccode) and
+	d.acccode = a.acccode and
+	h.date BETWEEN :ad_StartDate and :ad_endDate
+UNION ALL
+SELECT /*transaction involving cash deposited in a cash a/c from another cash a/c*/
+	debit=d.debit,
+	date = h.date,
+	type = RTRIM(LTRIM(VC.SHORTNAME)) + '-' + RTRIM(LTRIM(CONVERT(VARCHAR(7), h.glvochcode))),
+	remarks=d.remarks,
+	acc=
+		CASE WHEN d.studentcode IS NULL THEN
+			(SELECT name FROM accounts WHERE accounts.acccode = d.acccode) 
+		ELSE 
+			(SELECT name + ' (' + regno + ')' FROM student WHERE student.studentcode = d.studentcode)
+		END,
+	accounthead=(SELECT name FROM accounts WHERE accounts.acccode = h.acccode),
+	RegNo=
+		CASE WHEN d.studentcode IS NULL THEN NULL
+		ELSE 
+			(SELECT regno FROM student WHERE student.studentcode = d.studentcode)
+		END,
+	credit=d.credit,
+	priority=0,
+	Opening=0
+FROM
+	glheader h,
+	gldetail d,
+	vochercategory vc,
+	accounts a
+WHERE
+	h.posted = 'Y' and
+	h.glvochcode = d.glvochcode and
+	h.vochcatcode = vc.vochcatcode and
+	vc.journalvoucher = 0 and
+	h.acccode in (:ai_acccode) and
+	d.acccode in (:ai_acccode) and
+	h.acccode <> d.acccode and
+	d.acccode = a.acccode and
+	h.date BETWEEN :ad_StartDate and :ad_endDate
+UNION ALL
+SELECT /*debit/credit adjustment for cash/bank accounts using JVs*/
+	debit=d.debit,
+	date = h.date,
+	type = RTRIM(LTRIM(VC.SHORTNAME)) + '-' + RTRIM(LTRIM(CONVERT(VARCHAR(7), h.glvochcode))),
+	remarks=d.remarks,
+	acc=(SELECT MAX(name) FROM accounts WHERE accounts.acccode IN (:ai_acccode)),
+	accounthead=
+		CASE WHEN d.studentcode IS NULL THEN
+			(SELECT name FROM accounts WHERE accounts.acccode = d.acccode) 
+		ELSE 
+			(SELECT name + ' (' + regno + ')' FROM student WHERE student.studentcode = d.studentcode)
+		END,
+	RegNo=
+		CASE WHEN d.studentcode IS NULL THEN NULL
+		ELSE 
+			(SELECT regno FROM student WHERE student.studentcode = d.studentcode)
+		END,
+	credit=d.credit,
+	priority=0,
+	Opening=0
+FROM
+	glheader h,
+	gldetail d,
+	vochercategory vc
+WHERE
+	h.posted = 'Y' and
+	h.glvochcode = d.glvochcode and
+	h.vochcatcode = vc.vochcatcode and
+	vc.journalvoucher = 1 and
+ 	d.acccode IN (:ai_acccode) and 
+	h.date BETWEEN :ad_StartDate and :ad_endDate
+UNION ALL
+SELECT 
+	debit = ISNULL(SUM(S.Amt), 0),
+	date = :ad_EndDate,
+	type = 'CSH-SALE',
+	remarks='Total Invoices: ' + LTRIM(RTRIM(STR((SELECT COUNT(SaleInvCode) FROM saleledger WHERE salecatcode = 3 and posted = 'Y' and accountfor='Y' and date >= :ad_StartDate and date <= :ad_EndDate), 7))) + 
+			' (' + LTRIM(RTRIM(STR((SELECT MIN(SaleInvCode) FROM saleledger WHERE salecatcode = 3 and posted = 'Y' and accountfor='Y' and date >= :ad_StartDate and date <= :ad_EndDate), 7))) +
+			'-' + LTRIM(RTRIM(STR((SELECT MAX(SaleInvCode) FROM saleledger WHERE salecatcode = 3 and posted = 'Y' and accountfor='Y' and date >= :ad_StartDate and date <= :ad_EndDate), 7))) + ')',
+	acc=(SELECT MAX(name) FROM accounts WHERE accounts.acccode IN (:ai_acccode)),
+	accounthead='Cash Sale for the Period',
+	RegNo=SPACE(100),
+	credit = 0,
+	priority=1,
+	Opening=0
+FROM
+	(SELECT amt=ISNULL(Round(SUM(d.looseqty * d.unitsalestax) + 
+			SUM(ROUND( (d.looseqty * 
+				(d.saleprice - d.itemflatdisc)) *
+				(1 - (.01 * d.discperc)) * 
+				d.gstperc * .01, 2)) +
+			ROUND( (SUM((d.looseqty * 
+				(d.saleprice - d.itemflatdisc)) *
+				(1 - (.01 * d.discperc))) * (1- (.01 * h.discperc)) -
+				h.flatdisc) * (h.invgstperc1 * .01), 2), 0) +
+			Round( SUM((d.looseqty * (d.saleprice - d.itemflatdisc)) *
+				(1 - (.01 * d.discperc))) * (1- (.01 * h.discperc)) + 
+				h.misccharges + h.salestax - h.flatdisc, 0), 0)
+	FROM
+		saleledger h,
+		saledetail d
+	WHERE
+		h.saleinvcode = d.saleinvcode and
+		h.salecatcode = 3 and
+		h.paymentacccode IN (:ai_acccode) AND
+		h.posted = 'Y' and 
+		h.accountfor='Y' and
+		h.date BETWEEN :ad_StartDate and :ad_endDate
+	GROUP BY h.saleinvcode,
+		 h.salecatcode, 
+		 h.date,
+		 h.discperc,
+		 h.misccharges,
+		 h.salestax,
+		 h.InvGSTPerc1,
+		 h.flatdisc) S 
+HAVING SUM(S.Amt) <> 0
+UNION ALL
+SELECT 
+	debit = ISNULL(SUM(S.Amt), 0),
+	date = :ad_EndDate,
+	type = 'CR-SALE',
+	remarks='Total Invoices: ' + LTRIM(RTRIM(STR((SELECT COUNT(SaleInvCode) FROM saleledger WHERE salecatcode = 1 and posted = 'Y' and accountfor='Y' and date >= :ad_StartDate and date <= :ad_EndDate), 7))) + 
+			' (' + LTRIM(RTRIM(STR((SELECT MIN(SaleInvCode) FROM saleledger WHERE salecatcode = 1 and posted = 'Y' and accountfor='Y' and date >= :ad_StartDate and date <= :ad_EndDate), 7))) +
+			'-' + LTRIM(RTRIM(STR((SELECT MAX(SaleInvCode) FROM saleledger WHERE salecatcode = 1 and posted = 'Y' and accountfor='Y' and date >= :ad_StartDate and date <= :ad_EndDate), 7))) + ')',
+	acc=(SELECT MAX(name) FROM accounts WHERE accounts.acccode IN (:ai_acccode)),
+	accounthead='Credit Sale (Immediate Cash) for the Period',
+	RegNo=SPACE(100),
+	credit = 0,
+	priority=2,
+	Opening=0
+FROM
+	(SELECT amt=ISNULL(Round(SUM(d.looseqty * d.unitsalestax) + 
+			SUM(ROUND( (d.looseqty * 
+				(d.saleprice - d.itemflatdisc)) *
+				(1 - (.01 * d.discperc)) * 
+				d.gstperc * .01, 2)) +
+			ROUND( (SUM((d.looseqty * 
+				(d.saleprice - d.itemflatdisc)) *
+				(1 - (.01 * d.discperc))) * (1- (.01 * h.discperc)) -
+				h.flatdisc) * (h.invgstperc1 * .01), 2), 0) +
+			Round( SUM((d.looseqty * (d.saleprice - d.itemflatdisc)) *
+				(1 - (.01 * d.discperc))) * (1- (.01 * h.discperc)) + 
+				h.misccharges + h.salestax - h.flatdisc, 0), 0)
+	FROM
+		saleledger h,
+		saledetail d
+	WHERE
+		h.saleinvcode = d.saleinvcode and
+		h.salecatcode = 1 and
+		h.paymentacccode IN (:ai_acccode) AND
+		h.posted = 'Y' and 
+		h.accountfor='Y' and
+		h.date BETWEEN :ad_StartDate and :ad_endDate
+	GROUP BY h.saleinvcode,
+		 h.salecatcode, 
+		 h.date,
+		 h.discperc,
+		 h.misccharges,
+		 h.salestax,
+		 h.InvGSTPerc1,
+		 h.flatdisc) S 
+HAVING SUM(S.Amt) > 0
+UNION ALL
+SELECT 
+	debit = ISNULL(SUM(S.Amt), 0),
+	date = :ad_EndDate,
+	type = 'CSH-SALE',
+	remarks='Total Invoices: ' + LTRIM(RTRIM(STR((SELECT COUNT(SaleInvCode) FROM saleledger WHERE salecatcode in (1,2) and posted = 'Y' and accountfor='Y' and amt <> 0 and date >= :ad_StartDate and date <= :ad_EndDate), 7))) + 
+			' (' + LTRIM(RTRIM(STR((SELECT MIN(SaleInvCode) FROM saleledger WHERE salecatcode IN (1, 2) and posted = 'Y' and accountfor='Y' and amt <> 0 and date >= :ad_StartDate and date <= :ad_EndDate), 7))) +
+			'-' + LTRIM(RTRIM(STR((SELECT MAX(SaleInvCode) FROM saleledger WHERE salecatcode IN (1, 2) and posted = 'Y' and accountfor='Y' and amt <> 0 and date >= :ad_StartDate and date <= :ad_EndDate), 7))) + ')',
+	acc=(SELECT MAX(name) FROM accounts WHERE accounts.acccode IN (:ai_acccode)),
+	accounthead='Received during credit sale for the Period',
+	RegNo=SPACE(100),
+	credit = 0,
+	priority=3,
+	Opening=0
+FROM
+	(SELECT amt=ISNULL(sum(h.amt), 0) + ISNULL(sum(h.cashcharged), 0)
+	FROM
+		saleledger h
+	WHERE
+		h.salecatcode IN (1, 2) and
+		h.posted = 'Y' and 
+		h.accountfor='Y' and
+		h.date BETWEEN :ad_StartDate and :ad_endDate AND
+		(h.paymentacccode in (:ai_acccode) OR h.cashacccode in (:ai_acccode) )) S
+HAVING SUM(S.Amt) > 0
+UNION ALL
+SELECT 
+	Debit  = 0,
+	date = :ad_EndDate,
+	type = 'CSH-SR',
+	remarks='Total Invoices: ' + LTRIM(RTRIM(STR((SELECT COUNT(SRInvCode) FROM srledger WHERE srcatcode = 8 and posted = 'Y' and accountfor='Y' and date >= :ad_StartDate and date <= :ad_EndDate), 7))) + 
+			' (' + LTRIM(RTRIM(STR((SELECT MIN(SrInvCode) FROM srledger WHERE srcatcode = 8 and posted = 'Y' and accountfor='Y' and date >= :ad_StartDate and date <= :ad_EndDate), 7))) +
+			'-' + LTRIM(RTRIM(STR((SELECT MAX(SrInvCode) FROM srledger WHERE srcatcode = 8 and posted = 'Y' and accountfor='Y' and date >= :ad_StartDate and date <= :ad_EndDate), 7))) + ')',
+	acc=(SELECT MAX(name) FROM accounts WHERE accounts.acccode IN (:ai_acccode)),
+	accounthead='Cash Sale Return for the Period',
+	RegNo=SPACE(100),
+	Credit = ISNULL(SUM(S.Amt), 0),
+	priority=4,
+	Opening=0
+FROM
+	(SELECT amt=ISNULL(Round(SUM(d.looseqty * d.unitsalestax) + 
+			SUM(ROUND( (d.looseqty * d.srprice) * (1 - (.01 * d.discperc)) * d.gstperc * .01, 2)) +
+			ROUND( (SUM((d.looseqty * d.srprice) * 	(1 - (.01 * d.discperc))) * (1- (.01 * h.discperc)) - h.flatdisc) * (h.invgstperc1 * .01), 2), 0) +
+			Round( SUM((d.looseqty * d.srprice) * (1 - (.01 * d.discperc))) * (1- (.01 * h.discperc)) + h.misccharges + h.salestax - h.flatdisc, 0), 0)
+	FROM
+		srledger h,
+		srdetail d
+	WHERE
+		h.srinvcode = d.srinvcode and
+		h.srcatcode = 8 and
+		h.paymentacccode IN (:ai_acccode) AND
+		h.posted = 'Y' and
+		h.accountfor = 'Y' and
+		h.date BETWEEN :ad_StartDate and :ad_endDate
+	GROUP BY h.srinvcode,
+		 h.srcatcode, 
+		 h.date,
+		 h.discperc,
+		 h.misccharges,
+		 h.salestax,
+		 h.InvGSTPerc1,
+		 h.flatdisc) S 
+HAVING SUM(S.Amt) > 0
+UNION ALL
+SELECT 
+	Debit  = 0,
+	date = :ad_EndDate,
+	type = 'CR-SR',
+	remarks='Total Invoices: ' + LTRIM(RTRIM(STR((SELECT COUNT(SRInvCode) FROM srledger WHERE srcatcode = 6 and posted = 'Y' and accountfor='Y' and date >= :ad_StartDate and date <= :ad_EndDate), 7))) + 
+			' (' + LTRIM(RTRIM(STR((SELECT MIN(SrInvCode) FROM srledger WHERE srcatcode = 6 and posted = 'Y' and accountfor='Y' and date >= :ad_StartDate and date <= :ad_EndDate), 7))) +
+			'-' + LTRIM(RTRIM(STR((SELECT MAX(SrInvCode) FROM srledger WHERE srcatcode = 6 and posted = 'Y' and accountfor='Y' and date >= :ad_StartDate and date <= :ad_EndDate), 7))) + ')',
+	acc=(SELECT MAX(name) FROM accounts WHERE accounts.acccode IN (:ai_acccode)),
+	accounthead='Credit S/Return (Immediate Cash) for the Period',
+	RegNo=SPACE(100),
+	Credit = ISNULL(SUM(S.Amt), 0),
+	priority=5,
+	Opening=0
+FROM
+	(SELECT amt=ISNULL(Round(SUM(d.looseqty * d.unitsalestax) + 
+			SUM(ROUND( (d.looseqty * d.srprice) * (1 - (.01 * d.discperc)) * d.gstperc * .01, 2)) +
+			ROUND( (SUM((d.looseqty * d.srprice) * 	(1 - (.01 * d.discperc))) * (1- (.01 * h.discperc)) - h.flatdisc) * (h.invgstperc1 * .01), 2), 0) +
+			Round( SUM((d.looseqty * d.srprice) * (1 - (.01 * d.discperc))) * (1- (.01 * h.discperc)) + h.misccharges + h.salestax - h.flatdisc, 0), 0)
+	FROM
+		srledger h,
+		srdetail d
+	WHERE
+		h.srinvcode = d.srinvcode and
+		h.srcatcode = 6 and
+		h.paymentacccode IN (:ai_acccode) AND
+		h.posted = 'Y' and 
+		h.accountfor='Y' and
+		h.date BETWEEN :ad_StartDate and :ad_endDate
+	GROUP BY h.srinvcode,
+		 h.srcatcode, 
+		 h.date,
+		 h.discperc,
+		 h.misccharges,
+		 h.salestax,
+		 h.InvGSTPerc1,
+		 h.flatdisc) S HAVING SUM(S.Amt) > 0
+UNION ALL
+SELECT 
+	Debit  = 0,
+	date = :ad_EndDate,
+	type = 'CSH-SR',
+	remarks='Total Invoices: ' + LTRIM(RTRIM(STR((SELECT COUNT(SRInvCode) FROM srledger WHERE srcatcode IN (6, 7) and posted = 'Y' and accountfor='Y' and date >= :ad_StartDate and date <= :ad_EndDate), 7))) + 
+			' (' + LTRIM(RTRIM(STR((SELECT MIN(SrInvCode) FROM srledger WHERE srcatcode IN (6, 7) and posted = 'Y' and accountfor='Y' and date >= :ad_StartDate and date <= :ad_EndDate), 7))) +
+			'-' + LTRIM(RTRIM(STR((SELECT MAX(SrInvCode) FROM srledger WHERE srcatcode IN (6,7) and posted = 'Y' and accountfor='Y' and date >= :ad_StartDate and date <= :ad_EndDate), 7))) + ')',
+	acc=(SELECT MAX(name) FROM accounts WHERE accounts.acccode IN (:ai_acccode)),
+	accounthead='Paid during Credit S/Return for the Period',
+	RegNo=SPACE(100),
+	Credit = ISNULL(SUM(S.Amt), 0),
+	priority=6,
+	Opening=0
+FROM
+	(SELECT amt=ISNULL(SUM(h.amt), 0)
+	FROM
+		srledger h
+	WHERE
+		h.srcatcode IN (6,7) and
+		h.posted = 'Y' and 
+		h.accountfor='Y' and
+		h.date BETWEEN :ad_StartDate and :ad_endDate AND
+		h.paymentacccode in (:ai_acccode)) S
+HAVING SUM(S.Amt) > 0
+UNION ALL
+SELECT 
+	Debit  = CASE WHEN H.ServiceCatCode = 10 THEN H.InvTotal ELSE H.CashCharged END,
+	date = H.Date,
+	type = 'SVC-' + RTRIM(LTRIM(CONVERT(VARCHAR(7), H.ServiceInvCode))),
+	remarks=h.remarks,
+	acc=(SELECT name FROM accounts WHERE accounts.acccode = h.cashacccode),
+	accounthead=	CASE WHEN h.studentcode IS NULL THEN
+			(SELECT name FROM accounts WHERE accounts.acccode = h.custcode) 
+		ELSE 
+			(SELECT name + ' (' + regno + ')' FROM student WHERE student.studentcode = h.studentcode)
+		END,
+	RegNo=
+		CASE WHEN h.studentcode IS NULL THEN NULL
+		ELSE 
+			(SELECT regno FROM student WHERE student.studentcode = h.studentcode)
+		END,
+	Credit = 0,
+	priority=7,
+	Opening=0
+FROM
+	serviceheader h
+WHERE
+	(h.CashCharged > 0 OR H.ServiceCatCode = 10) and
+	h.cashacccode in (:ai_acccode) AND
+	h.posted = 'Y' and
+	h.date BETWEEN :ad_StartDate and :ad_EndDate
+UNION ALL
+SELECT 
+	Debit  = 0.00,
+	date = H.Date,
+	type = 'SVCR-' + RTRIM(LTRIM(CONVERT(VARCHAR(7), H.ServiceRInvCode))),
+	remarks=h.remarks,
+	acc=(SELECT name FROM accounts WHERE accounts.acccode = h.cashacccode),
+	accounthead=	CASE WHEN h.studentcode IS NULL THEN
+			(SELECT name FROM accounts WHERE accounts.acccode = h.custcode) 
+		ELSE 
+			(SELECT name + ' (' + regno + ')' FROM student WHERE student.studentcode = h.studentcode)
+		END,
+	RegNo=
+		CASE WHEN h.studentcode IS NULL THEN NULL
+		ELSE 
+			(SELECT regno FROM student WHERE student.studentcode = h.studentcode)
+		END,
+	Credit = CASE WHEN H.ServiceRCatCode = 13 THEN H.InvTotal ELSE H.CashCharged END,
+	priority=7,
+	Opening=0
+FROM
+	servicerheader h
+WHERE
+	(h.CashCharged > 0 OR H.ServiceRCatCode = 13) and
+	h.cashacccode in (:ai_acccode) AND
+	h.posted = 'Y' and
+	h.date BETWEEN :ad_StartDate and :ad_EndDate
+UNION ALL
+SELECT 
+	Debit  = 0,  
+	date = :ad_EndDate,
+	type = 'CSH-PUR',
+	remarks='Total Invoices: ' + LTRIM(RTRIM(STR((SELECT COUNT(PurInvCode) FROM Purledger WHERE posted = 'Y' and accountfor='Y' and amt <> 0 and date >= :ad_StartDate and date <= :ad_EndDate), 7))) + 
+			' (' + LTRIM(RTRIM(STR((SELECT MIN(PurInvCode) FROM Purledger WHERE posted = 'Y' and accountfor='Y' and amt <> 0 and date >= :ad_StartDate and date <= :ad_EndDate), 7))) +
+			'-' + LTRIM(RTRIM(STR((SELECT MAX(PurInvCode) FROM Purledger WHERE posted = 'Y' and accountfor='Y' and amt <> 0 and date >= :ad_StartDate and date <= :ad_EndDate), 7))) + ')',
+	acc=(SELECT MAX(name) FROM accounts WHERE accounts.acccode IN (:ai_acccode)),
+	accounthead='Paid During Purchase for the Period',
+	RegNo=SPACE(100),
+	Credit = ISNULL(SUM(P.Amt), 0),
+	priority=13,
+	Opening=0
+FROM
+	(SELECT amt=ISNULL(SUM(h.amt), 0)
+	FROM
+		purledger h
+	WHERE
+		h.posted = 'Y' and 
+		h.accountfor='Y' and
+		h.amt <> 0 and 
+		h.date BETWEEN :ad_StartDate and :ad_endDate AND 
+	 	h.paymentacccode IN (:ai_acccode)
+	HAVING ISNULL(SUM(H.Amt), 0) > 0) P
+HAVING SUM(P.Amt) <> 0
+UNION ALL
+SELECT 
+	Debit  = ISNULL(SUM(P.Amt), 0),
+	date = :ad_EndDate,
+	type = 'CSH-PR',
+	remarks='Total Invoices: ' + LTRIM(RTRIM(STR((SELECT COUNT(PrInvCode) FROM Prledger WHERE posted = 'Y' and accountfor = 'Y' and amt <> 0 and date >= :ad_StartDate and date <= :ad_EndDate), 7))) + 
+			' (' + LTRIM(RTRIM(STR((SELECT MIN(PrInvCode) FROM Prledger WHERE posted = 'Y' and accountfor = 'Y' and amt <> 0 and date >= :ad_StartDate and date <= :ad_EndDate), 7))) +
+			'-' + LTRIM(RTRIM(STR((SELECT MAX(PrInvCode) FROM Prledger WHERE posted = 'Y' and accountfor = 'Y' and amt <> 0 and date >= :ad_StartDate and date <= :ad_EndDate), 7))) + ')',
+	acc=(SELECT MAX(name) FROM accounts WHERE accounts.acccode IN (:ai_acccode)),
+	accounthead='Received during Cash P/Return for the Period',
+	RegNo=SPACE(100),
+	Credit = 0,
+	priority=15,
+	Opening=0
+FROM
+	(SELECT amt=ISNULL(SUM(h.amt), 0)
+	FROM
+		prledger h
+	WHERE
+		h.posted = 'Y' and 
+		h.amt <> 0 and h.accountfor = 'Y' and
+		h.paymentacccode IN (:ai_acccode) AND
+		h.date BETWEEN :ad_StartDate and :ad_endDate) P 
+HAVING SUM(P.Amt) > 0
+UNION ALL
+SELECT /*Sales Receivable Adjustments*/
+	debit=SUM(d.debit),
+	date = :ad_endDate,
+	type = 'SRADJ',
+	remarks='Sales Receivable Amount Adjustment',
+	acc=(SELECT name FROM accounts WHERE accounts.acccode = d.acccode),
+	accounthead=(SELECT name FROM accounts WHERE accounts.acccode = d.acccode),
+	RegNo=SPACE(100),
+	credit=SUM(d.credit),
+	priority=16,
+	Opening=0
+FROM
+	saleledger sl, salereceivableadj d, accounts a
+WHERE
+	sl.posted = 'Y' and
+	sl.date BETWEEN :ad_StartDate and :ad_endDate and
+	sl.saleinvcode = d.saleinvcode and
+	d.acccode in (:ai_acccode) and
+	d.acccode = a.acccode
+GROUP BY
+	d.acccode
+UNION ALL
+SELECT /*Post Dated Cheques*/
+	debit=CASE WHEN notes.NoteCatCode = 1 THEN notes.Amount ELSE 0 END,
+	date = notes.PostDate,
+	type = CASE WHEN notes.NoteCatCode = 1 THEN 'NR' ELSE 'NP' END + '-' + LTRIM(RTRIM(STR(Notes.VoucherCode, 10))),
+	remarks=notes.Remarks,
+	acc=(SELECT name FROM accounts WHERE accounts.acccode = notes.BankAcccode),
+	accounthead=(SELECT name FROM accounts WHERE accounts.acccode = notes.acccode),
+	RegNo=SPACE(100),
+	credit=CASE WHEN notes.NoteCatCode = 2 THEN notes.Amount ELSE 0 END,
+	priority=17,
+	Opening=0
+FROM
+	Notes
+WHERE
+	notes.posted = 'Y' and
+	notes.PostDate BETWEEN :ad_StartDate and :ad_endDate and
+	notes.BankAcccode IN (:ai_acccode)
+"
+  arguments=(("ad_StartDate", datetime), ("ad_EndDate", datetime), ("ai_acccode", numberlist))
+ sort="opening D, if(debit>0, '', 'C') A, date A"
+)
+text(name=t_2 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" alignment="0" border="0" x="91" y="41" height="141" width="366" text="Date: " html.valueishtml="0" )
+compute(name=compute_1 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" x="500" y="41" height="158" width="1391" format="dd/mm/yyyy hh:mm:ss" expression="today()" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_6 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="700" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" alignment="2" border="0" x="91" y="50" height="133" width="7800" text="Cash Activity Report" html.valueishtml="0" )
+compute(name=compute_2 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" x="6350" y="41" height="166" width="1541" format="[general]" expression="'Page ' + page() + ' of ' + pageCount()" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_1 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="700" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" alignment="0" border="0" x="83" y="425" height="125" width="625" text="From Date:" html.valueishtml="0" )
+compute(name=c_sdate visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="700" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" x="750" y="425" height="125" width="1291" format="dd/mm/yyyy hh:mm:ss" expression=" ad_StartDate " alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_7 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="700" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" alignment="1" border="0" x="2133" y="425" height="125" width="216" text="To:" html.valueishtml="0" )
+compute(name=c_edate visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="700" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" x="2383" y="425" height="125" width="1291" format="dd/mm/yyyy hh:mm:ss" expression=" ad_EndDate " alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=date_t visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" alignment="2" border="0" x="91" y="241" height="133" width="341" text="Date" html.valueishtml="0" )
+text(name=t_3 visible="1	if(priority=-1,0,1)" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-7" font.pitch="2" font.weight="700" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" alignment="1" border="0" x="6183" y="425" height="125" width="608" text="Balance B/F:" html.valueishtml="0" )
+compute(name=c_openbalance visible="1	if(priority=-1,0,1)" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-7" font.pitch="2" font.weight="700" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" x="6841" y="425" height="125" width="833" format="###,###,##0.00" expression="abs(cumulativeSum( debit - credit for all ) + credit - debit )" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_5 visible="1	if(priority=-1,0,1)" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-7" font.pitch="2" font.weight="700" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" x="7716" y="425" height="125" width="133" format="[general]" expression="if( cumulativeSum( debit - credit for all ) + credit - debit >= 0, '', 'Cr.')" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+line(name=l_1 visible="1" band=header background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="2" pen.width="8" pen.color="0" x1="91" y1="391" x2="7891" y2="391" )
+line(name=l_2 visible="1" band=header background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="2" pen.width="8" pen.color="0" x1="91" y1="208" x2="7891" y2="208" )
+text(name=balance_t visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" alignment="2" border="0" x="7208" y="241" height="133" width="466" text="Balance" html.valueishtml="0" )
+text(name=debit_t visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" alignment="2" border="0" x="6583" y="241" height="133" width="425" text="Paid" html.valueishtml="0" )
+text(name=credit_t visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" alignment="2" border="0" x="5808" y="241" height="133" width="533" text="Received" html.valueishtml="0" )
+text(name=remarks_t visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" alignment="2" border="0" x="4433" y="241" height="133" width="750" text="Remarks" html.valueishtml="0" )
+text(name=acc_t visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" alignment="2" border="0" x="2641" y="241" height="133" width="1441" text="Cash Payed/Received " html.valueishtml="0" )
+text(name=accounthead_t visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" alignment="2" border="0" x="1491" y="241" height="133" width="858" text="Cash A/C Head" html.valueishtml="0" )
+text(name=type_t visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" alignment="2" border="0" x="841" y="241" height="133" width="500" text="Doc. No" html.valueishtml="0" )
+compute(name=transtype visible="0" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="2" background.color="16777215" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" x="4508" y="450" height="100" width="466" format="[GENERAL]" expression="if( debit = 0, 2, 1)" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_4 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="700" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" alignment="0" border="0" x="5091" y="33" height="133" width="366" text="Total:" html.valueishtml="0" )
+compute(name=compute_3 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-7" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" x="7716" y="33" height="133" width="133" format="[general]" expression="if( cumulativeSum( debit - credit for all ) >= 0, 'Dr.', 'Cr.')" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+line(name=l_3 visible="1" band=summary background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="2" pen.width="8" pen.color="0" x1="91" y1="0" x2="7891" y2="0" )
+line(name=l_4 visible="1" band=summary background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="2" pen.width="8" pen.color="0" x1="91" y1="192" x2="7891" y2="192" )
+compute(name=compute_4 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-7" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" x="7041" y="33" height="133" width="633" format="###,###,##0.00" expression="abs( cumulativeSum( debit - credit for all ) )" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=c_sreceived visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-7" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" x="5591" y="33" height="133" width="750" format="###,###,##0.00" expression="sum( case( remarks when 'Opening Balance' then 0 else debit) for all)  " alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=c_spayed visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-7" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" x="6375" y="33" height="133" width="633" format="###,###,##0.00" expression="sum( case( remarks when 'Opening Balance' then 0 else credit) for all)  " alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+column(name=date visible="1" band=detail id=2 x="58" y="8" height="125" width="733" color="0" border="0" alignment="0" format="dd/mm/yyyy hh:mm" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" transparency="0" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-7" font.pitch="2" font.weight="400" tabsequence=0 )
+compute(name=c_currbalcrbr visible="1" band=detail font.charset="0" font.face="Times New Roman" font.family="1" font.height="-7" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" x="7716" y="8" height="125" width="133" format="[general]" expression="if( cumulativeSum( debit - credit for all ) >= 0, '', 'Cr.')" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=c_currbalalnce visible="1" band=detail font.charset="0" font.face="Times New Roman" font.family="1" font.height="-7" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" x="7041" y="8" height="125" width="633" format="###,###,##0.00" expression="abs(cumulativeSum( debit - credit for all ))" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+column(name=debit visible="1	if(debit=0 or priority=-1,0,1)" band=detail id=1 x="5708" y="8" height="125" width="633" color="0" border="0" alignment="1" format="###,###,##0.00" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" transparency="0" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" font.charset="0" font.face="Times New Roman" font.family="1" font.height="-7" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=credit visible="1	if(credit=0 or priority=-1,0,1)" band=detail id=8 x="6375" y="8" height="125" width="633" color="0" border="0" alignment="1" format="###,###,##0.00" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" transparency="0" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" font.charset="0" font.face="Times New Roman" font.family="1" font.height="-7" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=remarks visible="1" height.autosize=yes band=detail id=4 x="4433" y="8" height="125" width="1233" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" transparency="0" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-7" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=accounthead visible="1" height.autosize=yes band=detail id=6 x="2641" y="8" height="125" width="1741" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" transparency="0" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-7" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=acc visible="1" band=detail id=5 x="1491" y="8" height="125" width="1091" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" transparency="0" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-7" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=type visible="1" pointer="HyperLink!" height.autosize=yes band=detail id=3 x="841" y="8" height="125" width="591" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=9 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" transparency="0" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-7" font.pitch="2" font.weight="400" tabsequence=0 )
+htmltable(border="0" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" encodeSelfLinkArgs="1" generateDDDWFrames="1" generateJavaScript="1" netscapeLayers="0" pagingMethod=0 )
+xhtmlgen() cssgen(sessionSpecific="0" )
+xmlgen(inline="0" )
+xsltgen()
+jsgen()
+export.xml(headGroups="1" includewhitespace="0" metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 distill.customPostScript="0" xslfop.print="0" )
+export.xhtml()

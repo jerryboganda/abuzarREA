@@ -1,0 +1,21 @@
+import json, collections
+
+d = json.load(open('deploy/analysis/scripts/out/scan.json', encoding='utf-8'))
+sql = d['sql']
+print('sql total', len(sql))
+print('kinds', collections.Counter(r['kind'] for r in sql))
+print('in loop', sum(1 for r in sql if r['in_loop']))
+print('kinds in loop', collections.Counter(r['kind'] for r in sql if r['in_loop']))
+print('select star', sum(1 for r in sql if r['select_star']))
+print('update no where', sum(1 for r in sql if r['kind'] == 'update' and not r['has_where']))
+print('delete no where', sum(1 for r in sql if r['kind'] == 'delete' and not r['has_where']))
+print('commit/rollback total', sum(1 for r in sql if r['kind'] in ('commit', 'rollback')))
+print('commit/rollback in loop', sum(1 for r in sql if r['kind'] in ('commit', 'rollback') and r['in_loop']))
+print('loops total', len(d['loops']))
+print('loops with sql', sum(1 for L in d['loops'] if L['counts'].get('SQL', 0)))
+print('loops with retrieve', sum(1 for L in d['loops'] if L['counts'].get('Retrieve', 0)))
+print('loops with messagebox', sum(1 for L in d['loops'] if L['counts'].get('MessageBox', 0)))
+print('loops with create', sum(1 for L in d['loops'] if L['counts'].get('Create', 0)))
+print('loops with filter', sum(1 for L in d['loops'] if L['counts'].get('Filter', 0) or L['counts'].get('SetFilter', 0)))
+print('loops rowcount in header', sum(1 for L in d['loops'] if L['rowcount_in_header']))
+print('hot lines', len(d['hot_lines']))

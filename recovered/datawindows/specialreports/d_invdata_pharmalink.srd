@@ -1,0 +1,217 @@
+release 12.5;
+datawindow ( units=0 timer_interval=0 processing=0 color=16777215 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.file=""  picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.printername=""  print.documentname=""  print.orientation=0 print.margin.left=110 print.margin.right=110 print.margin.top=96 print.margin.bottom=96 print.paper.size=0 print.paper.source=0 print.canusedefaultprinter=yes selected.mouse=no hidegrayline=no showbackcoloronxp=no)
+header(height=248 color="536870912" transparency="0" gradient.color="8421504" gradient.transparency="0" gradient.angle="0" brushmode="0" gradient.repetition.mode="0" gradient.repetition.length="100" gradient.repetition.count="0" gradient.focus="0" gradient.scale="100" gradient.spread="100" )
+summary(height=0 color="536870912" transparency="0" gradient.color="8421504" gradient.transparency="0" gradient.angle="0" brushmode="0" gradient.repetition.mode="0" gradient.repetition.length="100" gradient.repetition.count="0" gradient.focus="0" gradient.scale="100" gradient.spread="100" )
+footer(height=0 color="536870912" transparency="0" gradient.color="8421504" gradient.transparency="0" gradient.angle="0" brushmode="0" gradient.repetition.mode="0" gradient.repetition.length="100" gradient.repetition.count="0" gradient.focus="0" gradient.scale="100" gradient.spread="100" )
+detail(height=84 color="536870912" transparency="0" gradient.color="8421504" gradient.transparency="0" gradient.angle="0" brushmode="0" gradient.repetition.mode="0" gradient.repetition.length="100" gradient.repetition.count="0" gradient.focus="0" gradient.scale="100" gradient.spread="100" )
+table(column=(type=char(15) updatewhereclause=yes name=documentcode dbname="DocumentCode"  )
+column=(type=char(2) updatewhereclause=yes name=documenttype dbname="DocumentType"  )
+column=(type=char(10) updatewhereclause=yes name=documentdate dbname="DocumentDate"  )
+column=(type=char(12) updatewhereclause=yes name=custcode dbname="CustCode"  )
+column=(type=char(12) updatewhereclause=yes name=regioncode dbname="RegionCode"  )
+column=(type=char(12) updatewhereclause=yes name=bookingmancode dbname="BookingManCode"  )
+column=(type=char(12) updatewhereclause=yes name=deliverymancode dbname="DeliveryManCode"  )
+column=(type=char(12) updatewhereclause=yes name=grossamount dbname="GrossAmount"  )
+column=(type=char(12) updatewhereclause=yes name=discount dbname="Discount"  )
+column=(type=char(12) updatewhereclause=yes name=saletaxamount dbname="SaleTaxAmount"  )
+column=(type=char(12) updatewhereclause=yes name=netamount dbname="NetAmount"  )
+ retrieve="SELECT 
+	DocumentCode = LTRIM(RTRIM(STR(SL.SaleInvCode, 15))),
+	DocumentType= 'SI',
+	DocumentDate=Convert(varchar(10), SL.DATE, 103),
+	CustCode = LTRIM(RTRIM(STR(SL.CustCode, 12))),
+	RegionCode = LTRIM(RTRIM(STR(AR.RegionCode, 12))),
+	BookingManCode = LTRIM(RTRIM(STR(SL.SMANCode, 12))),
+	DeliveryManCode = LTRIM(RTRIM(STR(SL.DeliveredBY, 12))),
+	GrossAmount=LTRIM(RTRIM(STR(Round(SUM(SD.LooseQty * SD.SalePrice), 2), 12, 2))),
+	Discount=LTRIM(RTRIM(STR(Round(SUM(SD.LooseQty * (SD.SalePrice - SD.ItemFlatDisc) * (SD.DiscPerc * 0.01)), 2) + SUM(SD.LooseQty * SD.ItemFlatDisc), 12, 2))),
+	SaleTaxAmount=LTRIM(RTRIM(STR(Round(SUM(SD.LooseQty * (SD.SalePrice - SD.ItemFlatDisc) * (1 - SD.DiscPerc * 0.01) * SD.GSTPerc * 0.01), 2) + ROUND(SUM((SD.LooseQty + SD.BonusQty) * SD.UnitSalesTax), 2), 12, 2))),
+	NetAmount=LTRIM(RTRIM(STR(MAX(SL.InvTotal), 12, 2)))
+FROM
+	SaleLedger SL,
+	SaleDetail SD,
+	Customer C,
+	Accounts A,
+	Area AR,
+	CustomerCategory CC,
+	Item I
+WHERE
+	SL.SaleInvCode = SD.SaleInvCode AND
+	SL.POSTED = 'Y' AND
+	SD.ICode = I.ICode AND
+	I.ManfCode IN (:manfcode) AND
+	SL.CustCode = C.CustCode AND
+	C.CustCode = A.AccCode AND 
+	C.CustCatCode = CC.CustCatCode AND
+	C.AreaCode = AR.AreaCode AND
+	SL.DATE >= :ar_startdate AND SL.DATE <= :ar_enddate
+GROUP BY
+	SL.SaleInvCode,
+	SL.date,
+	SL.CustCode,
+	AR.RegionCode,
+	SL.SManCode,
+	SL.deliveredby
+UNION ALL
+SELECT 
+	DocumentCode = LTRIM(RTRIM(STR(SL.SRInvCode, 15))),
+	DocumentType= 'SR',
+	DocumentDate=Convert(varchar(10), SL.DATE, 103),
+	CustCode = LTRIM(RTRIM(STR(SL.CustCode, 12))),
+	RegionCode = LTRIM(RTRIM(STR(AR.RegionCode, 12))),
+	BookingManCode = LTRIM(RTRIM(STR(SL.SMANCode, 12))),
+	DeliveryManCode = LTRIM(RTRIM(STR(SL.SMANCode, 12))),
+	GrossAmount=LTRIM(RTRIM(STR(Round(SUM(SD.LooseQty * SD.SRPrice), 2), 12, 2))),
+	Discount=LTRIM(RTRIM(STR(Round(SUM(SD.LooseQty * SD.SRPrice * (SD.DiscPerc * 0.01)), 2), 12, 2))),
+	SaleTaxAmount=LTRIM(RTRIM(STR(Round(SUM(SD.LooseQty * SD.SRPrice * (1 - SD.DiscPerc * 0.01) * SD.GSTPerc * 0.01), 2) + ROUND(SUM((SD.LooseQty + SD.BonusQty) * SD.UnitSalesTax), 2), 12, 2))),
+	NetAmount=LTRIM(RTRIM(STR(MAX(SL.InvTotal), 12, 2)))
+FROM
+	SRLedger SL,
+	SRDetail SD,
+	Customer C,
+	Accounts A,
+	Area AR,
+	CustomerCategory CC,
+	Item I
+WHERE
+	SL.SRInvCode = SD.SRInvCode AND
+	SL.POSTED = 'Y' AND
+	SD.ICode = I.ICode AND
+	I.ManfCode IN (:manfcode) AND
+	SL.CustCode = C.CustCode AND
+	C.CustCode = A.AccCode AND 
+	C.CustCatCode = CC.CustCatCode AND
+	C.AreaCode = AR.AreaCode AND
+	SL.DATE >= :ar_startdate AND SL.DATE <= :ar_enddate
+GROUP BY
+	SL.SRInvCode,
+	SL.date,
+	SL.CustCode,
+	AR.RegionCode,
+	SL.SManCode,
+	SL.SMANCode
+UNION ALL
+SELECT 
+	DocumentCode = LTRIM(RTRIM(STR(SL.PurInvCode, 15))),
+	DocumentType= 'PI',
+	DocumentDate=Convert(varchar(10), SL.DATE, 103),
+	CustCode = LTRIM(RTRIM(STR(SL.SuppCode, 12))),
+	RegionCode = '1',
+	BookingManCode = '1',
+	DeliveryManCode = '1',
+	GrossAmount=LTRIM(RTRIM(STR(Round(SUM((SD.PackQty + SD.LooseQty) * SD.PurPrice), 2), 12, 2))),
+	Discount=LTRIM(RTRIM(STR(Round(SUM((SD.PackQty + SD.LooseQty) * SD.PurPrice  * (SD.DiscPerc * 0.01)), 2), 12, 2))),
+	SaleTaxAmount=LTRIM(RTRIM(STR(Round(SUM((SD.PackQty + SD.LooseQty) * SD.PurPrice * (1 - SD.DiscPerc * 0.01) * SD.GSTPerc * 0.01), 2) + ROUND(SUM((SD.PackQty + SD.LooseQty + SD.BonusQty) * SD.UnitSalesTax), 2), 12, 2))),
+	NetAmount=LTRIM(RTRIM(STR(MAX(SL.InvTotal), 12, 2)))
+FROM
+	PurLedger SL,
+	PurDetail SD,
+	Supplier C,
+	Accounts A,
+	Item I
+WHERE
+	SL.PurInvCode = SD.PurInvCode AND
+	SL.POSTED = 'Y' AND
+	SD.ICode = I.ICode AND
+	I.ManfCode IN (:manfcode) AND
+	SL.SuppCode = C.SuppCode AND
+	C.SuppCode = A.AccCode AND 
+	SL.DATE >= :ar_startdate AND SL.DATE <= :ar_enddate
+GROUP BY
+	SL.PurInvCode,
+	SL.date,
+	SL.SuppCode
+UNION ALL
+SELECT 
+	DocumentCode = LTRIM(RTRIM(STR(SL.PrInvCode, 15))),
+	DocumentType= 'PR',
+	DocumentDate=Convert(varchar(10), SL.DATE, 103),
+	CustCode = LTRIM(RTRIM(STR(SL.SuppCode, 12))),
+	RegionCode = '1',
+	BookingManCode = '1',
+	DeliveryManCode = '1',
+	GrossAmount=LTRIM(RTRIM(STR(Round(SUM((SD.PackQty + SD.LooseQty) * SD.PrPrice), 2), 12, 2))),
+	Discount=LTRIM(RTRIM(STR(Round(SUM((SD.PackQty + SD.LooseQty) * SD.PrPrice  * (SD.DiscPerc * 0.01)), 2), 12, 2))),
+	SaleTaxAmount=LTRIM(RTRIM(STR(Round(SUM((SD.PackQty + SD.LooseQty) * SD.PrPrice * (1 - SD.DiscPerc * 0.01) * SD.GSTPerc * 0.01), 2) + ROUND(SUM((SD.PackQty + SD.LooseQty + SD.BonusQty) * SD.UnitSalesTax), 2), 12, 2))),
+	NetAmount=LTRIM(RTRIM(STR(MAX(SL.InvTotal), 12, 2)))
+FROM
+	PrLedger SL,
+	PrDetail SD,
+	Supplier C,
+	Accounts A,
+	Item I
+WHERE
+	SL.PrInvCode = SD.PrInvCode AND
+	SL.POSTED = 'Y' AND
+	SD.ICode = I.ICode AND
+	I.ManfCode IN (:manfcode) AND
+	SL.SuppCode = C.SuppCode AND
+	C.SuppCode = A.AccCode AND 
+	SL.DATE >= :ar_startdate AND SL.DATE <= :ar_enddate
+GROUP BY
+	SL.PrInvCode,
+	SL.date,
+	SL.SuppCode
+UNION ALL
+SELECT 
+	DocumentCode = LTRIM(RTRIM(STR(SL.AdjCode, 15))),
+	DocumentType= CASE WHEN SL.AdjCatCode = 1 THEN 'TI' ELSE 'TO' END,
+	DocumentDate=Convert(varchar(10), SL.DATE, 103),
+	CustCode = LTRIM(RTRIM(STR(ISNULL(SL.AccCode, ''), 12))),
+	RegionCode = '1',
+	BookingManCode = '1', 
+	DeliveryManCode = '1', 
+	GrossAmount=LTRIM(RTRIM(STR(Round(SUM((SD.LooseQty) * SD.Price), 2), 12, 2))),
+	Discount='0.00',
+	SaleTaxAmount='0.00',
+	NetAmount=LTRIM(RTRIM(STR(Round(SUM((SD.LooseQty) * SD.Price), 2), 12, 2)))
+FROM
+	AdjHeader SL,
+	AdjDetail SD,
+	Item I
+WHERE
+	SL.AdjCode = SD.AdjCode AND
+	SL.POSTED = 'Y' AND
+	SD.ICode = I.ICode AND
+	I.ManfCode IN (:manfcode) AND
+	SL.DATE BETWEEN :ar_startdate AND :ar_enddate
+GROUP BY
+	SL.AdjCode,
+	SL.AdjCatCode,
+	SL.date,
+	SL.AccCode
+"
+  arguments=(("manfcode", numberlist), ("ar_startdate", datetime), ("ar_enddate", datetime))
+)
+text(name=documenttype_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="33554432" alignment="2" border="0" x="507" y="12" height="64" width="384" text="Documenttype" html.valueishtml="0" )
+text(name=documentcode_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="33554432" alignment="2" border="0" x="18" y="12" height="64" width="439" text="Documentcode" html.valueishtml="0" )
+text(name=netamount_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="33554432" alignment="2" border="0" x="4457" y="12" height="64" width="357" text="Netamount" html.valueishtml="0" )
+text(name=saletaxamount_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="33554432" alignment="2" border="0" x="4009" y="12" height="64" width="398" text="Saletaxamount" html.valueishtml="0" )
+text(name=discount_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="33554432" alignment="2" border="0" x="3602" y="12" height="64" width="357" text="Discount" html.valueishtml="0" )
+text(name=grossamount_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="33554432" alignment="2" border="0" x="3195" y="12" height="64" width="357" text="Grossamount" html.valueishtml="0" )
+text(name=deliverymancode_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="33554432" alignment="2" border="0" x="2697" y="12" height="64" width="448" text="Deliverymancode" html.valueishtml="0" )
+text(name=bookingmancode_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="33554432" alignment="2" border="0" x="2190" y="12" height="64" width="457" text="Bookingmancode" html.valueishtml="0" )
+text(name=regioncode_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="33554432" alignment="2" border="0" x="1783" y="12" height="64" width="357" text="Regioncode" html.valueishtml="0" )
+text(name=custcode_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="33554432" alignment="2" border="0" x="1376" y="12" height="64" width="357" text="Custcode" html.valueishtml="0" )
+text(name=documentdate_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="33554432" alignment="2" border="0" x="942" y="12" height="64" width="384" text="Documentdate" html.valueishtml="0" )
+column(name=documentcode visible="1" band=detail id=1 x="18" y="4" height="76" width="439" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=15 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" transparency="0" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=documenttype visible="1" band=detail id=2 x="507" y="4" height="76" width="265" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=2 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" transparency="0" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=netamount visible="1" band=detail id=11 x="4457" y="4" height="76" width="357" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=12 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" transparency="0" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=saletaxamount visible="1" band=detail id=10 x="4009" y="4" height="76" width="357" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=12 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" transparency="0" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=discount visible="1" band=detail id=9 x="3602" y="4" height="76" width="357" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=12 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" transparency="0" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=grossamount visible="1" band=detail id=8 x="3195" y="4" height="76" width="357" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=12 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" transparency="0" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=deliverymancode visible="1" band=detail id=7 x="2697" y="4" height="76" width="357" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=12 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" transparency="0" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=bookingmancode visible="1" band=detail id=6 x="2190" y="4" height="76" width="361" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=12 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" transparency="0" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=regioncode visible="1" band=detail id=5 x="1783" y="4" height="76" width="357" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=12 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" transparency="0" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=custcode visible="1" band=detail id=4 x="1376" y="4" height="76" width="357" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=12 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" transparency="0" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=documentdate visible="1" band=detail id=3 x="942" y="4" height="76" width="302" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=10 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" transparency="0" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+htmltable(border="1" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" encodeSelfLinkArgs="1" generateDDDWFrames="1" generateJavaScript="1" netscapeLayers="0" pagingMethod=0 )
+xhtmlgen() cssgen(sessionSpecific="0" )
+xmlgen(inline="0" )
+xsltgen()
+jsgen()
+export.xml(headGroups="1" includewhitespace="0" metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 distill.customPostScript="0" xslfop.print="0" )
+export.xhtml()

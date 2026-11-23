@@ -1,0 +1,80 @@
+release 12.5;
+datawindow ( units=2 timer_interval=60000 processing=0 color=16777215 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.printername=""  print.documentname=""  print.orientation=0 print.margin.left=0 print.margin.right=0 print.margin.top=0 print.margin.bottom=0 print.paper.size=0 print.paper.source=0 print.canusedefaultprinter=yes selected.mouse=no hidegrayline=no showbackcoloronxp=no)
+header(height=0 )
+summary(height=0 color="536870912" )
+footer(height=10 color="536870912" )
+detail(height=3854 color="536870912" )
+table(column=(type=long updatewhereclause=yes name=glcode dbname="GLCODE"  )
+column=(type=long updatewhereclause=yes name=vouchercode dbname="Glheader.VoucherCode"  )
+column=(type=datetime updatewhereclause=yes name=date dbname="Date"  )
+column=(type=long updatewhereclause=yes name=acccode dbname="AccCode"  )
+column=(type=char(12) updatewhereclause=yes name=aliasname dbname="AliasName"  )
+column=(type=char(60) updatewhereclause=yes name=title dbname="Title"  )
+column=(type=decimal(2) updatewhereclause=yes name=amount dbname="Amount"  )
+column=(type=char(100) updatewhereclause=yes name=remarks dbname="Remarks"  )
+column=(type=char(20) updatewhereclause=yes name=chequeno dbname="ChequeNo"  )
+column=(type=char(1) updatewhereclause=yes name=posted dbname="Posted"  )
+column=(type=datetime updatewhereclause=yes name=postdate dbname="postdate"  )
+column=(type=long updatewhereclause=yes name=invoicecode dbname="Invoicecode"  )
+ retrieve="SELECT
+	GLCODE = H.GLVochCode,
+	H.VoucherCode,
+	Date = H.Date,
+	AccCode=D.AccCode,
+	AliasName = A.AliasName,
+	Title = A.Name,
+	Amount = D.Debit - D.Credit,
+	Remarks = D.Remarks,
+	ChequeNo= D.ChkNo,
+	Posted=H.Posted,
+	postdate=H.postdate,
+	Invoicecode=D.invoicecode
+FROM
+	GLHeader H,
+	GLDetail D,
+	Accounts A
+WHERE 
+	H.VochCatCode= :ai_VoucherCatCode AND
+	H.GLVochCode = D.GLVochCode AND
+	D.GLRowID IN (:ai_SelectedRowID) AND
+	D.AccCode = A.AccCode
+ORDER BY
+	H.GLVochCode,
+	D.GLRowID"
+  arguments=(("ai_SelectedRowID", numberlist), ("ai_VoucherCatCode", number))
+)
+group(level=1 header.height=0 trailer.height=10 by=("glcode"  ) header.color="536870912" trailer.color="536870912" )
+line(name=l_2 visible="1" band=detail background.mode="2" background.color="16777215" pen.style="2" pen.width="10" pen.color="0" x1="62" y1="1240" x2="3927" y2="1240" )
+text(name=t_4 visible="1" band=detail font.charset="0" font.face="Times New Roman" font.family="1" font.height="-12" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="62" y="1000" height="208" width="635" text="Phone(s) :" html.valueishtml="0" )
+compute(name=c_phone visible="1" band=detail font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="739" y="1000" height="208" width="1354" format="[general]" expression="f_ReportHeaderInfo('phone')" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_7 visible="1" band=detail font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="3" border="0" x="62" y="2135" height="1479" width="3947" text="	'Amount in Words: '+F_TOWORDS(amount, '', 1) + '~~r~~n~~r~~n' +'via' + if( ai_VoucherCatCode =2, ' Cash', 'Cheque No. '  +  if(isnull(chequeno),'..........',chequeno)  ) + '  Dated  ' + string(postdate,'dd/mm/yyyy') + ' on account of Bill for the~~r~~n~~r~~nMonth of .........................'" html.valueishtml="0" )
+text(name=t_12 visible="1" band=detail font.charset="0" font.face="Times New Roman" font.family="1" font.height="-12" font.pitch="2" font.weight="700" background.mode="2" background.color="16777215" color="0" alignment="2" border="0" x="72" y="21" height="208" width="3864" text="	if( ai_VoucherCatCode =2, 'Cash Receipt', 'Bank Receipt')" html.valueishtml="0" )
+compute(name=c_companyname visible="1" band=detail font.charset="0" font.face="Times New Roman" font.family="1" font.height="-16" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" x="62" y="271" height="260" width="3864" format="[general]" expression="f_ReportHeaderInfo('clientname')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_receivedwiththanksfrom visible="1" band=detail font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="0" border="0" x="62" y="1698" height="177" width="1677" text="Received With Thanks From :" html.valueishtml="0" )
+column(name=title visible="1" band=detail id=6 x="1760" y="1698" height="177" width="2218" color="0" border="0" alignment="3" format="[general]" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="700" tabsequence=0 )
+text(name=t_glcode visible="1" band=detail font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="0" border="0" x="72" y="1479" height="177" width="197" text="No." html.valueishtml="0" )
+text(name=t_13 visible="1	if(isnull(invoicecode), 0, 1)" band=detail font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="0" border="0" x="1000" y="1479" height="177" width="791" text="Invoice Code:" html.valueishtml="0" )
+compute(name=compute_1 visible="1" band=detail font.charset="0" font.face="Times New Roman" font.family="1" font.height="-12" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" x="2916" y="1479" height="177" width="947" format="dd/mm/yyyy" expression="today()" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_date visible="1" band=detail font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="0" border="0" x="2583" y="1479" height="177" width="312" text="Date:" html.valueishtml="0" )
+column(name=invoicecode visible="1	if(isnull(invoicecode), 0, 1)" band=detail id=12 x="1833" y="1479" height="177" width="718" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="700" tabsequence=0 )
+column(name=vouchercode visible="1" band=detail id=2 x="312" y="1479" height="177" width="614" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="700" tabsequence=0 )
+compute(name=c_address1 visible="1" band=detail font.charset="0" font.face="Times New Roman" font.family="1" font.height="-12" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="62" y="563" height="187" width="3864" format="[general]" expression="f_ReportHeaderInfo('address1')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=c_address2 visible="1" band=detail font.charset="0" font.face="Times New Roman" font.family="1" font.height="-12" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="62" y="781" height="187" width="3864" format="[general]" expression="f_ReportHeaderInfo('address2')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=c_fax visible="1" band=detail font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="2260" y="1010" height="208" width="1645" format="[general]" expression="'Fax : '+f_ReportHeaderInfo('fax')" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_11 visible="1" band=detail font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="0" border="0" x="62" y="1917" height="187" width="958" text="Membership No." html.valueishtml="0" )
+column(name=aliasname visible="1" band=detail id=5 x="1052" y="1917" height="187" width="1020" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="700" tabsequence=0 )
+text(name=t_5 visible="1" band=detail font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="0" border="0" x="2114" y="1917" height="187" width="760" text="a Sum of Rs.:" html.valueishtml="0" )
+compute(name=compute_2 visible="1" band=detail font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="700" background.mode="2" background.color="16777215" color="0" x="2916" y="1917" height="187" width="1031" format="###,###,##0.00" expression="abs(amount)" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_1 visible="1" band=detail font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" font.underline="1" background.mode="2" background.color="16777215" color="0" alignment="0" border="0" x="93" y="3646" height="156" width="1406" text="Submit && Realisation" html.valueishtml="0" )
+text(name=t_2 visible="1" band=detail font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" font.underline="1" background.mode="2" background.color="16777215" color="0" alignment="0" border="0" x="1916" y="3646" height="156" width="802" text="Prepared " html.valueishtml="0" )
+text(name=t_3 visible="1" band=detail font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" font.underline="1" background.mode="2" background.color="16777215" color="0" alignment="0" border="0" x="3250" y="3646" height="156" width="802" text="Approved" html.valueishtml="0" )
+htmltable(border="1" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" encodeSelfLinkArgs="1" generateJavaScript="1" netscapeLayers="0" pagingMethod=0 )
+xhtmlgen() cssgen(sessionSpecific="0" )
+xmlgen(inline="0" )
+xsltgen()
+jsgen()
+export.xml(headGroups="1" includewhitespace="0" metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 distill.customPostScript="0" xslfop.print="0" )
+export.xhtml()

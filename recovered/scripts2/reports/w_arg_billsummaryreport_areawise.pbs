@@ -1,0 +1,105 @@
+// window w_arg_billsummaryreport_areawise (reports)  ancestor: w_listarguments
+
+// w_arg_billsummaryreport_areawise.create() returns 0
+	integer icurrent
+	call super::create
+	this.cbx_usergroups = create cbx_usergroups
+	this.cbx_printbalance = create cbx_printbalance
+	this.st_4 = create st_4
+	this.st_8 = create st_8
+	this.rb_posted = create rb_posted
+	this.rb_unposted = create rb_unposted
+	this.gb_5 = create gb_5
+	icurrent = upperbound(this.control)
+	this.control[icurrent + 1] = this.cbx_usergroups
+	this.control[icurrent + 2] = this.cbx_printbalance
+	this.control[icurrent + 3] = this.st_4
+	this.control[icurrent + 4] = this.st_8
+	this.control[icurrent + 5] = this.rb_posted
+	this.control[icurrent + 6] = this.rb_unposted
+	this.control[icurrent + 7] = this.gb_5
+
+// w_arg_billsummaryreport_areawise.destroy() returns 0
+	call super::destroy
+	destroy this.cbx_usergroups
+	destroy this.cbx_printbalance
+	destroy this.st_4
+	destroy this.st_8
+	destroy this.rb_posted
+	destroy this.rb_unposted
+	destroy this.gb_5
+
+// w_arg_billsummaryreport_areawise.open() returns long
+	long ancestorreturnvalue
+	long ll_counter
+	long ll_rowcount
+	integer rtncode
+	ancestorreturnvalue = super::open()
+	this.dw_control.settransobject(sqlca)
+	this.dw_control.insertrow(0)
+	this.dw_control.scrolltorow(0)
+	rtncode = this.dw_control.getchild("areacode", this.idc_categories)
+	if rtncode = -1 then
+		messagebox("Error", "Not a DataWindowChild")
+	end if
+	ll_rowcount = this.idc_categories.rowcount()
+	for ll_counter = 1 to ll_rowcount
+		this.lb_categories.additem(this.idc_categories.getitemstring(ll_counter, "name"))
+	next
+	this.dw_startendinvoice.settransobject(sqlca)
+	this.dw_startendinvoice.insertrow(0)
+	this.dw_startendinvoice.scrolltorow(0)
+	return ::message.returnvalue
+
+// cb_ok.clicked() returns long
+	long ancestorreturnvalue
+	long ll_count
+	long ll_counter
+	long ll_innercounter
+	long ll_found
+	integer li_temp
+	ancestorreturnvalue = super::clicked()
+	if parent.cbx_all.checked = true then
+		for ll_counter = 1 to parent.idc_categories.rowcount()
+			parent.istr_arg.ia_integerlist[ll_counter] = parent.idc_categories.getitemnumber(ll_counter, "areacode")
+		next
+	else
+		for ll_counter = 1 to ll_counter
+			ll_found = parent.idc_categories.find("name ='" + parent.lb_selectedcategories.text(ll_counter) + "'", 1, parent.idc_categories.rowcount())
+			if ll_found > 0 then
+				parent.istr_arg.ia_integerlist[ll_counter] = parent.idc_categories.getitemnumber(ll_found, "areacode")
+			end if
+		next
+	end if
+	parent.dw_startendinvoice.accepttext()
+	parent.istr_arg.l_code1 = parent.dw_startendinvoice.getitemnumber(1, "sinvcode")
+	parent.istr_arg.l_code2 = parent.dw_startendinvoice.getitemnumber(1, "linvcode")
+	if parent.istr_arg.l_code1 > parent.istr_arg.l_code2 then
+		li_temp = parent.istr_arg.l_code1
+		parent.istr_arg.l_code1 = parent.istr_arg.l_code2
+		parent.istr_arg.l_code2 = li_temp
+	end if
+	if parent.rb_posted.checked then
+		parent.istr_arg.s_name1 = "Y"
+	else
+		parent.istr_arg.s_name1 = "N"
+	end if
+	parent.em_startdate.getdata(parent.istr_arg.d_sdate)
+	parent.em_enddate.getdata(parent.istr_arg.d_edate)
+	parent.istr_arg.i_supress = parent.cbx_supress.checked
+	parent.istr_arg.i_hide = parent.cbx_hide.checked
+	parent.istr_arg.i_status = 1
+	parent.post event ue_close(1)
+	return ::message.returnvalue
+
+// cbx_usergroups.ue_keypressed(keycode key, unsignedlong keyflags) returns long
+	if key = keyenter! then
+		send(handle(this), 256, 9, long(90))
+	end if
+	return ::message.returnvalue
+
+// cbx_printbalance.ue_keypressed(keycode key, unsignedlong keyflags) returns long
+	if key = keyenter! then
+		send(handle(this), 256, 9, long(90))
+	end if
+	return ::message.returnvalue

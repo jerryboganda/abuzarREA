@@ -1,0 +1,200 @@
+// window w_arg_item_batch_salereturn_issuebased (reports)  ancestor: w_popup_forselection_walias
+
+// w_arg_item_batch_salereturn_issuebased.wf_validate_batchno(long al_icode, string as_batch) returns long
+	datetime ldt_expiry
+	double ld_qty
+	SQL SELECT Expiry =Max ( Expiry ) , Qty =SUM ( ISNULL ( Qty , 0 ) ) INTO :ldt_expiry, :ld_qty FROM ( SELECT Expiry =Max ( Expiry ) , Qty =SUM ( Qty ) FROM IssueDetail WHERE ICode =:al_icode AND Batch =:as_batch UNION ALL SELECT Expiry =Max ( Expiry ) , Qty =- SUM ( LooseQty ) FROM SRDetail WHERE ICode =:al_icode AND Batch =:as_batch ) A USING sqlca;
+	if sqlca.sqlcode = 0 then
+		if ld_qty > 0.0 then
+			this.dw_control.object.expirydate[1] = ldt_expiry
+		else
+			messagebox("Batch No. Validation!", "Invalid Batch or Returnable Qty for this batch is not enough")
+			return 1
+		end if
+	else
+		messagebox("Batch No. Validation!", "Database Problem.Possible Reasons:-~r~n" + sqlca.sqlerrtext)
+		return 1
+	end if
+	return 0
+
+// w_arg_item_batch_salereturn_issuebased.create() returns 0 [event]
+	integer icurrent
+	call super::create
+	this.gb_2 = create gb_2
+	this.st_1 = create st_1
+	this.st_2 = create st_2
+	this.em_startdate = create em_startdate
+	this.em_enddate = create em_enddate
+	this.dw_control = create dw_control
+	icurrent = upperbound(this.control)
+	this.control[icurrent + 1] = this.gb_2
+	this.control[icurrent + 2] = this.st_1
+	this.control[icurrent + 3] = this.st_2
+	this.control[icurrent + 4] = this.em_startdate
+	this.control[icurrent + 5] = this.em_enddate
+	this.control[icurrent + 6] = this.dw_control
+
+// w_arg_item_batch_salereturn_issuebased.destroy() returns 0 [event]
+	call super::destroy
+	destroy this.gb_2
+	destroy this.st_1
+	destroy this.st_2
+	destroy this.em_startdate
+	destroy this.em_enddate
+	destroy this.dw_control
+
+// w_arg_item_batch_salereturn_issuebased.open() returns long [event]
+	long ancestorreturnvalue
+	date ld_currdate
+	string ls_text
+	ancestorreturnvalue = super::open()
+	gd_itemsinfo.sharedata(this.id_selectionlist)
+	ld_currdate = today()
+	ls_text = string(ld_currdate, "dd/mm/yyyy")
+	ls_text = trim(ls_text) + " 00:00:00"
+	this.em_startdate.text = ls_text
+	ls_text = string(ld_currdate, "dd/mm/yyyy")
+	ls_text = trim(ls_text) + " 23:59:59"
+	this.em_enddate.text = ls_text
+	this.dw_control.settransobject(sqlca)
+	this.dw_control.retrieve()
+	this.dw_control.setrow(0)
+	this.dw_control.scrolltorow(0)
+	return ::message.returnvalue
+
+// w_arg_item_batch_salereturn_issuebased.ue_close() returns 0 [event]
+	closewithreturn(this, this.istr_arg)
+
+// dw_selected.itemchanged(long row, dwobject dwo, string data) returns long [event]
+	integer li_qty
+	long ll_icode
+	long ll_null
+	long ll_gcode
+	string ls_itemname
+	string ls_null
+	setnull(ll_null)
+	setnull(ls_null)
+	choose case dwo.name
+	case "aliasname"
+		if parent.wf_inititem(data) = false then
+			messagebox("Validation", "AliasName does not exist.~r~nPlease try some other AliasName.")
+			setitem(row, "code", ll_null)
+			setitem(row, "aliasname", ls_null)
+			setitem(row, "name", ls_null)
+			return 1
+		end if
+		parent.ib_itemvalidated = false
+		triggerevent("ue_enterkey")
+	case "name"
+		setitem(row, "code", parent.id_selectionlist.getitemnumber(parent.id_selectionlist.getrow(), "code"))
+		setitem(row, "aliasname", parent.id_selectionlist.getitemstring(parent.id_selectionlist.getrow(), "aliasname"))
+		setitem(row, "name", parent.id_selectionlist.getitemstring(parent.id_selectionlist.getrow(), "name"))
+		parent.ib_itemvalidated = false
+		return 2
+	end choose
+	return ::message.returnvalue
+
+// cb_cancel.clicked() returns long [event]
+	parent.post event ue_close()
+	return ::message.returnvalue
+
+// cb_ok.clicked() returns long [event]
+	double ld_tmp
+	double ld_returnableqty
+	string ls_temp
+	if parent.id_selected.accepttext() = -1 then
+		parent.id_selected.setfocus()
+		return ::message.returnvalue
+	elseif isnull(parent.id_selected.getitemstring(parent.id_selected.getrow(), "name")) then
+		messagebox("Name Validation", "Please enter valid value for Name.")
+		parent.id_selected.setcolumn(1)
+		parent.id_selected.setfocus()
+		return ::message.returnvalue
+	end if
+	parent.is_popup_selection.l_code = parent.id_selected.getitemnumber(parent.id_selected.getrow(), "code")
+	parent.is_popup_selection.s_name = parent.id_selected.getitemstring(parent.id_selected.getrow(), "name")
+	parent.istr_arg.l_code1 = parent.id_selected.getitemnumber(1, "code")
+	if isnull(parent.istr_arg.l_code1) or parent.istr_arg.l_code1 <= 0 then
+		messagebox("Item Validation!", "Please enter valid Item")
+		parent.dw_selected.setcolumn("name")
+		parent.dw_selected.setfocus()
+		return ::message.returnvalue
+	end if
+	parent.istr_arg.i_status = 1
+	parent.istr_arg.s_name1 = parent.dw_control.object.batchno[1]
+	if isnull(parent.istr_arg.s_name1) or parent.istr_arg.s_name1 = "" then
+		messagebox("Batch No. Validation!", "Please enter valid Batch No.")
+		parent.dw_control.setcolumn("batchno")
+		parent.dw_control.setfocus()
+		return ::message.returnvalue
+	end if
+	parent.istr_arg.l_code2 = parent.dw_control.object.batchqty[1]
+	if parent.istr_arg.l_code2 <= 0 then
+		messagebox("Batch Qty Validation!", "Please enter valid Qty.")
+		parent.dw_control.setcolumn("batchqty")
+		parent.dw_control.setfocus()
+		return ::message.returnvalue
+	end if
+	parent.istr_arg.d_sdate = parent.dw_control.object.expirydate[1]
+	if isnull(parent.istr_arg.d_sdate) then
+		messagebox("Expiry Date Validation!", "Please enter valid Expiry Date")
+		parent.dw_control.setcolumn("expirydate")
+		parent.dw_control.setfocus()
+		return ::message.returnvalue
+	end if
+	sqlca.batchwisesalereturn_issuebased(parent.istr_arg.l_code1, parent.istr_arg.s_name1, parent.istr_arg.d_sdate, ld_returnableqty)
+	if sqlca.sqlcode = 0 then
+		if ld_returnableqty > 0.0 then
+			if parent.istr_arg.l_code2 > ld_returnableqty then
+				messagebox("Returnable Qty Validation!", "Return Qty is more than allowed qty for this batch. Please enter some valid qty.")
+				return ::message.returnvalue
+			end if
+		else
+			messagebox("Returnable Qty Validation!", "Batch is already returned. Please enter some other batch, expiry and qty.")
+			return ::message.returnvalue
+		end if
+	else
+		messagebox("Database Error", "Some Problem Occurred at database, Possible Reasons are:-~r~n" + sqlca.sqlerrtext)
+		return ::message.returnvalue
+	end if
+	parent.post event ue_close()
+	return ::message.returnvalue
+
+// em_startdate.ue_enterkey(keycode key, unsignedlong keyflags) returns long [event]
+	if key = keyenter! then
+		send(handle(this), 256, 9, long(90))
+	end if
+	return ::message.returnvalue
+
+// em_enddate.ue_enterkey(keycode key, unsignedlong keyflags) returns long [event]
+	if key = keyenter! then
+		send(handle(this), 256, 9, long(90))
+	end if
+	return ::message.returnvalue
+
+// dw_control.itemfocuschanged(long row, dwobject dwo) returns long [event]
+	long ancestorreturnvalue
+	ancestorreturnvalue = super::itemfocuschanged(row, dwo)
+	selecttext(1, len(gettext()))
+	return ::message.returnvalue
+
+// dw_control.itemchanged(long row, dwobject dwo, string data) returns long [event]
+	long ancestorreturnvalue
+	long ll_retcode
+	ancestorreturnvalue = super::itemchanged(row, dwo, data)
+	if dwo.name = "batchno" then
+		if isnull(data) then
+			messagebox("Batch No. Validation!", "Please enter valid batch no.")
+			ll_retcode = 1
+		elseif not isnull(parent.dw_selected.object.code[1]) and parent.dw_selected.object.code[1] > 0 then
+			ll_retcode = parent.wf_validate_batchno(parent.dw_selected.object.code[1], data)
+		end if
+		return ll_retcode
+	end if
+	return ll_retcode
+
+// dw_control.ue_enterkey() returns long [event]
+	long ancestorreturnvalue
+	ancestorreturnvalue = super::ue_enterkey()
+	send(handle(this), 256, 9, long(90))
+	return ::message.returnvalue

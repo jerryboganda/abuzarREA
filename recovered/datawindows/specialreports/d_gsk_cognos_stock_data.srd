@@ -1,0 +1,250 @@
+release 12.5;
+datawindow ( units=0 timer_interval=0 processing=1 color=16777215 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.printername=""  print.documentname=""  print.orientation=0 print.margin.left=110 print.margin.right=110 print.margin.top=96 print.margin.bottom=96 print.paper.size=0 print.paper.source=0 print.canusedefaultprinter=yes grid.lines=0 selected.mouse=yes hidegrayline=no showbackcoloronxp=no)
+header(height=80 color="536870912" )
+summary(height=0 color="536870912" )
+footer(height=0 color="536870912" )
+detail(height=74 color="536870912" )
+table(column=(type=char(8000) updatewhereclause=yes name=distributor_id dbname="Distributor_ID"  )
+column=(type=char(75) updatewhereclause=yes name=sku_id dbname="SKU_ID"  )
+column=(type=char(100) updatewhereclause=yes name=date_id dbname="Date_ID"  )
+column=(type=decimal(4) updatewhereclause=yes name=saleable_stock dbname="SaleAble_Stock"  )
+column=(type=decimal(4) updatewhereclause=yes name=damage_stock dbname="Damage_Stock"  )
+column=(type=decimal(4) updatewhereclause=yes name=expired_stock dbname="Expired_Stock"  )
+ retrieve="SELECT
+	Distributor_ID=:as_distcode + REPLICATE(' ', 10 - LEN(:as_distcode)),
+	SKU_ID=LTRIM(RTRIM(I.CustomICode)),
+	Date_ID=Convert(VARCHAR(100), :ar_enddate, 112),
+	SaleAble_Stock = SUM(
+		CASE WHEN G.GodownGroupCode = 1 THEN CASE WHEN TYPE = 'OP' OR TYPE = 'PV' OR TYPE = 'SR' OR TYPE = 'RV' OR TYPE = 'AI' THEN +1 
+		ELSE -1 END * (qty + bonus) ELSE 0 END), 
+	Damage_Stock = SUM(
+		CASE WHEN G.GodownGroupCode = 2 THEN CASE WHEN TYPE = 'OP' OR TYPE = 'PV' OR TYPE = 'SR' OR TYPE = 'RV' OR TYPE = 'AI' THEN +1 
+		ELSE -1 END * (qty + bonus) ELSE 0 END),
+	Expired_Stock = SUM(
+		CASE WHEN G.GodownGroupCode = 3 THEN CASE WHEN TYPE = 'OP' OR TYPE = 'PV' OR TYPE = 'SR' OR TYPE = 'RV' OR TYPE = 'AI' THEN +1 
+		ELSE -1 END * (qty + bonus) ELSE 0 END)
+FROM
+	(SELECT type='OP', icode, gcode, qty = sum(qty), bonus = 0
+	FROM	
+		(select pd.icode, pd.gcode,
+			qty = sum(isnull(case pl.purcatcode 
+				when 1 THEN (pd.packqty + pd.bonusqty) * pd.packunits
+				when 2 THEN (pd.packqty + pd.bonusqty) * pd.packunits
+				else pd.looseqty + pd.bonusqty end, 0))
+		FROM purledger pl, purdetail pd, item i
+		WHERE pl.posted = 'Y' AND pl.purinvcode = pd.purinvcode AND
+			pl.date < :ar_startdate AND
+			pd.icode=i.icode AND
+			I.ManfCode IN (:ai_manfcode)
+		Group By pd.gcode, pd.icode
+		UNION ALL
+		select	pd.icode, pd.gcode, 
+			qty  = - sum(pd.looseqty + pd.bonusqty + pd.packqty * pd.packunits)
+		FROM prledger pl, prdetail pd, item i
+		WHERE pl.posted = 'Y' AND pl.prinvcode = pd.prinvcode AND
+			pl.date < :ar_startdate AND
+			pd.icode=i.icode AND
+			I.ManfCode IN (:ai_manfcode)
+		Group By pd.gcode, pd.icode
+		UNION ALL
+		select	sd.icode, sd.gcode, 
+			qty  = -sum(sd.looseqty + sd.bonusqty)
+		FROM saleledger sl, saledetail sd, item i
+		WHERE sl.saleinvcode = sd.saleinvcode AND
+			  sl.posted = 'Y' AND 
+		      sl.date < :ar_startdate AND sd.Due IS NULL AND
+			sd.icode=i.icode AND
+			I.ManfCode IN (:ai_manfcode)
+		Group By sd.gcode, sd.icode
+		UNION ALL
+		select	sd.icode, sd.gcode, 
+			qty  = sum(sd.looseqty + sd.bonusqty)
+		FROM srledger sl, srdetail sd, item i
+		WHERE sl.posted = 'Y' AND sl.srinvcode = sd.srinvcode AND
+			  sl.posted = 'Y' AND 
+		      sl.date < :ar_startdate AND
+			sd.icode=i.icode AND
+			I.ManfCode IN (:ai_manfcode)
+		Group By sd.gcode, sd.icode
+		UNION ALL
+		select	sd.icode, sd.gcode, 
+			qty  = -sum(sd.qty)
+		FROM issueheader sl, issuedetail sd, item i
+		WHERE sl.posted = 'Y' AND sl.issueinvcode = sd.issueinvcode AND
+		      sl.date < :ar_startdate AND
+			sd.icode=i.icode AND
+			I.ManfCode IN (:ai_manfcode)
+		Group By sd.gcode, sd.icode
+		UNION ALL
+		select	sd.icode, sd.gcode, 
+			qty  = sum(sd.qty)
+		FROM receiptheader sl, receiptdetail sd, item i
+		WHERE sl.posted = 'Y' AND sl.receiptinvcode = sd.receiptinvcode AND
+		      sl.date < :ar_startdate AND
+			sd.icode=i.icode AND
+			I.ManfCode IN (:ai_manfcode)
+		Group By sd.gcode, sd.icode
+		UNION ALL
+		select	sd.icode, sd.gcode, 
+			qty = sum(sd.looseqty)
+		FROM Adjheader sl, Adjdetail sd, item i
+		WHERE sl.posted = 'Y' AND sl.Adjcode = sd.Adjcode and sl.Adjcatcode = 1 AND
+		      sl.date < :ar_startdate AND
+			sd.icode=i.icode AND
+			I.ManfCode IN (:ai_manfcode)
+		Group By  sd.gcode, sd.icode
+		UNION ALL
+		select	sd.icode, sd.gcode, 
+			qty = -sum(sd.looseqty)
+		FROM Adjheader sl, Adjdetail sd, item i
+		WHERE sl.posted = 'Y' AND sl.Adjcode = sd.Adjcode and sl.Adjcatcode = 2 AND
+		      sl.date < :ar_startdate AND
+			sd.icode=i.icode AND
+			I.ManfCode IN (:ai_manfcode)
+		Group By  sd.gcode, sd.icode
+		UNION ALL
+		select	d.icode, d.gcode, 
+			qty = -sum(d.duesatisfyqty)
+		FROM duesatisfyheader h, duesatisfydetail d, item i
+		WHERE h.duesatisfycode=d.duesatisfycode AND
+		      h.duesatisfydate < :ar_startdate AND
+			d.icode=i.icode AND
+			I.ManfCode IN (:ai_manfcode)
+		Group By  d.gcode, d.icode) A
+	GROUP BY  gcode, icode
+	UNION ALL
+	select	type='PV',
+		pd.icode, pd.gcode, 
+		qty = sum(pd.looseqty + pd.packqty * pd.packunits),
+		bonus = sum(isnull(case pl.purcatcode 
+			when 1 THEN pd.bonusqty * pd.packunits
+			when 2 THEN pd.bonusqty * pd.packunits
+			else pd.bonusqty
+			end, 0))
+	FROM purledger pl, purdetail pd, item i
+	WHERE pl.posted = 'Y' AND pl.purinvcode = pd.purinvcode AND
+		pl.date >= :ar_startdate and pl.date <= :ar_enddate AND
+		pd.icode=i.icode AND
+		I.ManfCode IN (:ai_manfcode)
+	Group By  pd.gcode, pd.icode
+	UNION ALL
+	select	type='PR',
+		pd.icode, pd.gcode, 
+		qty = sum(pd.looseqty + pd.packqty * pd.packunits),
+		bonus = sum(pd.bonusqty)
+	FROM prledger pl, prdetail pd, item i
+	WHERE pl.posted = 'Y' AND pl.prinvcode = pd.prinvcode AND
+	      pl.date >= :ar_startdate and pl.date <= :ar_enddate AND
+		pd.icode=i.icode AND
+		I.ManfCode IN (:ai_manfcode)
+	Group By  pd.gcode, pd.icode
+	UNION ALL
+	select	type='SV',
+		sd.icode, sd.gcode, 
+		qty = sum(sd.looseqty + sd.packqty * sd.packunits),
+		bonus = sum(sd.bonusqty)
+	FROM saleledger sl, saledetail sd, item i
+	WHERE sl.posted = 'Y' AND sl.saleinvcode = sd.saleinvcode AND SD.Due IS NULL AND
+	      sl.date >= :ar_startdate and sl.date <= :ar_enddate AND
+		sd.icode=i.icode AND
+		I.ManfCode IN (:ai_manfcode)
+	Group By  sd.gcode, sd.icode
+	UNION ALL
+	select	type='SR',
+		sd.icode, sd.gcode, 
+		qty = sum(sd.looseqty + sd.packqty * sd.packunits),
+		bonus = sum(sd.bonusqty)
+	FROM srledger sl, srdetail sd, item i
+	WHERE sl.posted = 'Y' AND sl.srinvcode = sd.srinvcode AND
+	      sl.date >= :ar_startdate and sl.date <= :ar_enddate AND
+		sd.icode=i.icode AND
+		I.ManfCode IN (:ai_manfcode)
+	Group By  sd.gcode, sd.icode
+	UNION ALL
+	select	type='IV',
+		sd.icode, sd.gcode, 
+		qty = sum(sd.qty),
+		bonus = 0
+	FROM issueheader sl, issuedetail sd, item i
+	WHERE sl.posted = 'Y' AND sl.issueinvcode = sd.issueinvcode AND
+	      sl.date >= :ar_startdate and sl.date <= :ar_enddate AND
+		sd.icode=i.icode AND
+		I.ManfCode IN (:ai_manfcode)
+	Group By  sd.gcode, sd.icode
+	UNION ALL
+	select	type='DS',
+		d.icode, d.gcode, 
+		qty = sum(d.duesatisfyqty),
+		bonus = 0
+	FROM duesatisfyheader h, duesatisfydetail d, item i
+	WHERE h.duesatisfycode = d.duesatisfycode AND
+	      h.duesatisfydate >= :ar_startdate and h.duesatisfydate <= :ar_enddate AND
+		d.icode=i.icode AND
+		I.ManfCode IN (:ai_manfcode)
+	Group By  d.gcode, d.icode
+	UNION ALL
+	select	type='RV',
+		sd.icode, sd.gcode, 
+		qty = sum(sd.qty),
+		bonus = 0
+	FROM receiptheader sl, receiptdetail sd, item i
+	WHERE sl.posted = 'Y' AND sl.receiptinvcode = sd.receiptinvcode AND
+	      sl.date >= :ar_startdate and sl.date <= :ar_enddate AND
+		sd.icode=i.icode AND
+		I.ManfCode IN (:ai_manfcode)
+	Group By  sd.gcode, sd.icode
+	UNION ALL
+	select	type='AI',
+		sd.icode, sd.gcode, 
+		qty = sum(sd.looseqty),
+		bonus = 0
+	FROM Adjheader sl, Adjdetail sd, item i
+	WHERE sl.posted = 'Y' AND sl.Adjcode = sd.Adjcode and sl.Adjcatcode = 1 AND
+	      sl.date >= :ar_startdate and sl.date <= :ar_enddate AND
+		sd.icode=i.icode AND
+		I.ManfCode IN (:ai_manfcode)
+	Group By  sd.gcode, sd.icode
+	UNION ALL
+	select	type='AD',
+		sd.icode, sd.gcode, 
+		qty = sum(sd.looseqty),
+		bonus = 0
+	FROM Adjheader sl, Adjdetail sd, item i
+	WHERE sl.posted = 'Y' AND sl.Adjcode = sd.Adjcode and sl.Adjcatcode = 2 AND
+	      sl.date >= :ar_startdate and sl.date <= :ar_enddate AND
+		sd.icode=i.icode AND
+		I.ManfCode IN (:ai_manfcode)
+	Group By  sd.gcode, sd.icode
+	UNION ALL
+	SELECT type='OP', icode,  godown.gcode, qty = 0, bonus = 0
+	FROM ITEM, Godown WHERE Item.ManfCode IN (:ai_manfcode)) St, 
+	Item i,
+	Godown G
+WHERE st.icode = i.icode AND St.GCode=G.GCode
+GROUP BY i.name, i.customicode
+ORDER BY i.customicode
+"
+  arguments=(("as_distcode", string), ("ai_manfcode", numberlist), ("ar_startdate", datetime), ("ar_enddate", datetime))
+)
+text(name=distributor_id_t visible="1" band=header font.charset="0" font.face="Tahoma" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="2" border="0" x="9" y="6" height="61" width="581" text="Distributor Id" html.valueishtml="0" )
+text(name=sku_id_t visible="1" band=header font.charset="0" font.face="Tahoma" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="2" border="0" x="599" y="6" height="61" width="594" text="Sku Id" html.valueishtml="0" )
+text(name=date_id_t visible="1" band=header font.charset="0" font.face="Tahoma" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="2" border="0" x="1202" y="6" height="61" width="489" text="Date Id" html.valueishtml="0" )
+text(name=saleable_stock_t visible="1" band=header font.charset="0" font.face="Tahoma" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="2" border="0" x="1701" y="6" height="61" width="494" text="Saleable Stock" html.valueishtml="0" )
+text(name=damage_stock_t visible="1" band=header font.charset="0" font.face="Tahoma" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="2" border="0" x="2203" y="6" height="61" width="443" text="Damage Stock" html.valueishtml="0" )
+text(name=expired_stock_t visible="1" band=header font.charset="0" font.face="Tahoma" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="2" border="0" x="2656" y="6" height="61" width="425" text="Expired Stock" html.valueishtml="0" )
+column(name=date_id visible="1" band=detail id=3 x="1202" y="3" height="67" width="490" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Tahoma" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=saleable_stock visible="1" band=detail id=4 x="1701" y="3" height="67" width="494" color="0" border="0" alignment="1" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Tahoma" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=damage_stock visible="1" band=detail id=5 x="2203" y="3" height="67" width="443" color="0" border="0" alignment="1" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Tahoma" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=expired_stock visible="1" band=detail id=6 x="2656" y="3" height="67" width="424" color="0" border="0" alignment="1" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Tahoma" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=distributor_id visible="1" band=detail id=1 x="9" y="3" height="67" width="581" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Tahoma" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=sku_id visible="1" band=detail id=2 x="599" y="3" height="67" width="592" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Tahoma" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+htmltable(border="1" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" encodeSelfLinkArgs="1" generateJavaScript="1" netscapeLayers="0" pagingMethod=0 )
+xhtmlgen() cssgen(sessionSpecific="0" )
+xmlgen(inline="0" )
+xsltgen()
+jsgen()
+export.xml(headGroups="1" includewhitespace="0" metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 distill.customPostScript="0" xslfop.print="0" )
+export.xhtml()

@@ -1,0 +1,61 @@
+// window w_biometricmachine (singleentry)  ancestor: w_single_entry
+
+// w_biometricmachine.wf_duplicatename(string as_name) returns boolean
+	long ll_count
+	boolean b_flag
+	as_name = trim(as_name)
+	SQL SELECT count ( *) INTO :ll_count FROM biometricmachine WHERE name =:as_name USING sqlca;
+	if ll_count > 0 then
+		b_flag = true
+	end if
+	return b_flag
+
+// w_biometricmachine.create() returns 0 [event]
+	call super::create
+
+// w_biometricmachine.destroy() returns 0 [event]
+	call super::destroy
+	if isvalid(this.menuid) then
+		destroy this.menuid
+	end if
+
+// w_biometricmachine.open() returns long [event]
+	long ancestorreturnvalue
+	ancestorreturnvalue = super::open()
+	this.is_tablename = "biometricmachine"
+	return ::message.returnvalue
+
+// dw_detail.itemchanged(long row, dwobject dwo, string data) returns long [event]
+	long ancestorreturnvalue
+	ancestorreturnvalue = super::itemchanged(row, dwo, data)
+	choose case dwo.name
+	case "name"
+		if wf_duplicatename(data) then
+			messagebox("Name Validation", "Duplication Name Error~n~rPlease Choose Some Other Name")
+			return 1
+		end if
+	end choose
+	return ::message.returnvalue
+
+// dw_detail.itemerror(long row, dwobject dwo, string data) returns long [event]
+	long ancestorreturnvalue
+	ancestorreturnvalue = super::itemerror(row, dwo, data)
+	choose case dwo.name
+	case "name"
+		if data = "" or isnull(data) then
+			messagebox("Name Validation", "Value required for " + upper(dwo.name) + " in current row")
+		end if
+	end choose
+	return 1
+
+// dw_find.keypressed(keycode key, unsignedlong keyflags) returns long [event]
+	long ancestorreturnvalue
+	long ll_code
+	ancestorreturnvalue = super::keypressed(key, keyflags)
+	if key = keyf5! then
+		if id_list.getrow() > 0 then
+			ll_code = id_list.object.code[id_list.getrow()]
+			openwithparm(w_emp_biometricmachine_mgmt, ll_code)
+		end if
+	end if
+	return ::message.returnvalue

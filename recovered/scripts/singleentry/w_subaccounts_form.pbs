@@ -1,0 +1,96 @@
+// window w_subaccounts_form (singleentry)  ancestor: w_single_entry
+
+// w_subaccounts_form.wf_duplicatename(string as_name) returns boolean
+	long ll_count
+	boolean b_flag
+	as_name = trim(as_name)
+	SQL SELECT count ( *) INTO :ll_count FROM SubAccounts WHERE SubAccounts.name =:as_name USING sqlca;
+	if ll_count > 0 then
+		b_flag = true
+	end if
+	return b_flag
+
+// w_subaccounts_form.wf_checkfortransactions(long al_subcode) returns boolean
+	long ll_newcode
+	SQL Select SubCode INTO :ll_newcode From Accounts Where SubCode =:al_subcode USING sqlca;
+	if ll_newcode <> 0 then
+		return true
+	end if
+	return false
+
+// w_subaccounts_form.wf_getmainaccount(long al_catacccode) returns long
+	long ll_mainacccode
+	SQL SELECT MainAccCode INTO :ll_mainacccode FROM CategoryAccounts WHERE catacccode =:al_catacccode USING sqlca;
+	return ll_mainacccode
+
+// w_subaccounts_form.ue_newform() returns 0 [event]
+	call super::ue_newform
+	this.id_detail.object.name.protect = 0
+	this.id_detail.object.catacccode.protect = 0
+
+// w_subaccounts_form.create() returns 0 [event]
+	call super::create
+
+// w_subaccounts_form.destroy() returns 0 [event]
+	call super::destroy
+	if isvalid(this.menuid) then
+		destroy this.menuid
+	end if
+
+// w_subaccounts_form.ue_detail() returns 0 [event]
+	long ll_row
+	long ll_newcode
+	long ll_subcode
+	call super::ue_detail
+	ll_row = this.id_detail.getrow()
+	ll_subcode = this.id_detail.object.code[ll_row]
+	SQL SELECT code INTO :ll_newcode FROM global WHERE lower ( rtrim ( ltrim ( tablename ) ) ) ='subaccounts' and code =:ll_subcode USING sqlca;
+	if ll_newcode <> 0 then
+		this.id_detail.object.name.protect = 1
+		this.id_detail.object.catacccode.protect = 1
+		return
+	end if
+	this.id_detail.object.name.protect = 0
+	this.id_detail.object.catacccode.protect = 0
+
+// w_subaccounts_form.activate() returns long [event]
+	long ancestorreturnvalue
+	ancestorreturnvalue = super::activate()
+	this.windowstate = maximized!
+	setredraw(true)
+	return ::message.returnvalue
+
+// w_subaccounts_form.open() returns long [event]
+	long ancestorreturnvalue
+	ancestorreturnvalue = super::open()
+	this.is_tablename = "SubAccounts"
+	return ::message.returnvalue
+
+// dw_detail.itemerror(long row, dwobject dwo, string data) returns long [event]
+	long ancestorreturnvalue
+	ancestorreturnvalue = super::itemerror(row, dwo, data)
+	choose case dwo.name
+	case "name"
+		if data = "" or isnull(data) then
+			messagebox("Name Validation", "Value required for " + upper(dwo.name) + " in current row")
+		end if
+	case "catacccode"
+		if data = "" or isnull(data) then
+			messagebox("Category Account Validation", "Value required  for " + upper("Category account"))
+		end if
+	end choose
+	return 1
+
+// dw_detail.itemchanged(long row, dwobject dwo, string data) returns long [event]
+	long ancestorreturnvalue
+	ancestorreturnvalue = super::itemchanged(row, dwo, data)
+	choose case dwo.name
+	case "name"
+		if parent.parent.parent.wf_duplicatename(data) then
+			messagebox("Name Validation", "Duplication Name Error~n~rPlease Choose Some Other Name")
+			return 1
+		end if
+	case "catacccode"
+		parent.parent.parent.id_detail.setitem(parent.parent.parent.id_detail.getrow(), "mainacccode", parent.parent.parent.wf_getmainaccount(long(data)))
+	end choose
+	return ::message.returnvalue

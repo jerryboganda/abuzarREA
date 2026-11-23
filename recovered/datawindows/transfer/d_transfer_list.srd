@@ -1,0 +1,97 @@
+release 12.5;
+datawindow ( units=0 timer_interval=0 processing=1 color=80263581 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.printername=""  print.documentname=""  print.orientation=0 print.margin.left=110 print.margin.right=110 print.margin.top=96 print.margin.bottom=96 print.paper.size=0 print.paper.source=0 print.canusedefaultprinter=yes grid.lines=0 selected.mouse=yes hidegrayline=no showbackcoloronxp=no)
+header(height=76 color="536870912" )
+summary(height=0 color="536870912" )
+footer(height=0 color="536870912" )
+detail(height=68 color="536870912" )
+table(column=(type=long update=yes updatewhereclause=yes name=code dbname="Theader.TransCode"  )
+column=(type=datetime update=yes updatewhereclause=yes name=date dbname="Theader.Date"  )
+column=(type=char(60) updatewhereclause=yes name=sourcegodown dbname="SourceGodown"  )
+column=(type=char(60) updatewhereclause=yes name=targetgodown dbname="TargetGodown"  )
+column=(type=char(1) update=yes updatewhereclause=yes name=posted dbname="Theader.Posted"  )
+column=(type=datetime update=yes updatewhereclause=yes name=postdate dbname="Theader.PostDate"  )
+column=(type=char(100) updatewhereclause=yes name=remarks dbname="Theader.remarks"  )
+column=(type=char(60) updatewhereclause=yes name=postedby dbname="PostedBy"  )
+column=(type=long update=yes updatewhereclause=yes name=salesmancode dbname="Theader.SalesManCode"  )
+column=(type=char(60) updatewhereclause=yes name=users_username dbname="Users.UserName"  )
+column=(type=char(60) updatewhereclause=yes name=transfertype dbname="TransferType"  )
+column=(type=char(60) updatewhereclause=yes name=salesperson dbname="SalesPerson"  )
+ retrieve="SELECT 
+	Theader.TransCode,   
+	Theader.Date,   
+	SourceGodown= (SELECT name from Godown WHERE gcode = Theader.SGCode),
+	TargetGodown= (SELECT name from Godown WHERE gcode = Theader.DGCode),
+	Theader.Posted,   
+	Theader.PostDate, 
+	Theader.remarks,  
+	PostedBy=(SELECT U.UserName FROM Users U WHERE U.UserCode = Theader.PostedBy),
+	Theader.SalesManCode,   
+	Users.UserName,
+	TransferType = (SELECT T.Name FROM TransferType T WHERE T.TTCode = THeader.TTCode),
+	SalesPerson = (SELECT SM.Name FROM Salesman SM WHERE SM.SalesManCode = THeader.SManCode)
+FROM 
+	Theader,   
+	Users
+WHERE 
+	Theader.Date > :ad_invdate AND
+	Users.UserCode = Theader.SalesManCode AND
+	Theader.SalesManCode = Users.UserCode AND
+	(Theader.SGCode IN 
+		(SELECT	Godown.GCode
+		FROM		Godown
+		WHERE GCode IN 
+			(CASE (SELECT TransferSourceGodownStrategy FROM Groups WHERE GroupCode=:ai_groupcode)
+			WHEN 2 THEN (SELECT G.GCode From Godown G WHERE G.GCode = Godown.GCode) 
+			ELSE (SELECT G.GCode From GroupAllowedGodown G 
+					WHERE G.GroupCode = :ai_groupcode AND
+						G.Module = 8 AND
+						Godown.GCode = G.GCode) 
+			END)
+		) OR
+	Theader.DGCode IN 
+		(SELECT	Godown.GCode
+		FROM		Godown
+		WHERE GCode IN 
+			(CASE (SELECT TransferTargetGodownStrategy FROM Groups WHERE GroupCode=:ai_groupcode)
+			WHEN 2 THEN (SELECT G.GCode From Godown G WHERE G.GCode = Godown.GCode) 
+			ELSE (SELECT G.GCode From GroupAllowedGodown G 
+					WHERE G.GroupCode = :ai_groupcode AND
+						G.Module = 13 AND
+						Godown.GCode = G.GCode) 
+			END)
+		)
+	)
+"
+  arguments=(("ai_groupcode", number), ("ad_invdate", datetime))
+ sort="code A"
+)
+text(name=transcode_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80263581" color="0" alignment="2" border="6" x="9" y="8" height="60" width="274" text="Code" html.valueishtml="0" )
+text(name=date_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80263581" color="0" alignment="2" border="6" x="293" y="8" height="60" width="448" text="Date" html.valueishtml="0" )
+text(name=t_4 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80269524" color="0" alignment="2" border="6" x="750" y="8" height="60" width="608" text="Transfer Type" html.valueishtml="0" )
+text(name=t_2 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80263581" color="0" alignment="2" border="6" x="1367" y="8" height="60" width="594" text="Source Godown" html.valueishtml="0" )
+text(name=t_3 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80263581" color="0" alignment="2" border="6" x="1970" y="8" height="60" width="617" text="Target Godown" html.valueishtml="0" )
+text(name=posted_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80263581" color="0" alignment="2" border="6" x="2597" y="8" height="60" width="183" text="Posted" html.valueishtml="0" )
+text(name=salesperson_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="67108864" color="0" alignment="2" border="6" x="2789" y="8" height="60" width="654" text="Sales Person" html.valueishtml="0" )
+text(name=theader_remarks_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="67108864" color="0" alignment="2" border="6" x="3451" y="8" height="60" width="1106" text="Remarks" html.valueishtml="0" )
+text(name=t_1 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80269524" color="0" alignment="2" border="6" x="4567" y="8" height="60" width="521" text="Last Saved By" html.valueishtml="0" )
+text(name=postedby_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80269524" color="0" alignment="2" border="6" x="5097" y="8" height="60" width="535" text="Posted By" html.valueishtml="0" )
+column(name=code visible="1" band=detail id=1 x="9" y="4" height="60" width="274" color="0" border="0" alignment="0" format="[general]" protect="0	1" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=date visible="1" band=detail id=2 x="293" y="4" height="60" width="448" color="0" border="0" alignment="0" format="dd/mm/yyyy hh:mm" protect="0	1" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=sourcegodown visible="1" band=detail id=3 x="1367" y="4" height="60" width="594" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=targetgodown visible="1" band=detail id=4 x="1970" y="4" height="60" width="617" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=users_username visible="1" band=detail id=10 x="4567" y="4" height="60" width="521" color="0" border="0" alignment="0" format="[general]" protect="0	1" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=transfertype visible="1" band=detail id=11 x="750" y="4" height="60" width="608" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=posted visible="1" band=detail id=5 x="2597" y="4" height="60" width="183" color="0" border="0" alignment="2" format="[general]" protect="0	1" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=1 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=postedby visible="1" band=detail id=8 x="5097" y="4" height="60" width="535" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=remarks visible="1" band=detail id=7 x="3451" y="4" height="60" width="1106" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=salesperson visible="1" band=detail id=12 x="2789" y="4" height="60" width="654" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+htmltable(border="1" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" encodeSelfLinkArgs="1" generateJavaScript="1" netscapeLayers="0" pagingMethod=0 )
+xhtmlgen() cssgen(sessionSpecific="0" )
+xmlgen(inline="0" )
+xsltgen()
+jsgen()
+export.xml(headGroups="1" includewhitespace="0" metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 distill.customPostScript="0" xslfop.print="0" )
+export.xhtml()

@@ -1,0 +1,360 @@
+
+/****** Object:  Stored Procedure dbo.sp_SupplierTransactionStatus    Script Date: 4/23/02 4:29:58 PM ******/
+/****** Object:  Stored Procedure dbo.sp_SupplierTransactionStatus    Script Date: 4/8/02 6:26:06 PM ******/
+/****** Object:  Stored Procedure dbo.sp_SupplierTransactionStatus    Script Date: 3/6/02 3:39:37 PM ******/
+/****** Object:  Stored Procedure dbo.sp_SupplierTransactionStatus    Script Date: 7/20/01 6:52:02 PM ******/
+/****** Object:  Stored Procedure dbo.sp_supplierTransaction    Script Date: 7/13/01 11:12:30 AM ******/
+CREATE PROCEDURE sp_SupplierTransactionStatus @ad_sdate datetime, @ad_edate datetime AS 
+
+declare @ln_openbalance numeric(12,2)
+create table #lt_pvamts 
+(
+	debit  numeric (15, 2) NOT NULL,
+	credit numeric (15, 2) NOT NULL,
+	Code numeric   (5)     NOT NULL,
+	Name varchar(50)       NOT NULL
+)
+
+/*********************************** Packs  Purchases **************************************/
+insert #lt_pvamts
+select   debit = 0.0,
+	 credit= ISNULL(
+		 ROUND(SUM(purdetail.packqty * purdetail.purprice * 
+			(1 - (.01 * purdetail.discperc))) * (1- (.01 * purledger.discperc)) + 
+			purledger.misccharges + purledger.salestax - purledger.flatdisc, 0) +
+		 ROUND(SUM((purdetail.packqty + purdetail.bonusqty) * purdetail.unitsalestax)+
+			SUM(ROUND(purdetail.packqty * purdetail.purprice * 
+				(1 - (.01 * purdetail.discperc)) * purdetail.gstperc * .01, 2))+
+			ROUND((SUM((purdetail.packqty * purdetail.purprice) * 
+				(1 - (.01 * purdetail.discperc))) * 
+				(1- (.01 * purledger.discperc)) - purledger.flatdisc) * 
+				(purledger.invgstperc1 * .01), 2), 0), 0),
+	 suppcode=purledger.suppcode,
+	 name=(select name from accounts where accounts.acccode=purledger.suppcode)
+
+from     purledger, purdetail,supplier  
+
+where  	 purledger.purcatcode IN (2,1) and 
+	 purledger.date <@ad_sdate and
+	 purledger.posted = 'Y'  and
+	 purledger.suppcode=Supplier.suppcode and
+	 purledger.purinvcode = purdetail.purinvcode 
+group by purledger.purinvcode, 
+	 purledger.purcatcode, 
+         purledger.suppcode,
+	 purledger.date,
+	 purledger.discperc,
+	 Purledger.misccharges,
+	 purledger.salestax,
+	 purledger.invgstperc1,
+ 	 purledger.flatdisc
+
+/*********************************** Loose Purchases **************************************/
+
+insert #lt_pvamts
+select   debit = 0.0,
+	 credit= ISNULL(
+		 ROUND(sum((purdetail.looseqty * purdetail.purprice) * 
+			(1 - (.01 * purdetail.discperc))) * (1- (.01 * purledger.discperc)) + 
+			purledger.misccharges + purledger.salestax - purledger.flatdisc, 0) +
+		 ROUND(SUM((purdetail.looseqty + purdetail.bonusqty) * purdetail.unitsalestax) +
+		 SUM(ROUND(purdetail.looseqty * purdetail.purprice * 
+			(1 - (.01 * purdetail.discperc)) * purdetail.gstperc * .01, 2)) +
+		 ROUND((SUM((purdetail.looseqty * purdetail.purprice) * 
+			(1 - (.01 * purdetail.discperc))) * (1- (.01 * purledger.discperc)) -
+			purledger.flatdisc) * (purledger.invgstperc1 * .01), 2), 0), 0),
+         code=purledger.suppcode,
+       	 name=(select name from accounts where acccode=purledger.suppcode)
+
+from     purledger, purdetail,supplier  
+
+where    purledger.purcatcode in (8,7)    and 
+	 purledger.date < @ad_sdate and
+	 purledger.posted = 'Y' and 
+	 purledger.suppcode = supplier.suppcode and
+	 purledger.purinvcode = purdetail.purinvcode 
+group by purledger.purinvcode, 
+	 purledger.purcatcode, 
+	 purledger.suppcode,
+	 purledger.date,
+	 purledger.discperc,
+	 Purledger.misccharges,
+	 purledger.salestax,
+	 purledger.invgstperc1,
+	 purledger.flatdisc
+
+/*********************************** Purchase Returns **************************************/
+
+insert #lt_pvamts
+select	 debit = ISNULL(
+		 ROUND(SUM((prdetail.looseqty * prdetail.prprice) * 
+			(1 - (.01 * prdetail.discperc))) * (1- (.01 * prledger.discperc)) + 
+			prledger.misccharges + prledger.salestax - prledger.flatdisc, 0) +
+		 ROUND(SUM((prdetail.looseqty + prdetail.bonusqty) * prdetail.unitsalestax) +
+		 SUM(ROUND(prdetail.looseqty * prdetail.prprice * 
+			(1 - (.01 * prdetail.discperc)) * prdetail.gstperc * .01, 2)) +
+		 ROUND((SUM((prdetail.looseqty * prdetail.prprice) * 
+			(1 - (.01 * prdetail.discperc))) * (1- (.01 * prledger.discperc)) -
+			prledger.flatdisc) * (prledger.invgstperc1 * .01), 2), 0), 0),
+	 credit = 0.0,
+         code=prledger.suppcode,
+         name=(select name from accounts where accounts.acccode=prledger.suppcode)
+
+from     prledger, prdetail ,supplier 
+where    prledger.prcatcode IN( 5 ,4)     and 
+	 prledger.date < @ad_sdate   and
+	 prledger.posted = 'Y' and 
+	 prledger.suppcode = supplier.suppcode and
+	 prledger.prinvcode = prdetail.prinvcode
+group by prledger.prinvcode,
+	 prledger.prcatcode, 
+	 prledger.suppcode,
+	 prledger.date,
+	 prledger.discperc,
+	 prledger.misccharges,
+	 prledger.salestax,
+	 prledger.invgstperc1,
+	 prledger.flatdisc
+
+/*********************************** Any A/C Vouchers **************************************/
+
+insert #lt_pvamts
+select   case sum(gldetail.debit)
+	 when NULL then 0.0
+	 else sum(gldetail.debit)
+	 end, 
+	 case sum(gldetail.credit)
+	 when NULL then 0.0
+	 else sum(gldetail.credit)
+	 end,
+   	 code=gldetail.acccode,
+	 name=(select name from accounts where accounts.acccode=gldetail.acccode)
+from     glheader, gldetail ,supplier 
+where    glheader.glvochcode = gldetail.glvochcode and 
+	 glheader.date < @ad_sdate  and
+	 glheader.posted = 'Y' and 
+	 gldetail.acccode = supplier.suppcode
+
+GROUP BY gldetail.acccode
+/******************************* Any Bills Payables **********************************/
+
+insert #lt_pvamts
+select   IsNull( sum(notes.amount), 0),
+         0,
+	 code=notes.acccode,
+   	 name=(select name from accounts where accounts.acccode=notes.acccode)
+	 
+from     notes,supplier
+where    notes.notecatcode = 2 and
+	 notes.posted = 'Y' and
+	 notes.postdate < @ad_sdate and
+	 notes.acccode = supplier.suppcode
+
+GROUP BY notes.acccode
+
+/******** Collecting the result and assigning to the relevent reference variable *********/
+
+delete from reportdata
+
+insert into reportdata(code1,name1,value1,value2,value3)
+ ( select code,name,sum(debit) - sum(credit),0,0
+   from   #lt_pvamts 
+   GROUP BY code,name)		
+
+
+insert into reportdata(code1,value1,value2,value3)
+select supplier.suppcode,0,0,0
+
+from  supplier
+
+where 
+	 supplier.suppcode Not IN (select code1 from reportdata) 
+
+
+update 	reportdata
+set 	name1=accounts.name
+from 	accounts,reportdata
+where	reportdata.name1=Null and
+	reportdata.code1=accounts.acccode
+
+
+
+delete from #lt_pvamts
+
+
+
+
+
+/*-----------------------------For Transactions Within The Period----------------*/
+/*===============================================================================*/
+
+
+
+/*********************************** Packs  Purchases **************************************/
+insert #lt_pvamts
+select   debit = 0.0,
+	 credit= ISNULL(
+		 ROUND(SUM(purdetail.packqty * purdetail.purprice * 
+			(1 - (.01 * purdetail.discperc))) * (1- (.01 * purledger.discperc)) + 
+			purledger.misccharges + purledger.salestax - purledger.flatdisc, 0) +
+		 ROUND(SUM((purdetail.packqty + purdetail.bonusqty) * purdetail.unitsalestax)+
+			SUM(ROUND(purdetail.packqty * purdetail.purprice * 
+				(1 - (.01 * purdetail.discperc)) * purdetail.gstperc * .01, 2))+
+			ROUND((SUM((purdetail.packqty * purdetail.purprice) * 
+				(1 - (.01 * purdetail.discperc))) * 
+				(1- (.01 * purledger.discperc)) - purledger.flatdisc) * 
+				(purledger.invgstperc1 * .01), 2), 0), 0),
+	 suppcode=purledger.suppcode,
+	 name=(select name from accounts where acccode=purledger.suppcode)
+
+from     purledger, purdetail,supplier  
+
+where    
+	 purledger.purcatcode in (2,1)    and 
+	 purledger.date >= @ad_sdate and
+         purledger.date <= @ad_edate and
+	 purledger.posted = 'Y'  and
+	 purledger.suppcode=supplier.suppcode and
+	 purledger.purinvcode = purdetail.purinvcode 
+group by purledger.purinvcode, 
+	 purledger.purcatcode, 
+         purledger.suppcode,
+	 purledger.date,
+	 purledger.discperc,
+	 Purledger.misccharges,
+	 purledger.salestax,
+	 purledger.invgstperc1,
+	 purledger.flatdisc
+
+/*********************************** Loose Purchases **************************************/
+
+insert #lt_pvamts
+select   debit = 0.0,
+	 credit= ISNULL(
+		 ROUND(sum((purdetail.looseqty * purdetail.purprice) * 
+			(1 - (.01 * purdetail.discperc))) * (1- (.01 * purledger.discperc)) + 
+			purledger.misccharges + purledger.salestax - purledger.flatdisc, 0) +
+		 ROUND(SUM((purdetail.looseqty + purdetail.bonusqty) * purdetail.unitsalestax) +
+		 SUM(ROUND(purdetail.looseqty * purdetail.purprice * 
+			(1 - (.01 * purdetail.discperc)) * purdetail.gstperc * .01, 2)) +
+		 ROUND((SUM((purdetail.looseqty * purdetail.purprice) * 
+			(1 - (.01 * purdetail.discperc))) * (1- (.01 * purledger.discperc)) -
+			purledger.flatdisc) * (purledger.invgstperc1 * .01), 2), 0), 0),
+         code=purledger.suppcode,
+       	 name=(select name from accounts where acccode=purledger.suppcode)
+
+from     purledger, purdetail,supplier  
+
+where    purledger.purcatcode in (8,7)    and 
+	 purledger.date >= @ad_sdate and
+	 purledger.date <= @ad_edate and
+	 purledger.posted = 'Y' and 
+	 purledger.suppcode = supplier.suppcode and
+	 purledger.purinvcode = purdetail.purinvcode 
+group by purledger.purinvcode, 
+	 purledger.purcatcode, 
+	 purledger.suppcode,
+	 purledger.date,
+	 purledger.discperc,
+	 Purledger.misccharges,
+	 purledger.salestax,
+	 purledger.invgstperc1,
+	 purledger.flatdisc
+
+/*********************************** Purchase Returns **************************************/
+
+insert #lt_pvamts
+select	 debit = ISNULL(
+		 ROUND(SUM((prdetail.looseqty * prdetail.prprice) * 
+			(1 - (.01 * prdetail.discperc))) * (1- (.01 * prledger.discperc)) + 
+			prledger.misccharges + prledger.salestax - prledger.flatdisc, 0) +
+		 ROUND(SUM((prdetail.looseqty + prdetail.bonusqty) * prdetail.unitsalestax) +
+		 SUM(ROUND(prdetail.looseqty * prdetail.prprice * 
+			(1 - (.01 * prdetail.discperc)) * prdetail.gstperc * .01, 2)) +
+		 ROUND((SUM((prdetail.looseqty * prdetail.prprice) * 
+			(1 - (.01 * prdetail.discperc))) * (1- (.01 * prledger.discperc)) -
+			prledger.flatdisc) * (prledger.invgstperc1 * .01), 2), 0), 0),
+	 credit = 0.0,
+         code=prledger.suppcode,
+         name=(select name from accounts where acccode=prledger.suppcode)
+
+from     prledger, prdetail ,supplier 
+where    prledger.prcatcode IN( 5 ,4)     and
+ 	 prledger.date >= @ad_sdate   and 
+	 prledger.date <= @ad_edate   and
+	 prledger.posted = 'Y' and 
+	 prledger.suppcode = supplier.suppcode and
+	 prledger.prinvcode = prdetail.prinvcode
+group by prledger.prinvcode,
+	 prledger.prcatcode, 
+	 prledger.suppcode,
+	 prledger.date,
+	 prledger.discperc,
+	 prledger.misccharges,
+	 prledger.salestax,
+	 prledger.invgstperc1,
+	 prledger.flatdisc
+
+/*********************************** Any A/C Vouchers **************************************/
+
+insert #lt_pvamts
+select   case sum(gldetail.debit)
+	 when NULL then 0.0
+	 else sum(gldetail.debit)
+	 end, 
+	 case sum(gldetail.credit)
+	 when NULL then 0.0
+	 else sum(gldetail.credit)
+	 end,
+   	 code=gldetail.acccode,
+	 name=(select name from accounts where accounts.acccode=gldetail.acccode)
+from     glheader, gldetail ,supplier 
+where    glheader.glvochcode = gldetail.glvochcode and 
+	 glheader.date >= @ad_sdate  and
+	 glheader.date <= @ad_edate  and
+	 glheader.posted = 'Y' and 
+	 gldetail.acccode = supplier.suppcode
+
+GROUP BY gldetail.acccode
+/******************************* Any Bills Payables **********************************/
+
+insert #lt_pvamts
+select   IsNull( sum(notes.amount), 0),
+         0,
+	 code=notes.acccode,
+   	 name=(select name from accounts where accounts.acccode=notes.acccode)
+	 
+from     notes,supplier
+where    notes.notecatcode = 2 and
+	 notes.posted = 'Y' and
+	 notes.postdate >= @ad_sdate and
+	 notes.postdate <= @ad_edate and
+	 notes.acccode = supplier.suppcode
+GROUP BY notes.acccode
+
+/******** Collecting the result and assigning to the relevent reference variable *********/
+
+/*insert into reportdata(code1,name1,value1,value2,value3)
+ ( select code,name,sum(debit) , sum(credit)
+   from   #lt_pvamts 
+   GROUP BY code,name)		*/
+
+
+update reportdata
+
+set value2=A.ddebit,value3=A.dcredit
+
+from
+
+(select code,name,ddebit=IsNull(sum(debit) ,0),dcredit=IsNull(sum(credit),0)
+	from   #lt_pvamts 
+	group by code,
+                 name) as A
+
+
+where reportdata.code1=A.code
+
+drop table #lt_pvamts
+
+
+

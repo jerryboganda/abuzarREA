@@ -1,0 +1,66 @@
+release 12.5;
+datawindow ( units=0 timer_interval=0 processing=1 color=80263581 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.printername=""  print.documentname=""  print.orientation=0 print.margin.left=110 print.margin.right=110 print.margin.top=97 print.margin.bottom=97 print.paper.size=0 print.paper.source=0 print.canusedefaultprinter=yes grid.lines=0 selected.mouse=yes hidegrayline=no showbackcoloronxp=no)
+header(height=72 color="536870912" )
+summary(height=0 color="536870912" )
+footer(height=0 color="536870912" )
+detail(height=68 color="536870912" )
+table(column=(type=long updatewhereclause=yes name=icode dbname="Service.servicecode"  )
+column=(type=char(60) updatewhereclause=yes name=fullcode dbname="fullcode"  )
+column=(type=char(60) updatewhereclause=yes name=itemname dbname="Service.name"  )
+column=(type=decimal(2) updatewhereclause=yes name=saleprice dbname="saleprice"  )
+column=(type=decimal(5) updatewhereclause=yes name=costprice dbname="Service.costprice"  )
+column=(type=char(0) updatewhereclause=yes name=location dbname="location"  )
+column=(type=char(0) updatewhereclause=yes name=packingdesc dbname="packingdesc"  )
+column=(type=long updatewhereclause=yes name=servicecatcode dbname="Service.ServiceCatCode" 
+ values=""  )
+ retrieve="SELECT 
+	dbo.service.servicecode,
+	fullcode =dbo.service.aliasname,
+	dbo.service.name,
+	saleprice=
+		CASE 
+		WHEN (SELECT PrefValue FROM SoftwarePreferences WHERE Name='FetchServicePriceFromPricePolicy')='N' THEN dbo.service.price
+		ELSE
+			(SELECT ISNULL(D.Price, dbo.Service.Price)
+			FROM ServicePricePolicyDetail D
+			WHERE 
+				D.ServicePricePolicyCode IN 
+					(SELECT MAX(ServicePricePolicyCode) 
+					FROM ServicePricePolicy 
+					WHERE GetDate() BETWEEN StartDate AND EndDate AND ServiceCode = Service.ServiceCode) AND
+				D.WeekDayCode = DatePart(dw, GetDate()))
+		END,
+	dbo.service.costprice,
+	location='',
+	packingdesc='',
+	dbo.service.ServiceCatCode
+
+FROM dbo.service, dbo.servicecategory
+WHERE
+	dbo.service.active = 'Y' AND
+	dbo.service.ServiceCatCode = dbo.servicecategory.ServiceCatCode
+ORDER BY dbo.service.name
+"
+ )
+text(name=t_3 visible="1	0" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80263581" color="0" alignment="2" border="6" x="370" y="4" height="60" width="1440" text="Fullcode" html.valueishtml="0" )
+text(name=t_1 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80263581" color="0" alignment="2" border="6" x="370" y="4" height="60" width="1440" text="Service" html.valueishtml="0" )
+text(name=t_6 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80269524" color="0" alignment="2" border="6" x="9" y="4" height="60" width="352" text="Alias Name" html.valueishtml="0" )
+text(name=t_4 visible="1	0" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80269524" color="0" alignment="2" border="6" x="370" y="4" height="60" width="1440" text="Service" html.valueishtml="0" )
+text(name=saleprice_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80269524" color="0" alignment="2" border="6" x="1819" y="4" height="60" width="407" text="Charges" html.valueishtml="0" )
+text(name=t_5 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80269524" color="0" alignment="2" border="6" x="2235" y="4" height="60" width="1056" text="Service Category" html.valueishtml="0" )
+column(name=fullcode visible="1" band=detail id=2 x="9" y="4" height="64" width="352" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=location visible="1	0" band=detail id=6 x="3301" y="4" height="64" width="64" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=packingdesc visible="1	0" band=detail id=7 x="3374" y="4" height="60" width="174" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=servicecatcode visible="1" band=detail id=8 x="2235" y="4" height="64" width="1056" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" dddw.allowedit=no dddw.autohscroll=no dddw.autoretrieve=yes dddw.useasborder=no dddw.datacolumn=servicecatcode dddw.displaycolumn=name dddw.hscrollbar=no dddw.hsplitscroll=no dddw.imemode=0 dddw.limit=0 dddw.name=ddd_servicecategory_list dddw.nilisnull=no dddw.percentwidth=0 dddw.required=no dddw.showlist=no dddw.vscrollbar=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=itemname visible="1" band=detail id=3 x="370" y="4" height="64" width="1440" color="0" border="0" alignment="0" format="[general]" protect="0	1" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=10 )
+column(name=saleprice visible="1" band=detail id=4 x="1819" y="4" height="64" width="407" color="0" border="0" alignment="1" format="###,###,##0.00" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=20 )
+htmltable(border="0" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" encodeSelfLinkArgs="1" generateJavaScript="1" netscapeLayers="0" pagingMethod=0 )
+xhtmlgen() cssgen(sessionSpecific="0" )
+xmlgen(inline="0" )
+xsltgen()
+jsgen()
+export.xml(headGroups="1" includewhitespace="0" metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 distill.customPostScript="0" xslfop.print="0" )
+export.xhtml()

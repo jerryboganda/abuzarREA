@@ -1,0 +1,102 @@
+release 12.5;
+datawindow ( units=2 timer_interval=0 processing=0 color=16777215 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.printername=""  print.documentname=""  print.orientation=2 print.margin.left=0 print.margin.right=0 print.margin.top=1550 print.margin.bottom=500 print.paper.size=1 print.paper.source=0 print.canusedefaultprinter=yes selected.mouse=no hidegrayline=no showbackcoloronxp=no)
+header(height=2312 color="536870912" )
+summary(height=0 color="536870912" )
+footer(height=4000 color="536870912" )
+detail(height=0 color="536870912" )
+table(column=(type=char(60) updatewhereclause=yes name=itemname dbname="itemname"  )
+column=(type=datetime updatewhereclause=yes name=reprintdate dbname="reprintdate"  )
+column=(type=char(60) updatewhereclause=yes name=users_username dbname="Users.username"  )
+column=(type=long updatewhereclause=yes name=serviceheader_serviceinvcode dbname="ServiceHeader.serviceinvcode"  )
+column=(type=char(60) updatewhereclause=yes name=doctorname dbname="doctorname"  )
+column=(type=datetime updatewhereclause=yes name=serviceheader_date dbname="ServiceHeader.date"  )
+column=(type=long updatewhereclause=yes name=headerno dbname="ServiceHeader.headerno"  )
+column=(type=decimal(2) updatewhereclause=yes name=serviceheader_discperc dbname="ServiceHeader.discperc"  )
+column=(type=decimal(2) updatewhereclause=yes name=serviceheader_misccharges dbname="ServiceHeader.misccharges"  )
+column=(type=long updatewhereclause=yes name=serviceheader_custcode dbname="ServiceHeader.custcode"  )
+column=(type=char(100) updatewhereclause=yes name=serviceheader_remarks dbname="ServiceHeader.remarks"  )
+column=(type=decimal(2) updatewhereclause=yes name=flatdisc dbname="ServiceHeader.flatdisc"  )
+column=(type=long updatewhereclause=yes name=reprintcounter dbname="reprintcounter"  )
+column=(type=long updatewhereclause=yes name=service_servicecode dbname="Service.servicecode"  )
+column=(type=decimal(2) updatewhereclause=yes name=price dbname="price"  )
+column=(type=decimal(2) updatewhereclause=yes name=serviceflatdisc dbname="serviceflatdisc"  )
+column=(type=decimal(2) updatewhereclause=yes name=qty dbname="Qty"  )
+column=(type=decimal(2) updatewhereclause=yes name=servicedetail_discperc dbname="servicedetail_discperc"  )
+column=(type=char(100) updatewhereclause=yes name=customername dbname="customername"  )
+column=(type=char(60) updatewhereclause=yes name=customeradd1 dbname="customeradd1"  )
+column=(type=char(60) updatewhereclause=yes name=customeradd2 dbname="customeradd2"  )
+column=(type=char(50) updatewhereclause=yes name=regno dbname="Patient.regno"  )
+column=(type=char(60) updatewhereclause=yes name=patient dbname="patient"  )
+column=(type=long updatewhereclause=yes name=saleinvcode dbname="ServiceHeader.saleinvcode"  )
+column=(type=long updatewhereclause=yes name=servicecatcode dbname="ServiceHeader.servicecatcode"  )
+column=(type=long updatewhereclause=yes name=tokenno dbname="tokenno"  )
+column=(type=decimal(2) updatewhereclause=yes name=serviceinvtotal dbname="serviceinvtotal"  )
+ retrieve="SELECT 
+	itemname = service.name,
+	reprintdate = getDate(),
+	users.username,  
+	dbo.serviceheader.serviceinvcode,  
+	doctorname=(select name from doctors where doctors.doctcode=serviceheader.doctcode), 
+	dbo.serviceheader.date,  
+	dbo.serviceheader.headerno,
+	dbo.serviceheader.discperc,   
+	dbo.serviceheader.misccharges,   
+	dbo.serviceheader.custcode,   
+	dbo.serviceheader.remarks,
+	dbo.serviceheader.flatdisc,
+	reprintcounter = dbo.serviceheader.reprintingcounter,
+	dbo.service.servicecode,   
+	price = dbo.servicedetail.price, 
+	
+	serviceflatdisc = dbo.servicedetail.serviceflatdisc, 
+	Qty = dbo.servicedetail.qty,
+	servicedetail_discperc = servicedetail.discperc, 
+	customername=(select owner from customer where customer.custcode=serviceheader.custcode),
+	customeradd1=(select address1 from customer where customer.custcode=serviceheader.custcode),
+	customeradd2=(select address2 from customer where customer.custcode=serviceheader.custcode),
+	patient.regno,
+	patient=patient.name,
+	dbo.serviceheader.saleinvcode,
+	dbo.serviceheader.servicecatcode,
+	tokenno = dbo.serviceheader.tokenno,
+	serviceinvtotal=dbo.fn_getserviceinvtotal(serviceheader.serviceinvcode)
+	
+FROM 
+	dbo.serviceheader LEFT OUTER JOIN Patient ON (dbo.serviceheader.patientcode = patient.patientcode),   
+	dbo.servicedetail,  
+	service, 
+	users
+	
+WHERE 
+	( dbo.serviceheader.serviceinvcode >= :ra_SInvCode ) AND
+	
+	( dbo.serviceheader.serviceinvcode = dbo.servicedetail.serviceinvcode ) AND 
+	( dbo.serviceheader.salesmancode = dbo.users.usercode ) AND
+	( servicedetail.servicecode = service.servicecode )
+order by serviceheader.serviceinvcode,
+			servicedetail.srvrowid
+"
+  arguments=(("ra_SInvCode", number))
+)
+text(name=t_1 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-12" font.pitch="2" font.weight="700" background.mode="2" background.color="16777215" color="0" alignment="2" border="0" x="31" y="10" height="208" width="8010" text="INVOICE" html.valueishtml="0" )
+column(name=serviceheader_serviceinvcode visible="1" band=header id=4 x="1812" y="468" height="156" width="1322" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-11" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=serviceheader_remarks visible="1" band=header id=11 x="833" y="2114" height="166" width="5156" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-11" font.pitch="2" font.weight="400" tabsequence=0 )
+text(name=t_2 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-11" font.italic="1" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="0" border="0" x="833" y="1708" height="177" width="770" text="Description" html.valueishtml="0" )
+text(name=t_invno visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-12" font.pitch="2" font.weight="700" background.mode="2" background.color="16777215" color="0" alignment="0" border="0" x="833" y="437" height="208" width="947" text="Invoice No.:" html.valueishtml="0" )
+column(name=serviceheader_date visible="1" band=header id=6 x="833" y="239" height="156" width="1322" color="0" border="0" alignment="0" format="dd/mm/yyyy " html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-11" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=customername visible="1" band=header id=19 x="833" y="864" height="218" width="7093" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="1" font.height="-14" font.pitch="2" font.weight="400" font.underline="1" tabsequence=0 )
+column(name=customeradd1 visible="1" band=header id=20 x="833" y="1114" height="187" width="7093" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-11" font.pitch="2" font.weight="400" font.underline="1" tabsequence=0 )
+column(name=customeradd2 visible="1" band=header id=21 x="833" y="1302" height="187" width="7093" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-11" font.pitch="2" font.weight="400" font.underline="1" tabsequence=0 )
+compute(name=compute_6 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-11" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="833" y="1916" height="166" width="5250" format="[GENERAL]" expression="f_StringPreferences('warantyline1')" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_4 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.italic="1" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="1" border="0" x="6572" y="1708" height="166" width="677" text="Price (Rs)" html.valueishtml="0" )
+column(name=price visible="1" band=header id=15 x="6135" y="1906" height="166" width="1114" color="0" border="0" alignment="1" format="##,##0" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-11" font.pitch="2" font.weight="400" tabsequence=0 )
+htmltable(border="0" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" encodeSelfLinkArgs="1" generateJavaScript="1" netscapeLayers="0" pagingMethod=0 )
+xhtmlgen() cssgen(sessionSpecific="0" )
+xmlgen(inline="0" )
+xsltgen()
+jsgen()
+export.xml(headGroups="1" includewhitespace="0" metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 distill.customPostScript="0" xslfop.print="0" )
+export.xhtml()

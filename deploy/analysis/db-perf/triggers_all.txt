@@ -1,0 +1,238 @@
+===== Trig_EMP_Payroll_AfterUpdate_Paid =====
+CREATE TRIGGER dbo.Trig_EMP_Payroll_AfterUpdate_Paid
+ON dbo.EMP_Payroll
+AFTER UPDATE
+AS 
+/*
+Author: Muhammad Azhar Inayat
+Created On: 15 OCT, 2024
+*/
+BEGIN
+	IF UPDATE(Paid)
+	BEGIN
+		UPDATE EMP_Attendance
+		SET Payed = 'Y'
+		FROM Deleted U
+		WHERE EMP_Attendance.EmpCode = U.EmpCode AND EMP_Attendance.TimeIn BETWEEN U.FromDate AND U.ToDate
+	END
+END
+===== Trig_GodownDetail_AfterUpdate_LastUpdated =====
+CREATE TRIGGER dbo.Trig_GodownDetail_AfterUpdate_LastUpdated
+ON dbo.GodownDetail
+AFTER UPDATE
+AS 
+/*
+Author: Muhammad Azhar Inayat
+Created On: 25 Jan, 2022
+*/
+BEGIN
+	UPDATE GodownDetail
+	SET LastUpdated=CURRENT_TIMESTAMP
+	FROM Deleted U, GodownDetail G
+	WHERE U.GCode=G.GCode AND 
+		U.ICode = G.ICode AND 
+		U.Batch = G.Batch AND 
+		U.Expiry = G.Expiry
+END
+===== Trig_Item_AfterUpdate_UpdateLastUpdate_TimeStamp =====
+CREATE TRIGGER dbo.Trig_Item_AfterUpdate_UpdateLastUpdate_TimeStamp
+ON dbo.Item
+AFTER UPDATE
+AS 
+/*
+Author: Muhammad Azhar Inayat
+Created On: 29 July, 2015
+*/
+BEGIN
+	UPDATE Item
+	SET LastUpdate=GetDate()
+	FROM Deleted U, Item I
+	WHERE U.ICode = I.ICode
+END
+===== Trig_ItemPart_AfterUpdate_ReflectItemPartChanges_TO_Item =====
+CREATE TRIGGER dbo.Trig_ItemPart_AfterUpdate_ReflectItemPartChanges_TO_Item
+ON dbo.ItemPart
+AFTER UPDATE
+AS 
+/*
+Author: Muhammad Azhar Inayat
+Created On: 01st April, 2006
+*/
+BEGIN
+	IF UPDATE(description) OR UPDATE(application) OR UPDATE(remarks) OR UPDATE(icatcode) OR UPDATE(iccode)
+	BEGIN
+		IF (SELECT MasterIPartCode FROM Inserted) IS NULL
+		BEGIN
+			UPDATE Item
+			SET 
+				remarks     = ISNULL((SELECT Inserted.description FROM Inserted), ''),
+				packingdesc = ISNULL((SELECT Inserted.application FROM Inserted), ''),
+				remarks1    = ISNULL((SELECT Inserted.remarks FROM Inserted), ''),
+				icatcode    = (SELECT Inserted.icatcode FROM Inserted),
+				iccode      = (SELECT Inserted.iccode FROM Inserted)
+			FROM Item, ItemPart
+			WHERE
+				Item.IPartCode IN
+					(SELECT IP.IPartCode FROM ItemPart IP
+					WHERE IP.MasterIPartCode IN (SELECT I.IPartCode FROM Inserted I)
+					UNION
+					SELECT Inserted.IPartCode FROM Inserted) AND
+				ItemPart.IPartCode=Item.IPartCode
+
+			UPDATE ItemPart 
+			SET 
+				description = I.description,
+				application = I.application,
+				remarks     = I.remarks,
+				icatcode    = I.icatcode,
+				iccode      = I.iccode
+			FROM Inserted I, ItemPart
+			WHERE ItemPart.MasterIPartCode = I.IPartCode
+		END
+	END
+END
+===== Trig_ItemPartInModel_AfterDelete_ReflectItemPartInModelChanges_TO_ItemInModel =====
+CREATE TRIGGER dbo.Trig_ItemPartInModel_AfterDelete_ReflectItemPartInModelChanges_TO_ItemInModel
+ON dbo.ItemPartInModel
+AFTER DELETE
+AS
+/*
+Author: Muhammad Azhar Inayat
+Created On: 01st April, 2006
+*/
+
+IF (SELECT MAX(MasterIPartCode) FROM ItemPart 
+	WHERE IPartCode IN 
+		(SELECT DISTINCT Deleted.IPartCode FROM Deleted)) IS NULL
+BEGIN
+	DELETE ItemInModel
+	WHERE ICode IN
+		(SELECT Item.ICode FROM Item
+		WHERE Item.IPartCode IN
+			(SELECT IP.IPartCode FROM ItemPart IP
+			WHERE IP.MasterIPartCode IN (SELECT DISTINCT D.IPartCode FROM Deleted D)
+			UNION 
+			SELECT DISTINCT Deleted.IPartCode FROM Deleted))
+
+	DELETE ItemPartInModel
+	WHERE IPartCode IN
+		(SELECT IP.IPartCode FROM ItemPart IP
+		WHERE IP.MasterIPartCode IN (SELECT DISTINCT D.IPartCode FROM Deleted D))
+END
+===== Trig_ItemPartInModel_AfterInsertUpdate_ReflectItemPartInModelChanges_TO_ItemInModel =====
+CREATE TRIGGER dbo.Trig_ItemPartInModel_AfterInsertUpdate_ReflectItemPartInModelChanges_TO_ItemInModel
+ON dbo.ItemPartInModel
+AFTER INSERT, UPDATE
+AS
+/*
+Author: Muhammad Azhar Inayat
+Created On: 01st April, 2006
+*/
+ 
+IF (SELECT MAX(MasterIPartCode) FROM ItemPart 
+	WHERE IPartCode IN 
+		(SELECT DISTINCT Inserted.IPartCode FROM Inserted)) IS NULL
+BEGIN
+	DELETE ItemInModel
+	WHERE ICode IN
+		(SELECT Item.ICode FROM Item
+		WHERE Item.IPartCode IN
+			(SELECT IP.IPartCode FROM ItemPart IP
+			WHERE IP.MasterIPartCode IN (SELECT DISTINCT I.IPartCode FROM Inserted I)
+			UNION 
+			SELECT DISTINCT Inserted.IPartCode FROM Inserted))
+
+	INSERT INTO ItemInModel (ICode, ModelCode)
+	SELECT I.ICode, M.ModelCode
+	FROM
+		(SELECT Item.ICode FROM Item
+		WHERE Item.IPartCode IN
+			(SELECT IP.IPartCode FROM ItemPart IP
+			WHERE IP.MasterIPartCode IN (SELECT DISTINCT I.IPartCode FROM Inserted I)
+			UNION SELECT DISTINCT Inserted.IPartCode FROM Inserted)) I,
+		(SELECT DISTINCT ModelCode FROM ItemPartInModel 
+		WHERE IPartCode IN (SELECT DISTINCT Inserted.IPartCode FROM Inserted)) M
+
+	DELETE ItemPartInModel
+	WHERE IPartCode IN
+		(SELECT IP.IPartCode FROM ItemPart IP
+		WHERE IP.MasterIPartCode IN (SELECT DISTINCT I.IPartCode FROM Inserted I))
+
+	INSERT INTO ItemPartInModel (IPartCode, ModelCode)
+	SELECT IP.IPartCode, M.ModelCode
+	FROM
+		(SELECT IP.IPartCode FROM ItemPart IP
+		WHERE IP.MasterIPartCode IN (SELECT DISTINCT I.IPartCode FROM Inserted I)) IP,
+		(SELECT ModelCode
+		FROM ItemPartInModel
+		WHERE IPartCode IN (SELECT DISTINCT Inserted.IPartCode FROM Inserted)) M
+END
+===== Trig_Patient_AfterUpdate_InActiveCount =====
+CREATE  TRIGGER dbo.Trig_Patient_AfterUpdate_InActiveCount
+ON dbo.Patient
+AFTER UPDATE
+AS 
+/*
+Author: Muhammad Azhar Inayat
+Created On: Monday 22nd May, 2006
+*/
+BEGIN
+	IF UPDATE(ACTIVE)
+	BEGIN
+		IF (SELECT Max(Active) FROM Inserted) = 'N'
+		BEGIN
+			UPDATE Patient
+			SET InActiveCount = ISNULL(Inserted.InActiveCount+1, 0)
+			FROM Patient, Inserted
+			WHERE Patient.PatientCode = Inserted.PatientCode
+		END
+	END
+END
+===== Trig_PurLedger_AfterUpdate_UpdatePOStatistics_For_Purchases =====
+CREATE TRIGGER dbo.Trig_PurLedger_AfterUpdate_UpdatePOStatistics_For_Purchases
+ON dbo.PurLedger
+AFTER UPDATE
+AS 
+/*
+Author: Muhammad Azhar Inayat
+Creation Date: August 01, 2012
+Revised On : 05-May-2014 (Azhar/Shahzad)
+*/
+BEGIN
+	Update PurOrderHeader
+	Set PurOrderHeader.ListOfPurInvoices = LEFT(ISNULL(PurOrderHeader.ListOfPurInvoices,'') + '(' + CAST(PurLedger.PurInvCode As VarChar(25) ) + ',' + CAST(PurLedger.InvTotal As VarChar(25) ) + ') , ', 500) ,
+		PurOrderHeader.TotalOfPurchases = PurOrderHeader.TotalOfPurchases + PurLedger.InvTotal
+	From Inserted, PurLedger
+	Where Inserted.PurInvCode = PurLedger.PurInvCode AND 
+		Inserted.Posted = 'Y' AND 
+		PurLedger.POCode > 0 AND 
+		Inserted.POCode > 0 AND 
+		Inserted.POCode = PurOrderHeader.POCode
+END
+===== Trig_SrLedger_AfterInsert_UpdateTotalOfSaleReturnsInSaleLedger =====
+CREATE TRIGGER dbo.Trig_SrLedger_AfterInsert_UpdateTotalOfSaleReturnsInSaleLedger
+ON dbo.SrLedger
+AFTER  INSERT
+AS 
+/*
+Author: Muhammad Usman
+Creation Date: November 07, 2003
+*/
+BEGIN
+	Update SaleLedger
+	Set SaleLedger.ListOfSrInvoices = SaleLedger.ListOfSrInvoices + '(' + CAST(Inserted.SrInvCode As VarChar(25) ) + ',' + CAST(Inserted.InvTotal As VarChar(25) ) + ') , ' ,
+		SaleLedger.TotalOfSaleReturns = SaleLedger.TotalOfSaleReturns + Inserted.InvTotal
+	From Inserted
+	Where SaleLedger.SaleInvcode = Inserted.saleinvcode
+END
+===== Trig_UserGroups_After_Update_Delete =====
+Create Trigger Trig_UserGroups_After_Update_Delete On UserGroups For Update,Delete As
+Declare @logdate DateTime
+Set @logdate = GetDate()
+Insert Into UserGroupsLog 
+Select @logdate,usercode,groupcode,modifiedby
+From   Deleted
+IF @@ERROR <> 0 
+Begin
+    RaisError('Database Problem Occur in generating UserGroupsLog',16,1)
+End

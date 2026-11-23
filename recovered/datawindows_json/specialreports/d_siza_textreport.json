@@ -1,0 +1,431 @@
+{
+ "release": "12.5",
+ "datawindow": {
+  "units": "0",
+  "timer_interval": "0",
+  "processing": "0",
+  "color": "1073741824",
+  "brushmode": "0",
+  "transparency": "0",
+  "gradient.color": "8421504",
+  "gradient.transparency": "0",
+  "gradient.angle": "0",
+  "gradient.repetition.mode": "0",
+  "gradient.repetition.count": "0",
+  "gradient.repetition.length": "100",
+  "gradient.focus": "0",
+  "gradient.scale": "100",
+  "gradient.spread": "100",
+  "picture.mode": "0",
+  "picture.scale.x": "100",
+  "picture.scale.y": "100",
+  "picture.clip.left": "0",
+  "picture.clip.right": "0",
+  "picture.clip.top": "0",
+  "picture.clip.bottom": "0",
+  "picture.blur": "0",
+  "picture.transparency": "0",
+  "print.printername": "",
+  "print.documentname": "",
+  "print.orientation": "0",
+  "print.margin.left": "110",
+  "print.margin.right": "110",
+  "print.margin.top": "96",
+  "print.margin.bottom": "96",
+  "print.paper.size": "0",
+  "print.paper.source": "0",
+  "print.canusedefaultprinter": "yes",
+  "selected.mouse": "no",
+  "hidegrayline": "no",
+  "showbackcoloronxp": "no"
+ },
+ "bands": {
+  "header": {
+   "height": "528",
+   "color": "536870912"
+  },
+  "summary": {
+   "height": "0",
+   "color": "536870912"
+  },
+  "footer": {
+   "height": "0",
+   "color": "536870912"
+  },
+  "detail": {
+   "height": "84",
+   "color": "536870912"
+  }
+ },
+ "table": {
+  "columns": [
+   {
+    "type": "char(60)",
+    "updatewhereclause": "yes",
+    "name": "mainarea",
+    "dbname": "MainArea"
+   },
+   {
+    "type": "char(13)",
+    "updatewhereclause": "yes",
+    "name": "subareacode",
+    "dbname": "Subareacode"
+   },
+   {
+    "type": "char(60)",
+    "updatewhereclause": "yes",
+    "name": "subarea",
+    "dbname": "SUBAREA"
+   },
+   {
+    "type": "char(12)",
+    "updatewhereclause": "yes",
+    "name": "chemistcode",
+    "dbname": "chemistcode"
+   },
+   {
+    "type": "char(60)",
+    "updatewhereclause": "yes",
+    "name": "chemistname",
+    "dbname": "chemistname"
+   },
+   {
+    "type": "char(12)",
+    "updatewhereclause": "yes",
+    "name": "productcode",
+    "dbname": "productcode"
+   },
+   {
+    "type": "char(60)",
+    "updatewhereclause": "yes",
+    "name": "productname",
+    "dbname": "productname"
+   },
+   {
+    "type": "char(14)",
+    "updatewhereclause": "yes",
+    "name": "invcode",
+    "dbname": "invcode"
+   },
+   {
+    "type": "char(12)",
+    "updatewhereclause": "yes",
+    "name": "date",
+    "dbname": "DATE"
+   },
+   {
+    "type": "char(10)",
+    "updatewhereclause": "yes",
+    "name": "saleunits",
+    "dbname": "SaleUnits"
+   },
+   {
+    "type": "char(11)",
+    "updatewhereclause": "yes",
+    "name": "bonusunits",
+    "dbname": "BonusUnits"
+   },
+   {
+    "type": "char(11)",
+    "updatewhereclause": "yes",
+    "name": "bonusvalue",
+    "dbname": "BonusValue"
+   },
+   {
+    "type": "char(13)",
+    "updatewhereclause": "yes",
+    "name": "discperc",
+    "dbname": "DiscPerc"
+   },
+   {
+    "type": "char(14)",
+    "updatewhereclause": "yes",
+    "name": "discountvalue",
+    "dbname": "DiscountValue"
+   },
+   {
+    "type": "char(15)",
+    "updatewhereclause": "yes",
+    "name": "price",
+    "dbname": "Price"
+   },
+   {
+    "type": "char(15)",
+    "updatewhereclause": "yes",
+    "name": "sales",
+    "dbname": "Sales"
+   }
+  ],
+  "retrieve": "SELECT  \n\tMainArea= LEFT(AR.Name, 60),\n\tSubareacode = STR(SA.SubAreaCode, 13),\n\tSUBAREA = LEFT(SA.Name, 60), \n\tchemistcode = STR(C.CustCode, 12),\n\tchemistname = LEFT(A.Name, 60),\n\tproductcode = STR(I.ICODE, 12),\n\tproductname = LEFT(I.Name, 60),\n\tinvcode = STR(SL.SaleInvCode, 14),\n\tDATE = CONVERT(VARCHAR(12), SL.Date, 103),\n\tSaleUnits = STR(SD.LooseQty, 10, 0),\n\tBonusUnits=STR(SD.BonusQty, 11, 0),\n\tBonusValue=STR(SD.BonusQty * (SD.SalePrice - SD.ItemFlatDisc), 11, 2),\n\tDiscPerc = STR(SD.DiscPerc, 13, 2),\n\tDiscountValue = STR((SD.LooseQty * SD.ItemFlatDisc) + (SD.LooseQty * (SD.SalePrice - SD.ItemFlatDisc) * SD.DiscPerc * 0.01), 14, 2),\n\tPrice = STR((SD.SalePrice - SD.ItemFlatDisc), 15, 2),\n\tSales = STR((SD.SalePrice - SD.ItemFlatDisc) * SD.LooseQty, 15, 2)\nFROM\n\tSaleLedger SL, \n\tSaleDetail SD,\n\tItem I,\n\tManufacturer M,\n\tCustomer C,\n\tAccounts A,\n\tArea AR,\n\tSubArea SA\nWHERE\n\tSL.Date BETWEEN :adt_startdate AND :adt_enddate AND \n\tSL.SaleInvCode = SD.SaleInvCode AND\n\tSD.ICode = I.ICode AND\n\tI.ManfCode = M.ManfCode AND\n\tM.ManfCode = :ai_manfcode AND \n\tSL.CustCode = C.CustCode AND \n\tC.CustCode = A.AccCode AND\n\tC.AreaCode = AR.AreaCode AND\n\tC.SubAreaCode = SA.SubAreaCode\nUNION ALL\nSELECT \n\tMainArea= LEFT(AR.Name, 60),\n\tSubareacode = STR(SA.SubAreaCode, 13),\n\tSUBAREA = LEFT(SA.Name, 60),\n\tchemistcode = STR(C.CustCode, 12),\n\tchemistname = LEFT(A.Name, 60),\n\tproductcode = STR(I.ICODE, 12),\n\tproductname = LEFT(I.Name, 60),\n\tinvcode = STR(SL.SRInvCode, 14),\n\tDATE = CONVERT(VARCHAR(12), SL.Date, 103),\n\tSaleUnits = STR(-SD.LooseQty, 10, 0),\n\tBonusUnits=STR(-SD.BonusQty, 11, 0),\n\tBonusValue=STR(-(SD.BonusQty * SD.SRPrice), 11, 2),\n\tDiscPerc = STR(SD.DiscPerc, 13, 2),\n\tDiscountValue = STR(-(SD.LooseQty * SD.SRPrice * SD.DiscPerc * 0.01), 14, 2),\n\tPrice = STR(SD.SRPrice, 15, 2),\n\tSales = STR(-(SD.SRPrice * SD.LooseQty), 15, 2)\nFROM\n\tSRLedger SL, \n\tSRDetail SD,\n\tItem I,\n\tManufacturer M,\n\tCustomer C,\n\tAccounts A,\n\tArea AR,\n\tSubArea SA\nWHERE\n\tSL.Date BETWEEN :adt_startdate AND :adt_enddate AND\n\tSL.SRInvCode = SD.SRInvCode AND\n\tSD.ICode = I.ICode AND\n\tI.ManfCode = M.ManfCode AND\n\tM.ManfCode = :ai_manfcode AND \n\tSL.CustCode = C.CustCode AND \n\tC.CustCode = A.AccCode AND\n\tC.AreaCode = AR.AreaCode AND\n\tC.SubAreaCode = SA.SubAreaCode\nORDER BY\n\tMAINAREA,\n\tSUBAREA,\n\tchemistname,\n\tDATE",
+  "arguments": {
+   "_items": [
+    {
+     "_items": [
+      "ai_manfcode",
+      "number"
+     ]
+    },
+    {
+     "_items": [
+      "adt_startdate",
+      "datetime"
+     ]
+    },
+    {
+     "_items": [
+      "adt_enddate",
+      "datetime"
+     ]
+    }
+   ]
+  }
+ },
+ "objects": [
+  {
+   "name": "compute_2",
+   "visible": "1",
+   "band": "header",
+   "font.charset": "0",
+   "font.face": "Arial",
+   "font.family": "2",
+   "font.height": "-12",
+   "font.pitch": "2",
+   "font.weight": "400",
+   "background.mode": "2",
+   "background.color": "16777215",
+   "color": "0",
+   "x": "9",
+   "y": "92",
+   "height": "76",
+   "width": "3058",
+   "format": "[GENERAL]",
+   "expression": "f_ReportHeaderInfo('clientname')",
+   "alignment": "0",
+   "border": "0",
+   "html.valueishtml": "0",
+   "crosstab.repeat": "no",
+   "type": "compute"
+  },
+  {
+   "name": "compute_3",
+   "visible": "1",
+   "band": "header",
+   "font.charset": "0",
+   "font.face": "Arial",
+   "font.family": "2",
+   "font.height": "-12",
+   "font.pitch": "2",
+   "font.weight": "400",
+   "background.mode": "2",
+   "background.color": "16777215",
+   "color": "0",
+   "x": "9",
+   "y": "180",
+   "height": "76",
+   "width": "3058",
+   "format": "[GENERAL]",
+   "expression": "'From  # ' + string(adt_startdate, 'dd/mm/yyyy') + '  To   # ' + string(adt_enddate, 'dd/mm/yyyy')",
+   "alignment": "0",
+   "border": "0",
+   "html.valueishtml": "0",
+   "crosstab.repeat": "no",
+   "type": "compute"
+  },
+  {
+   "name": "compute_4",
+   "visible": "1",
+   "band": "header",
+   "font.charset": "0",
+   "font.face": "Arial",
+   "font.family": "2",
+   "font.height": "-12",
+   "font.pitch": "2",
+   "font.weight": "400",
+   "background.mode": "2",
+   "background.color": "16777215",
+   "color": "0",
+   "x": "9",
+   "y": "268",
+   "height": "76",
+   "width": "3058",
+   "format": "[GENERAL]",
+   "expression": "FILL('=', 407)",
+   "alignment": "0",
+   "border": "0",
+   "html.valueishtml": "0",
+   "crosstab.repeat": "no",
+   "type": "compute"
+  },
+  {
+   "name": "compute_5",
+   "visible": "1",
+   "band": "header",
+   "font.charset": "0",
+   "font.face": "Arial",
+   "font.family": "2",
+   "font.height": "-12",
+   "font.pitch": "2",
+   "font.weight": "400",
+   "background.mode": "2",
+   "background.color": "16777215",
+   "color": "0",
+   "x": "9",
+   "y": "356",
+   "height": "76",
+   "width": "3058",
+   "format": "[GENERAL]",
+   "expression": "'MAIN AREA' + SPACE(52) + 'Sub-Area Code ' + 'Sub Area' + SPACE(53) + 'Chemist Code ' + 'Chemist Name' + SPACE(49) + 'Product Code ' + 'Product Name' + SPACE(49) + 'Invoice Number ' + 'Invoice Date ' + 'Sale Units ' + 'Bonus Units ' + 'Bonus Value ' + 'Discount %Age ' + 'Discount Value ' + 'Price' + SPACE(11) + 'Sale Value'",
+   "alignment": "0",
+   "border": "0",
+   "html.valueishtml": "0",
+   "crosstab.repeat": "no",
+   "type": "compute"
+  },
+  {
+   "name": "compute_6",
+   "visible": "1",
+   "band": "header",
+   "font.charset": "0",
+   "font.face": "Arial",
+   "font.family": "2",
+   "font.height": "-12",
+   "font.pitch": "2",
+   "font.weight": "400",
+   "background.mode": "2",
+   "background.color": "16777215",
+   "color": "0",
+   "x": "9",
+   "y": "444",
+   "height": "76",
+   "width": "3058",
+   "format": "[GENERAL]",
+   "expression": "FILL('=', 407)",
+   "alignment": "0",
+   "border": "0",
+   "html.valueishtml": "0",
+   "crosstab.repeat": "no",
+   "type": "compute"
+  },
+  {
+   "name": "compute_1",
+   "visible": "1",
+   "band": "header",
+   "font.charset": "0",
+   "font.face": "Arial",
+   "font.family": "2",
+   "font.height": "-12",
+   "font.pitch": "2",
+   "font.weight": "400",
+   "background.mode": "2",
+   "background.color": "16777215",
+   "color": "0",
+   "x": "9",
+   "y": "12",
+   "height": "68",
+   "width": "256",
+   "format": "[GENERAL]",
+   "expression": "''",
+   "alignment": "0",
+   "border": "0",
+   "html.valueishtml": "0",
+   "crosstab.repeat": "no",
+   "type": "compute"
+  },
+  {
+   "name": "compute_7",
+   "visible": "1",
+   "band": "detail",
+   "font.charset": "0",
+   "font.face": "Arial",
+   "font.family": "2",
+   "font.height": "-12",
+   "font.pitch": "2",
+   "font.weight": "400",
+   "background.mode": "2",
+   "background.color": "16777215",
+   "color": "0",
+   "x": "14",
+   "y": "4",
+   "height": "76",
+   "width": "3058",
+   "format": "[GENERAL]",
+   "expression": "mainarea + SPACE(60 - len(mainarea) + 1) + subareacode + ' ' + subarea + SPACE(60 - len(subarea) + 1) + chemistcode + ' ' + chemistname + SPACE(60 - len(chemistname) + 1) + productcode + ' ' + productname + SPACE(60 - len(productname) + 1) + invcode + ' ' + date + '   ' +  saleunits + ' ' + bonusunits + ' ' +  bonusvalue + ' ' +  discperc + ' ' +  discountvalue + ' ' + price + ' ' + sales",
+   "alignment": "0",
+   "border": "0",
+   "html.valueishtml": "0",
+   "crosstab.repeat": "no",
+   "type": "compute"
+  }
+ ],
+ "extras": [
+  {
+   "type": "htmltable",
+   "props": {
+    "border": "1"
+   }
+  },
+  {
+   "type": "htmlgen",
+   "props": {
+    "clientComputedFields": "1",
+    "clientEvents": "1",
+    "clientFormatting": "0",
+    "clientScriptable": "0",
+    "clientValidation": "1",
+    "encodeSelfLinkArgs": "1",
+    "generateJavaScript": "1",
+    "netscapeLayers": "0",
+    "pagingMethod": "0"
+   }
+  },
+  {
+   "type": "xhtmlgen",
+   "props": {}
+  },
+  {
+   "type": "cssgen",
+   "props": {
+    "sessionSpecific": "0"
+   }
+  },
+  {
+   "type": "xmlgen",
+   "props": {
+    "inline": "0"
+   }
+  },
+  {
+   "type": "xsltgen",
+   "props": {}
+  },
+  {
+   "type": "jsgen",
+   "props": {}
+  },
+  {
+   "type": "export.xml",
+   "props": {
+    "headGroups": "1",
+    "includewhitespace": "0",
+    "metadatatype": "0",
+    "savemetadata": "0"
+   }
+  },
+  {
+   "type": "import.xml",
+   "props": {}
+  },
+  {
+   "type": "export.pdf",
+   "props": {
+    "method": "0",
+    "distill.customPostScript": "0",
+    "xslfop.print": "0"
+   }
+  },
+  {
+   "type": "export.xhtml",
+   "props": {}
+  }
+ ]
+}

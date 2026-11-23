@@ -1,0 +1,96 @@
+release 12.5;
+datawindow ( units=0 timer_interval=60000 processing=0 color=16777215 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.printername=""  print.documentname=""  print.orientation=0 print.margin.left=110 print.margin.right=110 print.margin.top=96 print.margin.bottom=96 print.paper.size=0 print.paper.source=0 print.canusedefaultprinter=yes selected.mouse=no hidegrayline=no showbackcoloronxp=no)
+header(height=552 color="536870912" )
+summary(height=0 color="536870912" )
+footer(height=0 color="536870912" )
+detail(height=88 color="536870912" )
+table(column=(type=long updatewhereclause=yes name=saleordercode dbname="SaleOrderCode"  )
+column=(type=datetime updatewhereclause=yes name=date dbname="Date"  )
+column=(type=decimal(2) updatewhereclause=yes name=saleordertotal dbname="SaleOrderTotal"  )
+column=(type=char(60) updatewhereclause=yes name=supplier dbname="Supplier"  )
+column=(type=decimal(6) updatewhereclause=yes name=suppliertotal dbname="SupplierTotal"  )
+ retrieve="SELECT 
+	SaleOrderCode=SO.SaleOrderCode, 
+	Date=SO.Date, 
+	SaleOrderTotal=MAX(SO.InvTotal),
+	Supplier = (SELECT A.Name FROM Accounts A WHERE A.AccCode = IL.Suppcode),
+	SupplierTotal = SUM(SD.Looseqty * (SD.SalePrice - SD.ItemFlatDisc) * (1 - SD.DiscPerc * 0.01) * (1 - SO.DiscPerc * 0.01))
+FROM 
+	SaleOrderHeader SO,
+	SaleOrderDetail SD,
+	Item I,
+	(SELECT 
+	ItemSuppliers.ICode,   
+	ItemSuppliers.SuppCode  
+FROM 
+	ItemSuppliers,
+	(SELECT ITS.ICode, P=MIN(ITS.Priority)
+	FROM ItemSuppliers ITS
+	GROUP BY ITS.ICode) T
+	WHERE
+		dbo.Fn_GetPreference('POSupplierConsideration')='1' AND
+		ItemSuppliers.ICode = T.ICode AND ItemSuppliers.Priority = T.P
+	UNION
+	SELECT 
+		ItemSuppliers.ICode,   
+		ItemSuppliers.SuppCode  
+	FROM 
+		ItemSuppliers
+	WHERE
+		dbo.Fn_GetPreference('POSupplierConsideration')='2') IL
+WHERE
+	SO.SaleOrderCode BETWEEN :ai_startsocode AND :ai_endsocode AND
+	SO.SaleOrderCode = SD.SaleOrderCode AND
+	SD.ICode = I.ICode AND
+	I.ICode = IL.ICode
+GROUP BY
+	SO.SaleOrderCode, 
+	SO.Date,
+	IL.SuppCode
+ORDER BY 
+	SO.SaleOrderCode, 
+	Supplier"
+  arguments=(("ai_startsocode", number), ("ai_endsocode", number))
+ sort="saleordercode A, supplier A"
+)
+group(level=1 header.height=80 trailer.height=104 by=("saleordercode"  ) header.color="536870912" trailer.color="536870912" )
+text(name=t_3 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="2181" y="376" height="64" width="315" text="Report Date:" html.valueishtml="0" )
+compute(name=compute_5 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" x="2519" y="376" height="60" width="745" format="dd/mm/yyyy hh:mm:ss" expression="today()" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_6 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="2642" y="12" height="60" width="626" format="[general]" expression="'Page ' + page() + ' of ' + pageCount()" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=suppliertotal_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="1" border="0" x="2651" y="468" height="64" width="613" text="Supplier Total" html.valueishtml="0" )
+compute(name=c_address1 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="256" y="232" height="60" width="3013" format="[general]" expression="f_ReportHeaderInfo('address1')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=c_companyname visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" x="256" y="160" height="60" width="3013" format="[general]" expression="f_ReportHeaderInfo('clientname')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_12 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" background.mode="2" background.color="16777215" color="0" alignment="2" border="0" x="256" y="84" height="64" width="3013" text="Sale Order - Supplier Wise Order Estimates" html.valueishtml="0" )
+line(name=l_1 visible="1" band=header background.mode="2" background.color="16777215" pen.style="0" pen.width="5" pen.color="0" x1="256" y1="452" x2="3269" y2="452" )
+line(name=l_2 visible="1" band=header background.mode="2" background.color="16777215" pen.style="0" pen.width="5" pen.color="0" x1="256" y1="544" x2="3269" y2="544" )
+compute(name=c_address2 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="256" y="304" height="60" width="3013" format="[general]" expression="f_ReportHeaderInfo('address2')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_3 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" x="1481" y="376" height="64" width="425" format="[GENERAL]" expression=" ai_endsocode " alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_2 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" x="901" y="376" height="64" width="425" format="[GENERAL]" expression=" ai_startsocode " alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_4 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="1358" y="376" height="64" width="91" text="To:" html.valueishtml="0" )
+text(name=t_2 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" background.mode="2" background.color="16777215" color="0" alignment="2" border="0" x="256" y="376" height="64" width="626" text="From Sale Order Code :" html.valueishtml="0" )
+text(name=supplier_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="2" border="0" x="590" y="468" height="64" width="1673" text="Supplier" html.valueishtml="0" )
+text(name=t_1 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="2" border="0" x="256" y="468" height="64" width="261" text="Serial No." html.valueishtml="0" )
+column(name=suppliertotal visible="1" band=detail id=5 x="2651" y="4" height="68" width="613" color="33554432" border="0" alignment="1" format="###,###,##0.00" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+compute(name=compute_1 visible="1" band=detail font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" x="256" y="4" height="68" width="261" format="[GENERAL]" expression="cumulativeSum( 1 for group 1)" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+column(name=supplier visible="1" band=detail id=4 x="590" y="4" height="68" width="2002" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=60 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+line(name=l_3 visible="1" band=detail background.mode="2" background.color="16777215" pen.style="0" pen.width="5" pen.color="0" x1="256" y1="84" x2="3269" y2="84" )
+text(name=saleordercode_t visible="1" band=header.1 font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" alignment="0" border="0" x="256" y="8" height="68" width="521" text="Sale Order Code:" html.valueishtml="0" )
+column(name=saleordercode visible="1" band=header.1 id=1 x="832" y="8" height="68" width="393" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="700" tabsequence=0 )
+text(name=date_t visible="1" band=header.1 font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" alignment="0" border="0" x="1390" y="8" height="68" width="178" text="Date:" html.valueishtml="0" )
+column(name=date visible="1" band=header.1 id=2 x="1595" y="8" height="68" width="603" color="33554432" border="0" alignment="0" format="dd/mm/yyyy hh:mm" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="700" tabsequence=0 )
+text(name=saleordertotal_t visible="1" band=header.1 font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" alignment="2" border="0" x="2249" y="8" height="68" width="366" text="Order Total:" html.valueishtml="0" )
+column(name=saleordertotal visible="1" band=header.1 id=3 x="2651" y="8" height="68" width="613" color="33554432" border="0" alignment="1" format="###,###,##0.00" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="700" tabsequence=0 )
+line(name=l_4 visible="1" band=trailer.1 background.mode="2" background.color="16777215" pen.style="0" pen.width="5" pen.color="0" x1="256" y1="4" x2="3269" y2="4" )
+compute(name=compute_4 visible="1" band=trailer.1 font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" x="2651" y="20" height="68" width="613" format="###,###,##0.00" expression="sum(suppliertotal for group 1)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+line(name=l_5 visible="1" band=trailer.1 background.mode="2" background.color="16777215" pen.style="0" pen.width="5" pen.color="0" x1="256" y1="96" x2="3269" y2="96" )
+text(name=t_5 visible="1" band=trailer.1 font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="700" background.mode="2" background.color="16777215" color="0" alignment="0" border="0" x="2153" y="20" height="64" width="475" text="Suppliers Total:" html.valueishtml="0" )
+htmltable(border="1" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" encodeSelfLinkArgs="1" generateJavaScript="1" netscapeLayers="0" pagingMethod=0 )
+xhtmlgen() cssgen(sessionSpecific="0" )
+xmlgen(inline="0" )
+xsltgen()
+jsgen()
+export.xml(headGroups="1" includewhitespace="0" metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 distill.customPostScript="0" xslfop.print="0" )
+export.xhtml()

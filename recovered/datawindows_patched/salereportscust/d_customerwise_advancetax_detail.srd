@@ -1,0 +1,475 @@
+release 12.5;
+datawindow ( units=2 timer_interval=60000 processing=0 color=16777215 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.file=""  picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.printername=""  print.documentname=""  print.orientation=0 print.margin.left=0 print.margin.right=0 print.margin.top=0 print.margin.bottom=0 print.paper.size=1 print.paper.source=0 print.canusedefaultprinter=yes selected.mouse=no hidegrayline=no showbackcoloronxp=no)
+header(height=1208 color="536870912" transparency="0" gradient.color="8421504" gradient.transparency="0" gradient.angle="0" brushmode="0" gradient.repetition.mode="0" gradient.repetition.length="100" gradient.repetition.count="0" gradient.focus="0" gradient.scale="100" gradient.spread="100" )
+summary(height=208 color="536870912" transparency="0" gradient.color="8421504" gradient.transparency="0" gradient.angle="0" brushmode="0" gradient.repetition.mode="0" gradient.repetition.length="100" gradient.repetition.count="0" gradient.focus="0" gradient.scale="100" gradient.spread="100" )
+footer(height=0 color="536870912" transparency="0" gradient.color="8421504" gradient.transparency="0" gradient.angle="0" brushmode="0" gradient.repetition.mode="0" gradient.repetition.length="100" gradient.repetition.count="0" gradient.focus="0" gradient.scale="100" gradient.spread="100" )
+detail(height=200 color="536870912" transparency="0" gradient.color="8421504" gradient.transparency="0" gradient.angle="0" brushmode="0" gradient.repetition.mode="0" gradient.repetition.length="100" gradient.repetition.count="0" gradient.focus="0" gradient.scale="100" gradient.spread="100" )
+table(column=(type=char(12) updatewhereclause=yes name=ttype dbname="TType"  )
+column=(type=datetime updatewhereclause=yes name=date dbname="Date"  )
+column=(type=char(13) updatewhereclause=yes name=invoicecode dbname="InvoiceCode"  )
+column=(type=char(12) updatewhereclause=yes name=aliasname dbname="AliasName"  )
+column=(type=char(60) updatewhereclause=yes name=customername dbname="CustomerName"  )
+column=(type=char(50) updatewhereclause=yes name=ntn dbname="NTN"  )
+column=(type=decimal(2) updatewhereclause=yes name=netamount dbname="NetAmount"  )
+column=(type=char(75) updatewhereclause=yes name=itemalias dbname="ItemAlias"  )
+column=(type=char(60) updatewhereclause=yes name=itemname dbname="ItemName"  )
+column=(type=char(100) updatewhereclause=yes name=taxcategory dbname="TaxCategory"  )
+column=(type=decimal(2) updatewhereclause=yes name=advancetaxperc dbname="AdvanceTaxPerc"  )
+column=(type=decimal(2) updatewhereclause=yes name=advancetaxamt dbname="AdvanceTaxAmt"  )
+column=(type=decimal(2) updatewhereclause=yes name=itemadvancetaxperc dbname="ItemAdvanceTaxPerc"  )
+column=(type=decimal(6) updatewhereclause=yes name=saleamt dbname="SaleAmt"  )
+column=(type=decimal(6) updatewhereclause=yes name=itemadvancetax dbname="ItemAdvanceTax"  )
+ retrieve="SELECT 
+	TType = 'Sales',
+	Date=P.Date,
+	InvoiceCode='SV-' + LTRIM(RTRIM(STR(P.SaleInvCode, 10))),
+	AliasName = A.AliasName,
+	CustomerName=A.Name,
+	NTN = S.NTNNo,
+	NetAmount=P.InvTotal,
+	ItemAlias = I.CustomICode,
+	ItemName = I.Name,
+	TaxCategory = TC.Name,
+	AdvanceTaxPerc = TC.TaxPerc,
+	AdvanceTaxAmt = P.AdvanceTaxAmt,
+	ItemAdvanceTaxPerc = D.ItemAdvanceTaxPerc,
+	SaleAmt = (SUM((D.PackQty + D.LooseQty) * (D.SalePrice - D.ItemFlatDisc) * (1 - D.DiscPerc * 0.01)) + 
+		SUM((D.PackQty + D.LooseQty + D.BonusQty) * (D.SalePrice - D.ItemFlatDisc) * (1 - D.DiscPerc * 0.01) * D.Gstperc * 0.01) +
+		SUM((D.PackQty + D.LooseQty + D.BonusQty) * D.UnitSalesTax)),
+	ItemAdvanceTax = ROUND((SUM((D.PackQty + D.LooseQty) * (D.SalePrice - D.ItemFlatDisc) * (1 - D.DiscPerc * 0.01)) + 
+		SUM((D.PackQty + D.LooseQty + D.BonusQty) * (D.SalePrice - D.ItemFlatDisc) * (1 - D.DiscPerc * 0.01) * D.Gstperc * 0.01) +
+		SUM((D.PackQty + D.LooseQty + D.BonusQty) * D.UnitSalesTax)) * D.ItemAdvanceTaxPerc * 0.01, 2)
+FROM
+	SaleLedger P, SaleDetail D, Accounts A, Customer S, Item I, TaxCategory TC
+WHERE
+	:ai_allcust=0 AND
+	P.Posted = 'Y' AND
+	P.Date BETWEEN :adt_startdate AND :adt_enddate AND
+	P.CustCode IN (:ai_Custcode) AND
+	P.CustCode = S.CustCode AND
+	S.CustCode = A.AccCode AND
+	S.TaxCategoryCode = TC.TaxCategoryCode AND
+	P.SaleInvCode = D.SaleInvCode AND
+	D.ICode = I.ICode
+GROUP BY
+	P.Date,
+	P.SaleInvCode,
+	A.AliasName,
+	A.Name,
+	S.NTNNo,
+	P.InvTotal,
+	P.AdvanceTaxAmt,
+	TC.Name,
+	TC.TaxPerc,
+	I.CustomICode,
+	I.Name,
+	D.ItemAdvanceTaxPerc
+UNION ALL
+SELECT 
+	TType = 'Sales Return',
+	Date=P.Date,
+	InvoiceCode='SR-' + LTRIM(RTRIM(STR(P.SRInvCode, 10))),
+	AliasName = A.AliasName,
+	CustomerName=A.Name,
+	NTN = S.NTNNo,
+	NetAmount= - P.InvTotal,
+	ItemAlias = I.CustomICode,
+	ItemName = I.Name,
+	TaxCategory = TC.Name,
+	AdvanceTaxPerc = TC.TaxPerc,
+	AdvanceTaxAmt = P.AdvanceTaxAmt,
+	ItemAdvanceTaxPerc = D.ItemAdvanceTaxPerc,
+	SaleAmt = - ((SUM((D.PackQty + D.LooseQty) * D.SRPrice * (1 - D.DiscPerc * 0.01)) + 
+		SUM((D.PackQty + D.LooseQty + D.BonusQty) * D.SRPrice * (1 - D.DiscPerc * 0.01) * D.Gstperc * 0.01) +
+		SUM((D.PackQty + D.LooseQty + D.BonusQty) * D.UnitSalesTax))),
+	ItemAdvanceTax = - (ROUND((SUM((D.PackQty + D.LooseQty) * D.SRPrice * (1 - D.DiscPerc * 0.01)) + 
+		SUM((D.PackQty + D.LooseQty + D.BonusQty) * D.SRPrice * (1 - D.DiscPerc * 0.01) * D.Gstperc * 0.01) +
+		SUM((D.PackQty + D.LooseQty + D.BonusQty) * D.UnitSalesTax)) * D.ItemAdvanceTaxPerc * 0.01, 2))
+FROM
+	SRLedger P, SRDetail D, Accounts A, Customer S, Item I, TaxCategory TC
+WHERE
+	:ai_allcust=0 AND
+	P.Posted = 'Y' AND
+	P.Date BETWEEN :adt_startdate AND :adt_enddate AND
+	P.CustCode IN (:ai_Custcode) AND
+	P.CustCode = S.CustCode AND
+	S.CustCode = A.AccCode AND
+	S.TaxCategoryCode = TC.TaxCategoryCode AND
+	P.SRInvCode = D.SRInvCode AND
+	D.ICode = I.ICode
+GROUP BY
+	P.Date,
+	P.SRInvCode,
+	A.AliasName,
+	A.Name,
+	S.NTNNo,
+	P.InvTotal,
+	P.AdvanceTaxAmt,
+	TC.Name,
+	TC.TaxPerc,
+	I.CustomICode,
+	I.Name,
+	D.ItemAdvanceTaxPerc
+UNION ALL
+SELECT 
+	TType = 'Sales',
+	Date=P.Date,
+	InvoiceCode='SV-' + LTRIM(RTRIM(STR(P.SaleInvCode, 10))),
+	AliasName = A.AliasName,
+	CustomerName=A.Name,
+	NTN = S.NTNNo,
+	NetAmount=P.InvTotal,
+	ItemAlias = I.CustomICode,
+	ItemName = I.Name,
+	TaxCategory = TC.Name,
+	AdvanceTaxPerc = TC.TaxPerc,
+	AdvanceTaxAmt = P.AdvanceTaxAmt,
+	ItemAdvanceTaxPerc = D.ItemAdvanceTaxPerc,
+	SaleAmt = (SUM((D.PackQty + D.LooseQty) * (D.SalePrice - D.ItemFlatDisc) * (1 - D.DiscPerc * 0.01)) + 
+		SUM((D.PackQty + D.LooseQty + D.BonusQty) * (D.SalePrice - D.ItemFlatDisc) * (1 - D.DiscPerc * 0.01) * D.Gstperc * 0.01) +
+		SUM((D.PackQty + D.LooseQty + D.BonusQty) * D.UnitSalesTax)),
+	ItemAdvanceTax = ROUND((SUM((D.PackQty + D.LooseQty) * (D.SalePrice - D.ItemFlatDisc) * (1 - D.DiscPerc * 0.01)) + 
+		SUM((D.PackQty + D.LooseQty + D.BonusQty) * (D.SalePrice - D.ItemFlatDisc) * (1 - D.DiscPerc * 0.01) * D.Gstperc * 0.01) +
+		SUM((D.PackQty + D.LooseQty + D.BonusQty) * D.UnitSalesTax)) * D.ItemAdvanceTaxPerc * 0.01, 2)
+FROM
+	CRS_SaleLedger P, CRS_SaleDetail D, Accounts A, Customer S, Item I, TaxCategory TC
+WHERE
+	:ai_allcust=0 AND
+	P.Posted = 'Y' AND
+	P.Date BETWEEN :adt_startdate AND :adt_enddate AND
+	P.CustCode IN (:ai_Custcode) AND
+	P.CustCode = S.CustCode AND
+	S.CustCode = A.AccCode AND
+	S.TaxCategoryCode = TC.TaxCategoryCode AND
+	P.ClientInstanceID = D.ClientInstanceID AND
+	P.SaleInvCode = D.SaleInvCode AND
+	D.ICode = I.ICode
+GROUP BY
+	P.ClientInstanceID,
+	P.Date,
+	P.SaleInvCode,
+	A.AliasName,
+	A.Name,
+	S.NTNNo,
+	P.InvTotal,
+	P.AdvanceTaxAmt,
+	TC.Name,
+	TC.TaxPerc,
+	I.CustomICode,
+	I.Name,
+	D.ItemAdvanceTaxPerc
+UNION ALL
+SELECT 
+	TType = 'Sales Return',
+	Date=P.Date,
+	InvoiceCode='SR-' + LTRIM(RTRIM(STR(P.SRInvCode, 10))),
+	AliasName = A.AliasName,
+	CustomerName=A.Name,
+	NTN = S.NTNNo,
+	NetAmount= - P.InvTotal,
+	ItemAlias = I.CustomICode,
+	ItemName = I.Name,
+	TaxCategory = TC.Name,
+	AdvanceTaxPerc = TC.TaxPerc,
+	AdvanceTaxAmt = P.AdvanceTaxAmt,
+	ItemAdvanceTaxPerc = D.ItemAdvanceTaxPerc,
+	SaleAmt = - ((SUM((D.PackQty + D.LooseQty) * D.SRPrice * (1 - D.DiscPerc * 0.01)) + 
+		SUM((D.PackQty + D.LooseQty + D.BonusQty) * D.SRPrice * (1 - D.DiscPerc * 0.01) * D.Gstperc * 0.01) +
+		SUM((D.PackQty + D.LooseQty + D.BonusQty) * D.UnitSalesTax))),
+	ItemAdvanceTax = - (ROUND((SUM((D.PackQty + D.LooseQty) * D.SRPrice * (1 - D.DiscPerc * 0.01)) + 
+		SUM((D.PackQty + D.LooseQty + D.BonusQty) * D.SRPrice * (1 - D.DiscPerc * 0.01) * D.Gstperc * 0.01) +
+		SUM((D.PackQty + D.LooseQty + D.BonusQty) * D.UnitSalesTax)) * D.ItemAdvanceTaxPerc * 0.01, 2))
+FROM
+	CRS_SRLedger P, CRS_SRDetail D, Accounts A, Customer S, Item I, TaxCategory TC
+WHERE
+	:ai_allcust=0 AND
+	P.Posted = 'Y' AND
+	P.Date BETWEEN :adt_startdate AND :adt_enddate AND
+	P.CustCode IN (:ai_Custcode) AND
+	P.CustCode = S.CustCode AND
+	S.CustCode = A.AccCode AND
+	S.TaxCategoryCode = TC.TaxCategoryCode AND
+	P.ClientInstanceID = D.ClientInstanceID AND
+	P.SRInvCode = D.SRInvCode AND
+	D.ICode = I.ICode
+GROUP BY
+	P.ClientInstanceID,
+	P.Date,
+	P.SRInvCode,
+	A.AliasName,
+	A.Name,
+	S.NTNNo,
+	P.InvTotal,
+	P.AdvanceTaxAmt,
+	TC.Name,
+	TC.TaxPerc,
+	I.CustomICode,
+	I.Name,
+	D.ItemAdvanceTaxPerc
+UNION ALL
+SELECT 
+	TType = 'Sales',
+	Date=P.Date,
+	InvoiceCode='SV-' + LTRIM(RTRIM(STR(P.SaleInvCode, 10))),
+	AliasName = A.AliasName,
+	CustomerName=A.Name,
+	NTN = S.NTNNo,
+	NetAmount=P.InvTotal,
+	ItemAlias = I.CustomICode,
+	ItemName = I.Name,
+	TaxCategory = TC.Name,
+	AdvanceTaxPerc = TC.TaxPerc,
+	AdvanceTaxAmt = P.AdvanceTaxAmt,
+	ItemAdvanceTaxPerc = D.ItemAdvanceTaxPerc,
+	SaleAmt = (SUM((D.PackQty + D.LooseQty) * (D.SalePrice - D.ItemFlatDisc) * (1 - D.DiscPerc * 0.01)) + 
+		SUM((D.PackQty + D.LooseQty + D.BonusQty) * (D.SalePrice - D.ItemFlatDisc) * (1 - D.DiscPerc * 0.01) * D.Gstperc * 0.01) +
+		SUM((D.PackQty + D.LooseQty + D.BonusQty) * D.UnitSalesTax)),
+	ItemAdvanceTax = ROUND((SUM((D.PackQty + D.LooseQty) * (D.SalePrice - D.ItemFlatDisc) * (1 - D.DiscPerc * 0.01)) + 
+		SUM((D.PackQty + D.LooseQty + D.BonusQty) * (D.SalePrice - D.ItemFlatDisc) * (1 - D.DiscPerc * 0.01) * D.Gstperc * 0.01) +
+		SUM((D.PackQty + D.LooseQty + D.BonusQty) * D.UnitSalesTax)) * D.ItemAdvanceTaxPerc * 0.01, 2)
+FROM
+	SaleLedger P, SaleDetail D, Accounts A, Customer S, Item I, TaxCategory TC
+WHERE
+	:ai_allcust=1 AND
+	P.Posted = 'Y' AND
+	P.Date BETWEEN :adt_startdate AND :adt_enddate AND
+	P.CustCode = S.CustCode AND
+	S.CustCode = A.AccCode AND
+	S.TaxCategoryCode = TC.TaxCategoryCode AND
+	P.SaleInvCode = D.SaleInvCode AND
+	D.ICode = I.ICode
+GROUP BY
+	P.Date,
+	P.SaleInvCode,
+	A.AliasName,
+	A.Name,
+	S.NTNNo,
+	P.InvTotal,
+	P.AdvanceTaxAmt,
+	TC.Name,
+	TC.TaxPerc,
+	I.CustomICode,
+	I.Name,
+	D.ItemAdvanceTaxPerc
+UNION ALL
+SELECT 
+	TType = 'Sales Return',
+	Date=P.Date,
+	InvoiceCode='SR-' + LTRIM(RTRIM(STR(P.SRInvCode, 10))),
+	AliasName = A.AliasName,
+	CustomerName=A.Name,
+	NTN = S.NTNNo,
+	NetAmount= - P.InvTotal,
+	ItemAlias = I.CustomICode,
+	ItemName = I.Name,
+	TaxCategory = TC.Name,
+	AdvanceTaxPerc = TC.TaxPerc,
+	AdvanceTaxAmt = P.AdvanceTaxAmt,
+	ItemAdvanceTaxPerc = D.ItemAdvanceTaxPerc,
+	SaleAmt = - ((SUM((D.PackQty + D.LooseQty) * D.SRPrice * (1 - D.DiscPerc * 0.01)) + 
+		SUM((D.PackQty + D.LooseQty + D.BonusQty) * D.SRPrice * (1 - D.DiscPerc * 0.01) * D.Gstperc * 0.01) +
+		SUM((D.PackQty + D.LooseQty + D.BonusQty) * D.UnitSalesTax))),
+	ItemAdvanceTax = - (ROUND((SUM((D.PackQty + D.LooseQty) * D.SRPrice * (1 - D.DiscPerc * 0.01)) + 
+		SUM((D.PackQty + D.LooseQty + D.BonusQty) * D.SRPrice * (1 - D.DiscPerc * 0.01) * D.Gstperc * 0.01) +
+		SUM((D.PackQty + D.LooseQty + D.BonusQty) * D.UnitSalesTax)) * D.ItemAdvanceTaxPerc * 0.01, 2))
+FROM
+	SRLedger P, SRDetail D, Accounts A, Customer S, Item I, TaxCategory TC
+WHERE
+	:ai_allcust=1 AND
+	P.Posted = 'Y' AND
+	P.Date BETWEEN :adt_startdate AND :adt_enddate AND
+	P.CustCode = S.CustCode AND
+	S.CustCode = A.AccCode AND
+	S.TaxCategoryCode = TC.TaxCategoryCode AND
+	P.SRInvCode = D.SRInvCode AND
+	D.ICode = I.ICode
+GROUP BY
+	P.Date,
+	P.SRInvCode,
+	A.AliasName,
+	A.Name,
+	S.NTNNo,
+	P.InvTotal,
+	P.AdvanceTaxAmt,
+	TC.Name,
+	TC.TaxPerc,
+	I.CustomICode,
+	I.Name,
+	D.ItemAdvanceTaxPerc
+UNION ALL
+SELECT 
+	TType = 'Sales',
+	Date=P.Date,
+	InvoiceCode='SV-' + LTRIM(RTRIM(STR(P.SaleInvCode, 10))),
+	AliasName = A.AliasName,
+	CustomerName=A.Name,
+	NTN = S.NTNNo,
+	NetAmount=P.InvTotal,
+	ItemAlias = I.CustomICode,
+	ItemName = I.Name,
+	TaxCategory = TC.Name,
+	AdvanceTaxPerc = TC.TaxPerc,
+	AdvanceTaxAmt = P.AdvanceTaxAmt,
+	ItemAdvanceTaxPerc = D.ItemAdvanceTaxPerc,
+	SaleAmt = (SUM((D.PackQty + D.LooseQty) * (D.SalePrice - D.ItemFlatDisc) * (1 - D.DiscPerc * 0.01)) + 
+		SUM((D.PackQty + D.LooseQty + D.BonusQty) * (D.SalePrice - D.ItemFlatDisc) * (1 - D.DiscPerc * 0.01) * D.Gstperc * 0.01) +
+		SUM((D.PackQty + D.LooseQty + D.BonusQty) * D.UnitSalesTax)),
+	ItemAdvanceTax = ROUND((SUM((D.PackQty + D.LooseQty) * (D.SalePrice - D.ItemFlatDisc) * (1 - D.DiscPerc * 0.01)) + 
+		SUM((D.PackQty + D.LooseQty + D.BonusQty) * (D.SalePrice - D.ItemFlatDisc) * (1 - D.DiscPerc * 0.01) * D.Gstperc * 0.01) +
+		SUM((D.PackQty + D.LooseQty + D.BonusQty) * D.UnitSalesTax)) * D.ItemAdvanceTaxPerc * 0.01, 2)
+FROM
+	CRS_SaleLedger P, CRS_SaleDetail D, Accounts A, Customer S, Item I, TaxCategory TC
+WHERE
+	:ai_allcust = 1 AND
+	P.Posted = 'Y' AND
+	P.Date BETWEEN :adt_startdate AND :adt_enddate AND
+	P.CustCode = S.CustCode AND
+	S.CustCode = A.AccCode AND
+	S.TaxCategoryCode = TC.TaxCategoryCode AND
+	P.ClientInstanceID = D.ClientInstanceID AND
+	P.SaleInvCode = D.SaleInvCode AND
+	D.ICode = I.ICode
+GROUP BY
+	P.ClientInstanceID,
+	P.Date,
+	P.SaleInvCode,
+	A.AliasName,
+	A.Name,
+	S.NTNNo,
+	P.InvTotal,
+	P.AdvanceTaxAmt,
+	TC.Name,
+	TC.TaxPerc,
+	I.CustomICode,
+	I.Name,
+	D.ItemAdvanceTaxPerc
+UNION ALL
+SELECT 
+	TType = 'Sales Return',
+	Date=P.Date,
+	InvoiceCode='SR-' + LTRIM(RTRIM(STR(P.SRInvCode, 10))),
+	AliasName = A.AliasName,
+	CustomerName=A.Name,
+	NTN = S.NTNNo,
+	NetAmount= - P.InvTotal,
+	ItemAlias = I.CustomICode,
+	ItemName = I.Name,
+	TaxCategory = TC.Name,
+	AdvanceTaxPerc = TC.TaxPerc,
+	AdvanceTaxAmt = P.AdvanceTaxAmt,
+	ItemAdvanceTaxPerc = D.ItemAdvanceTaxPerc,
+	SaleAmt = - ((SUM((D.PackQty + D.LooseQty) * D.SRPrice * (1 - D.DiscPerc * 0.01)) + 
+		SUM((D.PackQty + D.LooseQty + D.BonusQty) * D.SRPrice * (1 - D.DiscPerc * 0.01) * D.Gstperc * 0.01) +
+		SUM((D.PackQty + D.LooseQty + D.BonusQty) * D.UnitSalesTax))),
+	ItemAdvanceTax = - (ROUND((SUM((D.PackQty + D.LooseQty) * D.SRPrice * (1 - D.DiscPerc * 0.01)) + 
+		SUM((D.PackQty + D.LooseQty + D.BonusQty) * D.SRPrice * (1 - D.DiscPerc * 0.01) * D.Gstperc * 0.01) +
+		SUM((D.PackQty + D.LooseQty + D.BonusQty) * D.UnitSalesTax)) * D.ItemAdvanceTaxPerc * 0.01, 2))
+FROM
+	CRS_SRLedger P, CRS_SRDetail D, Accounts A, Customer S, Item I, TaxCategory TC
+WHERE
+	:ai_allcust=1 AND
+	P.Posted = 'Y' AND
+	P.Date BETWEEN :adt_startdate AND :adt_enddate AND
+	P.CustCode = S.CustCode AND
+	S.CustCode = A.AccCode AND
+	S.TaxCategoryCode = TC.TaxCategoryCode AND
+	P.ClientInstanceID = D.ClientInstanceID AND
+	P.SRInvCode = D.SRInvCode AND
+	D.ICode = I.ICode
+GROUP BY
+	P.ClientInstanceID,
+	P.Date,
+	P.SRInvCode,
+	A.AliasName,
+	A.Name,
+	S.NTNNo,
+	P.InvTotal,
+	P.AdvanceTaxAmt,
+	TC.Name,
+	TC.TaxPerc,
+	I.CustomICode,
+	I.Name,
+	D.ItemAdvanceTaxPerc
+
+"
+  arguments=(("adt_startdate", datetime), ("adt_enddate", datetime), ("ai_custcode", numberlist), ("ai_allcust", number))
+ sort="customername A, aliasname A, date A, itemalias A, itemname A"
+)
+group(level=1 header.height=0 trailer.height=200 by=("customername"  ) header.color="536870912" header.transparency="0" header.gradient.color="8421504" header.gradient.transparency="0" header.gradient.angle="0" header.brushmode="0" header.gradient.repetition.mode="0" header.gradient.repetition.length="100" header.gradient.repetition.count="0" header.gradient.focus="0" header.gradient.scale="100" header.gradient.spread="100" trailer.color="536870912" trailer.transparency="0" trailer.gradient.color="8421504" trailer.gradient.transparency="0" trailer.gradient.angle="0" trailer.brushmode="0" trailer.gradient.repetition.mode="0" trailer.gradient.repetition.length="100" trailer.gradient.repetition.count="0" trailer.gradient.focus="0" trailer.gradient.scale="100" trailer.gradient.spread="100" )
+text(name=t_4 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="2" background.color="16777215" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" alignment="2" border="0" x="50" y="33" height="150" width="7666" text="Customer Wise Advance Income Tax - Invoice Detail" html.valueishtml="0" )
+compute(name=compute_4 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" x="383" y="33" height="166" width="700" format="dd/mm/yyyy" expression="today()" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_6 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" alignment="0" border="0" x="50" y="33" height="150" width="300" text="Date: " html.valueishtml="0" )
+compute(name=compute_5 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" x="6308" y="33" height="166" width="1408" format="[general]" expression="'Page ' + page() + ' of ' + pageCount()" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=c_companyname visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" x="50" y="225" height="158" width="7666" format="[general]" expression="f_ReportHeaderInfo('clientname')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=c_address1 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" x="50" y="416" height="158" width="7666" format="[general]" expression="f_ReportHeaderInfo('address1')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=c_address2 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" x="50" y="600" height="158" width="7666" format="[general]" expression="f_ReportHeaderInfo('address2')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_7 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" alignment="0" border="0" x="2241" y="791" height="150" width="258" text="To: " html.valueishtml="0" )
+text(name=t_5 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" alignment="0" border="0" x="50" y="791" height="150" width="775" text="From Date: " html.valueishtml="0" )
+compute(name=compute_1 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="33554432" x="858" y="791" height="158" width="1308" format="dd/mm/yyyy hh:mm" expression=" adt_startdate " alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_2 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="33554432" x="2533" y="791" height="158" width="1308" format="dd/mm/yyyy hh:mm" expression=" adt_enddate " alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+line(name=l_4 visible="1" band=header background.mode="2" background.color="16777215" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="0" pen.width="8" pen.color="0" x1="25" y1="983" x2="25" y2="1291" )
+line(name=l_22 visible="1" band=header background.mode="2" background.color="16777215" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="0" pen.width="8" pen.color="0" x1="6741" y1="983" x2="6741" y2="1291" )
+line(name=l_1 visible="1" band=header background.mode="2" background.color="16777215" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="0" pen.width="8" pen.color="0" x1="25" y1="983" x2="7950" y2="983" )
+line(name=l_2 visible="1" band=header background.mode="2" background.color="16777215" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="0" pen.width="8" pen.color="0" x1="25" y1="1191" x2="7950" y2="1191" )
+line(name=l_12 visible="1" band=header background.mode="2" background.color="16777215" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="0" pen.width="8" pen.color="0" x1="7950" y1="983" x2="7950" y2="1291" )
+text(name=advancetaxamt_t visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="33554432" alignment="2" border="0" x="7258" y="1016" height="150" width="666" text="Advance Tax" html.valueishtml="0" )
+line(name=l_11 visible="1" band=header background.mode="2" background.color="16777215" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="0" pen.width="8" pen.color="0" x1="7233" y1="983" x2="7233" y2="1291" )
+text(name=t_9 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="33554432" alignment="2" border="0" x="6766" y="1016" height="133" width="450" text="A.I Tax%" html.valueishtml="0" )
+text(name=t_3 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="33554432" alignment="2" border="0" x="5983" y="1016" height="150" width="741" text="Sales Amt." html.valueishtml="0" )
+line(name=l_10 visible="1" band=header background.mode="2" background.color="16777215" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="0" pen.width="8" pen.color="0" x1="5950" y1="983" x2="5950" y2="1291" )
+text(name=purinvcode_t visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="33554432" alignment="2" border="0" x="5458" y="1016" height="133" width="466" text="Invoice #" html.valueishtml="0" )
+line(name=l_5 visible="1" band=header background.mode="2" background.color="16777215" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="0" pen.width="8" pen.color="0" x1="5425" y1="983" x2="5425" y2="1291" )
+text(name=date_t visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="33554432" alignment="2" border="0" x="4858" y="1016" height="150" width="550" text="Date" html.valueishtml="0" )
+line(name=l_9 visible="1" band=header background.mode="2" background.color="16777215" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="0" pen.width="8" pen.color="0" x1="933" y1="983" x2="933" y2="1291" )
+line(name=l_8 visible="1" band=header background.mode="2" background.color="16777215" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="0" pen.width="8" pen.color="0" x1="2816" y1="983" x2="2816" y2="1291" )
+text(name=suppliername_t visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="33554432" alignment="2" border="0" x="966" y="1016" height="150" width="1833" text="Customer Name" html.valueishtml="0" )
+text(name=t_8 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="33554432" alignment="2" border="0" x="2841" y="1016" height="150" width="1975" text="Item Name" html.valueishtml="0" )
+line(name=l_6 visible="1" band=header background.mode="2" background.color="16777215" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="0" pen.width="8" pen.color="0" x1="4833" y1="983" x2="4833" y2="1291" )
+text(name=t_10 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="33554432" alignment="2" border="0" x="50" y="1016" height="150" width="866" text="NTN" html.valueishtml="0" )
+line(name=l_31 visible="1" band=summary background.mode="2" background.color="16777215" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="0" pen.width="8" pen.color="0" x1="25" y1="0" x2="25" y2="192" )
+text(name=t_2 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="33554432" alignment="1" border="0" x="2941" y="8" height="150" width="2583" text="Report Total:" html.valueishtml="0" )
+line(name=l_18 visible="1" band=summary background.mode="2" background.color="16777215" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="0" pen.width="8" pen.color="0" x1="5558" y1="0" x2="5558" y2="192" )
+compute(name=compute_8 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="33554432" x="5583" y="8" height="150" width="1141" format="###,###,##0.00" expression="sum(saleamt for all)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no enabled="0" )
+line(name=l_36 visible="1" band=summary background.mode="2" background.color="16777215" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="0" pen.width="8" pen.color="0" x1="6741" y1="0" x2="6741" y2="192" )
+line(name=l_28 visible="1" band=summary background.mode="2" background.color="16777215" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="0" pen.width="8" pen.color="0" x1="25" y1="192" x2="7950" y2="192" )
+line(name=l_29 visible="1" band=summary background.mode="2" background.color="16777215" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="0" pen.width="8" pen.color="0" x1="7950" y1="0" x2="7950" y2="192" )
+compute(name=compute_7 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="33554432" x="7258" y="8" height="150" width="666" format="###,###,##0.00" expression="sum(itemadvancetax for all)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no enabled="0" )
+line(name=l_30 visible="1" band=summary background.mode="2" background.color="16777215" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="0" pen.width="8" pen.color="0" x1="7233" y1="0" x2="7233" y2="192" )
+line(name=l_21 visible="1" band=detail background.mode="2" background.color="16777215" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="0" pen.width="8" pen.color="0" x1="25" y1="0" x2="25" y2="275" )
+line(name=l_15 visible="1" band=detail background.mode="2" background.color="16777215" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="0" pen.width="8" pen.color="0" x1="5950" y1="0" x2="5950" y2="275" )
+line(name=l_27 visible="1" band=detail background.mode="2" background.color="16777215" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="0" pen.width="8" pen.color="0" x1="6741" y1="0" x2="6741" y2="275" )
+line(name=l_3 visible="1" band=detail background.mode="2" background.color="16777215" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="0" pen.width="8" pen.color="0" x1="25" y1="183" x2="7950" y2="183" )
+line(name=l_13 visible="1" band=detail background.mode="2" background.color="16777215" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="0" pen.width="8" pen.color="0" x1="7950" y1="0" x2="7950" y2="275" )
+column(name=itemadvancetax visible="1" band=detail id=15 x="7258" y="8" height="150" width="666" color="33554432" border="0" alignment="1" format="###,###,##0.00" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" transparency="0" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+line(name=l_14 visible="1" band=detail background.mode="2" background.color="16777215" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="0" pen.width="8" pen.color="0" x1="7233" y1="0" x2="7233" y2="275" )
+column(name=advancetaxperc visible="1	if(advancetaxperc > 0, 1, 0)" band=detail id=11 x="6775" y="8" height="150" width="433" color="33554432" border="0" alignment="2" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" transparency="0" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=saleamt visible="1" band=detail id=14 x="5983" y="8" height="150" width="741" color="33554432" border="0" alignment="1" format="###,###,##0.00" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" transparency="0" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=date visible="1" band=detail id=2 x="4858" y="8" height="150" width="550" color="33554432" border="0" alignment="0" format="dd/mm/yyyy" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" transparency="0" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+line(name=l_20 visible="1" band=detail background.mode="2" background.color="16777215" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="0" pen.width="8" pen.color="0" x1="5425" y1="0" x2="5425" y2="275" )
+line(name=l_7 visible="1" band=detail background.mode="2" background.color="16777215" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="0" pen.width="8" pen.color="0" x1="933" y1="0" x2="933" y2="275" )
+line(name=l_17 visible="1" band=detail background.mode="2" background.color="16777215" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="0" pen.width="8" pen.color="0" x1="2816" y1="0" x2="2816" y2="275" )
+column(name=customername visible="1" band=detail id=5 x="966" y="8" height="150" width="1833" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" transparency="0" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=itemname visible="1" band=detail id=9 x="2841" y="8" height="150" width="1975" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" transparency="0" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="400" tabsequence=0 )
+line(name=l_19 visible="1" band=detail background.mode="2" background.color="16777215" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="0" pen.width="8" pen.color="0" x1="4833" y1="0" x2="4833" y2="275" )
+column(name=ntn visible="1" band=detail id=6 x="50" y="8" height="150" width="866" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" transparency="0" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=invoicecode visible="1" pointer="HyperLink!" tag="" band=detail id=3 x="5450" y="8" height="150" width="483" color="33554432" border="0" alignment="2" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" transparency="0" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="400" tabsequence=0 )
+line(name=l_26 visible="1" band=trailer.1 background.mode="2" background.color="16777215" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="0" pen.width="8" pen.color="0" x1="25" y1="0" x2="25" y2="208" )
+text(name=t_1 visible="1" band=trailer.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="33554432" alignment="1" border="0" x="1016" y="8" height="150" width="4508" text="	 customername + ' Total:'" html.valueishtml="0" )
+line(name=l_16 visible="1" band=trailer.1 background.mode="2" background.color="16777215" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="0" pen.width="8" pen.color="0" x1="5558" y1="0" x2="5558" y2="208" )
+compute(name=compute_6 visible="1" band=trailer.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="33554432" x="5583" y="8" height="150" width="1141" format="###,###,##0.00" expression="sum(saleamt for group 1)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no enabled="0" )
+line(name=l_35 visible="1" band=trailer.1 background.mode="2" background.color="16777215" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="0" pen.width="8" pen.color="0" x1="6741" y1="0" x2="6741" y2="208" )
+line(name=l_25 visible="1" band=trailer.1 background.mode="2" background.color="16777215" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="0" pen.width="8" pen.color="0" x1="25" y1="183" x2="7950" y2="183" )
+line(name=l_24 visible="1" band=trailer.1 background.mode="2" background.color="16777215" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="0" pen.width="8" pen.color="0" x1="7950" y1="0" x2="7950" y2="208" )
+compute(name=compute_3 visible="1" band=trailer.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="33554432" x="7258" y="8" height="150" width="666" format="###,###,##0.00" expression="sum(itemadvancetax for group 1)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no enabled="0" )
+line(name=l_23 visible="1" band=trailer.1 background.mode="2" background.color="16777215" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="0" pen.width="8" pen.color="0" x1="7233" y1="0" x2="7233" y2="208" )
+sparse(names="customername	ntn	invoicecode	date	itemname")
+htmltable(border="1" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" encodeSelfLinkArgs="1" generateDDDWFrames="1" generateJavaScript="1" netscapeLayers="0" pagingMethod=0 )
+xhtmlgen() cssgen(sessionSpecific="0" )
+xmlgen(inline="0" )
+xsltgen()
+jsgen()
+export.xml(headGroups="1" includewhitespace="0" metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 distill.customPostScript="0" xslfop.print="0" )
+export.xhtml()

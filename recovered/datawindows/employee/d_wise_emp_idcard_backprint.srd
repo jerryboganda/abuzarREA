@@ -1,0 +1,90 @@
+release 12.5;
+datawindow ( units=3 timer_interval=0 processing=0 color=16777215 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 pointer="Arrow!"  print.printername=""  print.documentname=""  print.orientation=0 print.margin.left=502 print.margin.right=502 print.margin.top=502 print.margin.bottom=502 print.paper.size=10 print.paper.source=0 print.canusedefaultprinter=yes print.columns=2 print.columns.width=9200 selected.mouse=no hidegrayline=no showbackcoloronxp=no)
+header(height=0 )
+summary(height=0 color="536870912" )
+footer(height=0 color="536870912" )
+detail(height=6006 color="536870912" )
+table(column=(type=long updatewhereclause=yes name=empcode dbname="EMPCode"  )
+column=(type=char(100) updatewhereclause=yes name=empid dbname="EMPID"  )
+column=(type=char(255) update=yes updatewhereclause=yes name=name dbname="Name"  )
+column=(type=char(255) updatewhereclause=yes name=fhname dbname="FHName"  )
+column=(type=char(1) update=yes updatewhereclause=yes initial="M" name=gender dbname="Gender" 
+ values="Male	M/Female	F/"  )
+column=(type=datetime update=yes updatewhereclause=yes initial="today" name=birthdate dbname="BirthDate"  )
+column=(type=char(100) updatewhereclause=yes name=cnicno dbname="CNICNo"  )
+column=(type=char(100) updatewhereclause=yes name=mobileno dbname="MobileNo"  )
+column=(type=long updatewhereclause=yes name=transportroutecode dbname="TransportRouteCode"  )
+column=(type=long updatewhereclause=yes name=vehiclecode dbname="VehicleCode"  )
+column=(type=char(255) updatewhereclause=yes name=pmtaddress dbname="PMTAddress"  )
+column=(type=char(100) updatewhereclause=yes name=bloodgroup dbname="BloodGroup"  )
+column=(type=char(100) updatewhereclause=yes name=department dbname="Department"  )
+column=(type=char(100) updatewhereclause=yes name=category dbname="Category"  )
+column=(type=char(60) updatewhereclause=yes name=designation dbname="Designation"  )
+column=(type=datetime updatewhereclause=yes name=issuedate dbname="IssueDate"  )
+column=(type=datetime updatewhereclause=yes name=expirydate dbname="ExpiryDate"  )
+column=(type=char(30) updatewhereclause=yes name=filename dbname="FileName"  )
+column=(type=char(27) updatewhereclause=yes name=signaturefile dbname="SignatureFile"  )
+ retrieve="SELECT  
+	EMPCode=E.EMPCode,
+	EMPID=E.EMPID,
+	Name=E.FullName,
+	FHName=E.FHName,
+	Gender=E.Gender,
+	BirthDate=E.BirthDate,
+	CNICNo=E.CNICNo,
+	MobileNo=E.MobileNo,
+	TransportRouteCode=E.TransportRouteCode,
+	VehicleCode=E.VehicleCode,
+	PMTAddress=E.PMTAddress,
+	BloodGroup=E.BloodGroup,
+	Department = (SELECT EC.Name FROM Emp_Department EC WHERE EC.DeptCode = E.DeptCode),
+	Category = (SELECT EC.Name FROM Emp_Category EC WHERE EC.EmpCatCode = E.EmpCatCode),
+	Designation = (SELECT EC.Name FROM Emp_Designation EC WHERE EC.DesigCode = E.DesigCode),
+	IssueDate = GETDATE(),
+	ExpiryDate = ISNULL((SELECT CAST(DBO.FN_GetPreference('DefaultExpiry') AS DATETIME)), GETDATE()+365),
+	FileName = 'c:~\waseela_temp~\'+LTRIM(RTRIM(STR(E.EMPCode)))+'.jpg',
+	SignatureFile = 'c:~\waseela_temp~\sigfile.jpg'
+FROM
+	EMP_Employee E
+WHERE 
+	E.EMPCode IN (:ai_code) AND
+	E.Active = 'Y'
+ORDER BY
+	Name"
+  arguments=(("ai_code", numberlist))
+)
+line(name=l_14 visible="1" band=detail background.mode="2" background.color="16777215" pen.style="0" pen.width="26" pen.color="8388608" x1="264" y1="344" x2="264" y2="5768" )
+line(name=l_15 visible="1" band=detail background.mode="2" background.color="16777215" pen.style="0" pen.width="26" pen.color="8388608" x1="264" y1="318" x2="8916" y2="318" )
+line(name=l_17 visible="1" band=detail background.mode="2" background.color="16777215" pen.style="0" pen.width="26" pen.color="8388608" x1="264" y1="318" x2="264" y2="5742" )
+line(name=l_3 visible="1" band=detail background.mode="2" background.color="16777215" pen.style="0" pen.width="26" pen.color="8388608" x1="264" y1="5742" x2="8916" y2="5742" )
+line(name=l_16 visible="1" band=detail background.mode="2" background.color="16777215" pen.style="0" pen.width="26" pen.color="8388608" x1="8916" y1="318" x2="8916" y2="5742" )
+text(name=t_16 visible="1" band=detail font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="8388608" alignment="0" border="0" x="396" y="794" height="370" width="1190" text="Address:" html.valueishtml="0" )
+column(name=pmtaddress visible="1" band=detail id=11 x="1693" y="794" height="1296" width="7117" color="8388608" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="700" tabsequence=0 )
+text(name=t_15 visible="1" band=detail font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="700" background.mode="2" background.color="8421376" color="16777215" alignment="0" border="0" x="343" y="371" height="370" width="8519" text="Personal Information" html.valueishtml="0" )
+text(name=t_19 visible="1" band=detail font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="700" background.mode="2" background.color="32896" color="16777215" alignment="2" border="0" x="343" y="4419" height="370" width="3095" text="About Organization" html.valueishtml="0" )
+bitmap(name=p_2 visible="1" band=detail filename="logo1.jpg" x="396" y="4842" height="846" width="1058" border="0"  originalsize=no )
+bitmap(name=p_3 visible="1" band=detail filename="logo2.jpg" x="1561" y="4842" height="846" width="1058" border="0"  originalsize=no )
+text(name=t_6 visible="1" band=detail font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="700" background.mode="2" background.color="16777215" color="8388608" alignment="0" border="0" x="3598" y="5319" height="370" width="5159" text="Model Town, Wah Cantt" html.valueishtml="0" )
+text(name=t_4 visible="1" band=detail font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="700" background.mode="2" background.color="16777215" color="8388608" alignment="0" border="0" x="3571" y="4869" height="370" width="5159" text="A Project of AL MARIFAH TRUST" html.valueishtml="0" )
+text(name=t_2 visible="1" band=detail font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="700" background.mode="2" background.color="16777215" color="8388608" alignment="0" border="0" x="3571" y="4419" height="370" width="5159" text="WISE Schools and Colleges" html.valueishtml="0" )
+line(name=l_5 visible="1" band=detail background.mode="2" background.color="16777215" pen.style="0" pen.width="26" pen.color="8388608" x1="264" y1="3043" x2="8916" y2="3043" )
+text(name=t_12 visible="1" band=detail font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="8388608" alignment="0" border="0" x="396" y="2170" height="370" width="1190" text="Cell No.:" html.valueishtml="0" )
+text(name=t_5 visible="1" band=detail font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="8388608" alignment="0" border="0" x="396" y="2620" height="370" width="1190" text="D.O.B.:" html.valueishtml="0" )
+column(name=mobileno visible="1" band=detail id=8 x="1693" y="2170" height="370" width="7117" color="8388608" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="700" tabsequence=0 )
+column(name=birthdate visible="1" band=detail id=6 x="1693" y="2620" height="370" width="3836" color="8388608" border="0" alignment="0" format="dd-mmmm-yyyy" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="700" tabsequence=0 )
+text(name=t_7 visible="1" band=detail font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="8388608" alignment="0" border="0" x="5662" y="2593" height="370" width="1693" text="Blood Group:" html.valueishtml="0" )
+column(name=bloodgroup visible="1" band=detail id=12 x="7487" y="2620" height="370" width="1349" color="8388608" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="700" tabsequence=0 )
+text(name=t_18 visible="1" band=detail font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="700" background.mode="2" background.color="16777215" color="8388608" alignment="0" border="0" x="635" y="3572" height="687" width="8202" text="WISE Schools and Colleges Model Town, Wah Cantt 0514-905371" html.valueishtml="0" )
+text(name=t_17 visible="1" band=detail font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="700" background.mode="2" background.color="16777215" color="134217857" alignment="0" border="0" x="635" y="3122" height="370" width="8202" text="Important Note: If found please return to:" html.valueishtml="0" )
+line(name=l_6 visible="1" band=detail background.mode="2" background.color="255" pen.style="0" pen.width="105" pen.color="255" x1="449" y1="3122" x2="423" y2="4234" )
+line(name=l_8 visible="1" band=detail background.mode="2" background.color="16777215" pen.style="0" pen.width="26" pen.color="8388608" x1="264" y1="4340" x2="8916" y2="4340" )
+htmltable(border="1" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" encodeSelfLinkArgs="1" generateJavaScript="1" netscapeLayers="0" pagingMethod=0 )
+xhtmlgen() cssgen(sessionSpecific="0" )
+xmlgen(inline="0" )
+xsltgen()
+jsgen()
+export.xml(headGroups="1" includewhitespace="0" metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 distill.customPostScript="0" xslfop.print="0" )
+export.xhtml()

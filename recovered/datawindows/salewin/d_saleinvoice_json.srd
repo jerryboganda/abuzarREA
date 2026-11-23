@@ -1,0 +1,74 @@
+release 12.5;
+datawindow ( units=0 timer_interval=0 processing=0 color=67108864 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.file=""  picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.printername=""  print.documentname=""  print.orientation=0 print.margin.left=110 print.margin.right=110 print.margin.top=96 print.margin.bottom=96 print.paper.size=0 print.paper.source=0 print.canusedefaultprinter=yes selected.mouse=no hidegrayline=no showbackcoloronxp=no)
+header(height=74 color="536870912" transparency="0" gradient.color="8421504" gradient.transparency="0" gradient.angle="0" brushmode="0" gradient.repetition.mode="0" gradient.repetition.length="100" gradient.repetition.count="0" gradient.focus="0" gradient.scale="100" gradient.spread="100" )
+summary(height=0 color="536870912" transparency="0" gradient.color="8421504" gradient.transparency="0" gradient.angle="0" brushmode="0" gradient.repetition.mode="0" gradient.repetition.length="100" gradient.repetition.count="0" gradient.focus="0" gradient.scale="100" gradient.spread="100" )
+footer(height=0 color="536870912" transparency="0" gradient.color="8421504" gradient.transparency="0" gradient.angle="0" brushmode="0" gradient.repetition.mode="0" gradient.repetition.length="100" gradient.repetition.count="0" gradient.focus="0" gradient.scale="100" gradient.spread="100" )
+detail(height=83 color="536870912" transparency="0" gradient.color="8421504" gradient.transparency="0" gradient.angle="0" brushmode="0" gradient.repetition.mode="0" gradient.repetition.length="100" gradient.repetition.count="0" gradient.focus="0" gradient.scale="100" gradient.spread="100" )
+table(column=(type=long updatewhereclause=yes name=rowid dbname="RowID"  )
+column=(type=char(8000) updatewhereclause=yes name=json dbname="JSON"  )
+column=(type=long updatewhereclause=yes name=itemcount dbname="ItemCount"  )
+ retrieve="SELECT RowID=T.RowID, JSON=T.JSON, ItemCount
+FROM 
+	(SELECT ROWID=-1, ItemCount = 0, JSON=SPACE(8000)
+	UNION ALL
+	SELECT ROWID=0, ItemCount = ISNULL((SELECT COUNT(D.ICode) FROM SaleDetail D WHERE D.SaleInvCode=:ai_code), 0), JSON='{~"InvoiceNumber~":~"~",~"POSID~":~"' + ISNULL(DBO.Fn_GetPreference('FBRPOSID'),'') + '~",~"USIN~":~"' + LTRIM(RTRIM(STR(S.SaleInvCode))) + 
+		'~",~"DateTime~":~"' + CONVERT(VARCHAR(100), S.DATE, 121) + 
+		'~",~"BuyerNTN~":' + '~"' + ISNULL(C.NTNNo,'')  + 
+		'~",~"BuyerCNIC~":~"' + ISNULL(C.NIC,'') + 
+		'~",~"BuyerName~":~"' + ISNULL(A.Name,'') + 
+		'~",~"BuyerPhoneNumber~":~"'+ ISNULL(C.Phone,'') +
+		'~",~"TotalBillAmount~":~"' + LTRIM(RTRIM(STR(S.InvTotal,12, 2))) + 
+		'~",~"TotalQuantity~":~"' + LTRIM(RTRIM(STR(ISNULL((SELECT SUM(D.LooseQty + D.BonusQty) FROM SaleDetail D WHERE D.SaleInvCode = :ai_code),0)))) + 
+		'~",~"TotalSaleValue~":~"' + LTRIM(RTRIM(STR(ISNULL(S.InvTotal - S.MiscCharges,0) - ISNULL(DBO.fn_getTaxOnSaleInv(S.SaleInvCode),0),12, 2))) +
+		'~",~"TotalTaxCharged~":~"' + LTRIM(RTRIM(STR(DBO.fn_getTaxOnSaleInv(S.SaleInvCode), 12,2))) + 
+		'~",~"Discount~":~"' + LTRIM(RTRIM(STR( ISNULL((SELECT ROUND(SUM((D.LooseQty * D.ItemFlatDisc) + (D.LooseQty * (D.SalePrice - D.ItemFlatDisc) * (D.DiscPerc * 0.01))), 2) FROM SaleDetail D WHERE D.SaleInvCode = :ai_code),0) + S.FlatDisc )))  + 
+		'~",~"FurtherTax~":~"' + LTRIM(RTRIM(STR(ISNULL((SELECT InvSaleTax=(Case when (Round(Sum ( (  D.looseqty * (D.saleprice - D.itemflatdisc)) * (1 - D.discperc /100) * (1 - SL.discperc /100) - SL.flatdisc), 2)) * SL.invgstperc1 * 0.01 IS NULL Then 0 Else (Round(Sum ( (  D.looseqty * (  D.saleprice -   D.itemflatdisc)) *  (1 -   D.discperc /100) * (1 -   SL.discperc /100) ) - SL.flatdisc, 2) ) * SL.invgstperc1 * 0.01 End ) 
+			FROM SaleDetail D, SaleLedger SL WHERE SL.SaleInvCode=:ai_code AND SL.SaleInvCode = D.SaleInvCode
+			GROUP BY SL.SaleInvCode, SL.invgstperc1, SL.flatdisc, SL.discperc), 0), 12, 2))) +
+		'~",~"PaymentMode~":~"1~",~"RefUSIN~":~"null~",~"InvoiceType~":~"1~",~"Items~":['
+	FROM SaleLedger S, Customer C, Accounts A
+	WHERE S.SaleInvCode=:ai_code AND S.CustCode=C.CustCode AND C.CustCode=A.Acccode
+	UNION ALL
+	SELECT 
+		ROWID=D.RowID, 
+		ItemCount = 1, 
+		JSON='{~"ItemCode~":~"' + I.customICode + 
+			'~",~"ItemName~":~"' + I.Name + 
+			'~",~"Quantity~":~"' + LTRIM(RTRIM(STR(D.LooseQty + D.BonusQty, 10,4))) +
+			'~",~"PCTCode~":~"' + P.Description + 
+			'~",~"TaxRate~":~"' + LTRIM(RTRIM(STR(CASE WHEN D.GSTPerc > 0 THEN D.GSTPerc ELSE 0 END + STS.TaxPerc, 6, 2))) + 
+			'~",~"SaleValue~":~"' + LTRIM(RTRIM(STR((D.LooseQty * D.SalePrice), 12, 2))) + 
+			'~",~"TotalAmount~":~"' + LTRIM(RTRIM(STR((D.LooseQty * D.SalePrice) + Round( Round (D.looseqty * (D.saleprice - D.itemflatdisc) * (1 - D.discperc * 0.01), 2) * D.gstperc * 0.01, 2) + ((D.LooseQty + D.BonusQty) * D.UnitSalesTax),12, 2))) + 
+			'~",~"TaxCharged~":~"' + LTRIM(RTRIM(STR( ((D.LooseQty + D.BonusQty) * D.UnitSalesTax) + Round( Round (D.looseqty * (D.saleprice - D.itemflatdisc) * (1 - D.discperc * 0.01), 2) * D.gstperc * 0.01, 2),12,2))) + 
+			'~",~"Discount~":~"' + LTRIM(RTRIM(STR(ROUND((D.LooseQty * D.ItemFlatDisc) + (D.LooseQty * (D.SalePrice - D.ItemFlatDisc) * (D.DiscPerc * 0.01)), 2),12,2))) + 
+			'~",~"FurtherTax~":~"' + 
+				LTRIM(RTRIM(STR(
+					ROUND(ISNULL((SELECT InvSaleTax=(Case when (Round(Sum ( (  D.looseqty * (D.saleprice - D.itemflatdisc)) * (1 - D.discperc /100) * (1 - SL.discperc /100) - SL.flatdisc), 2)) * SL.invgstperc1 * 0.01 IS NULL Then 0 Else (Round(Sum ( (  D.looseqty * (  D.saleprice -   D.itemflatdisc)) *  (1 -   D.discperc /100) * (1 -   SL.discperc /100) ) - SL.flatdisc, 2) ) * SL.invgstperc1 * 0.01 End ) 
+						FROM SaleDetail D, SaleLedger SL WHERE SL.SaleInvCode=:ai_code AND SL.SaleInvCode = D.SaleInvCode
+						GROUP BY SL.SaleInvCode, SL.invgstperc1, SL.flatdisc, SL.discperc), 0) * ( ((D.LooseQty * (D.SalePrice - D.ItemFlatDisc) * (1 - D.DiscPerc / 100))  / CASE WHEN (SELECT MAX(SS.Invtotal - SS.MiscCharges - DBO.fn_getTaxOnSaleInv(SS.SaleInvCode)) FROM SaleLedger SS WHERE SS.SaleInvCode=:ai_code) = 0 THEN 1 ELSE (SELECT MAX(SS.Invtotal - SS.MiscCharges - DBO.fn_getTaxOnSaleInv(SS.SaleInvCode)) FROM SaleLedger SS WHERE SS.SaleInvCode=:ai_code) END)), 2)
+				, 12, 2))) +
+			'~",~"InvoiceType~":~"1~",~"RefUSIN~":~"null~"},'
+	FROM SaleDetail D, Item I, PCT P, SalesTaxSchedule STS
+	WHERE D.SaleInvCode=:ai_code AND 
+		D.ICode=I.ICode AND 
+		I.PCTCode = P.PCTCode AND 
+		I.SalesTaxScheduleCode=STS.SalesTaxScheduleCode) T 
+WHERE ROWID >= 0
+ORDER BY RowID"
+  arguments=(("ai_code", number))
+)
+text(name=rowid_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="33554432" alignment="2" border="0" x="4" y="3" height="64" width="329" text="Rowid" html.valueishtml="0" )
+text(name=json_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="33554432" alignment="2" border="0" x="336" y="3" height="64" width="4392" text="Json" html.valueishtml="0" )
+column(name=rowid visible="1" band=detail id=1 x="4" y="3" height="77" width="329" color="33554432" border="0" alignment="2" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" transparency="0" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=json visible="1" band=detail id=2 x="336" y="3" height="77" width="12661" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=656 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" transparency="0" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=itemcount visible="1" band=detail id=3 x="12997" y="3" height="77" width="417" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" transparency="0" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+htmltable(border="1" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" encodeSelfLinkArgs="1" generateDDDWFrames="1" generateJavaScript="1" netscapeLayers="0" pagingMethod=0 )
+xhtmlgen() cssgen(sessionSpecific="0" )
+xmlgen(inline="0" )
+xsltgen()
+jsgen()
+export.xml(headGroups="1" includewhitespace="0" metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 distill.customPostScript="0" xslfop.print="0" )
+export.xhtml()

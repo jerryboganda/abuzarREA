@@ -1,0 +1,18 @@
+﻿import json,collections
+rows=json.load(open("dw_metrics.json",encoding="utf-8"))
+def s(r,k,d=0): return (r.get("sql") or {}).get(k,d)
+both=[r for r in rows if s(r,"order_by") and r.get("sort")]
+print("order_by",sum(1 for r in rows if s(r,"order_by")),"client sort",sum(1 for r in rows if r.get("sort")),"both",len(both))
+print("union dws",sum(1 for r in rows if s(r,"union")),"union legs total",sum(s(r,"union") for r in rows))
+print("subq dws",sum(1 for r in rows if s(r,"subqueries")),"subq total",sum(s(r,"subqueries") for r in rows))
+print("groupby",sum(1 for r in rows if s(r,"group_by")),"having",sum(1 for r in rows if s(r,"having")))
+print("distinct",sum(1 for r in rows if s(r,"distinct")),"select*",sum(1 for r in rows if s(r,"select_star")),"top",sum(1 for r in rows if s(r,"top")))
+print("like_prefix",sum(1 for r in rows if s(r,"like_prefix")),"or in where",sum(1 for r in rows if s(r,"where_has_or")))
+print("func_on_col",sum(1 for r in rows if s(r,"func_on_col")),"isnull",sum(1 for r in rows if s(r,"isnull")),"case",sum(1 for r in rows if s(r,"case_count")))
+print("tables>=10",sum(1 for r in rows if s(r,"n_tables")>=10),"joins>=10",sum(1 for r in rows if s(r,"n_joins")>=10))
+print("columns>=40",sum(1 for r in rows if r.get("n_columns",0)>=40),"compute>=20",sum(1 for r in rows if r.get("n_compute",0)>=20))
+print("no where",sum(1 for r in rows if r.get("sql") and not r["sql"].get("where_len") and not r["sql"].get("is_pbselect")))
+print("sort values top:")
+for k,v in collections.Counter(r.get("sort","") for r in rows if r.get("sort")).most_common(15): print("  ",v,repr(k[:80]))
+print("filter values top:")
+for k,v in collections.Counter(r.get("filter","") for r in rows if r.get("filter")).most_common(10): print("  ",v,repr(k[:100]))

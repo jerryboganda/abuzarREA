@@ -1,0 +1,304 @@
+release 12.5;
+datawindow ( units=0 timer_interval=0 processing=0 color=16777215 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.printername=""  print.documentname=""  print.orientation=0 print.margin.left=110 print.margin.right=110 print.margin.top=96 print.margin.bottom=96 print.paper.size=0 print.paper.source=0 print.canusedefaultprinter=yes selected.mouse=no hidegrayline=no showbackcoloronxp=no)
+header(height=0 )
+summary(height=0 color="536870912" )
+footer(height=0 color="536870912" )
+detail(height=84 color="536870912" )
+table(column=(type=long updatewhereclause=yes name=dstbidlen dbname="DSTBIDLEN"  )
+column=(type=char(8000) updatewhereclause=yes name=dstbid dbname="DSTBID"  )
+column=(type=long updatewhereclause=yes name=invoicenolen dbname="INVOICENOLEN"  )
+column=(type=char(10) updatewhereclause=yes name=invoiceno dbname="INVOICENO"  )
+column=(type=long updatewhereclause=yes name=invoicedatelen dbname="INVOICEDATELEN"  )
+column=(type=char(8000) updatewhereclause=yes name=invoicedate dbname="INVOICEDATE"  )
+column=(type=long updatewhereclause=yes name=custidlen dbname="CUSTIDLEN"  )
+column=(type=char(8000) updatewhereclause=yes name=custid dbname="CUSTID"  )
+column=(type=long updatewhereclause=yes name=brickidlen dbname="BrickIDLEN"  )
+column=(type=char(8000) updatewhereclause=yes name=brickid dbname="BrickID"  )
+column=(type=long updatewhereclause=yes name=productidlen dbname="PRODUCTIDLEN"  )
+column=(type=char(12) updatewhereclause=yes name=productid dbname="PRODUCTID"  )
+column=(type=long updatewhereclause=yes name=productnamelen dbname="PRODUCTNAMELEN"  )
+column=(type=char(60) updatewhereclause=yes name=productname dbname="PRODUCTNAME"  )
+column=(type=long updatewhereclause=yes name=batchlen dbname="BatchLEN"  )
+column=(type=char(100) updatewhereclause=yes name=batch dbname="Batch"  )
+column=(type=long updatewhereclause=yes name=ratelen dbname="RateLEN"  )
+column=(type=char(12) updatewhereclause=yes name=rate dbname="Rate"  )
+column=(type=long updatewhereclause=yes name=quantitylen dbname="QUANTITYLEN"  )
+column=(type=char(12) updatewhereclause=yes name=quantity dbname="QUANTITY"  )
+column=(type=long updatewhereclause=yes name=bonuslen dbname="BonusLEN"  )
+column=(type=char(12) updatewhereclause=yes name=bonus dbname="Bonus"  )
+column=(type=long updatewhereclause=yes name=discountlen dbname="DiscountLEN"  )
+column=(type=char(12) updatewhereclause=yes name=discount dbname="Discount"  )
+column=(type=long updatewhereclause=yes name=netamountlen dbname="NetAmountLEN"  )
+column=(type=char(12) updatewhereclause=yes name=netamount dbname="NetAmount"  )
+column=(type=long updatewhereclause=yes name=reasonlen dbname="REASONLen"  )
+column=(type=char(7) updatewhereclause=yes name=reason dbname="REASON"  )
+column=(type=long updatewhereclause=yes name=company_product_codelen dbname="COMPANY_PRODUCT_CODELen"  )
+column=(type=char(60) updatewhereclause=yes name=company_product_code dbname="COMPANY_PRODUCT_CODE"  )
+ retrieve="SELECT 
+	DSTBIDLEN=6,
+	DSTBID=:as_dstcode + REPLICATE(' ', 6 - LEN(:as_dstcode)),
+	INVOICENOLEN=10,
+	INVOICENO = STR(SL.SaleInvCode, 10),
+	INVOICEDATELEN=11,
+	INVOICEDATE=LTRIM(RTRIM(UPPER(REPLACE(Convert(VARCHAR(11), SL.Date, 103), '/', '-')))),
+	CUSTIDLEN=12,
+	CUSTID = LTRIM(RTRIM(A.AliasName)) + REPLICATE(' ', 12 - LEN(LTRIM(RTRIM(A.AliasName)))),
+	BrickIDLEN=9,
+	BrickID=REPLICATE('0', 4 - LEN(LTRIM(RTRIM(STR(SAR.SUBAREACODE))))) + LTRIM(RTRIM(STR(SAR.SUBAREACODE))) + SPACE(5),
+	PRODUCTIDLEN=12,
+	PRODUCTID=SUBSTRING(LTRIM(RTRIM(I.CustomICode)), 1, 12),
+	PRODUCTNAMELEN=60,
+	PRODUCTNAME=SUBSTRING(LTRIM(RTRIM(I.Name)), 1, 60),
+	BatchLEN=100,
+	Batch=SUBSTRING(SD.Batch, 1, 100),
+	RateLEN=12,
+	Rate=STR(SD.SalePrice, 12, 2),
+	QUANTITYLEN=12,
+	QUANTITY=STR(SD.LooseQty, 12),
+	BonusLEN=12,
+	Bonus=STR(SD.BonusQty, 12),
+	DiscountLEN=12,
+	Discount=STR(
+			Round((SD.LooseQty * SD.SalePrice * (SD.DiscPerc * 0.01)), 2) + 
+			(SD.LooseQty * SD.ItemFlatDisc), 12, 2),
+	NetAmountLEN=12,
+	NetAmount=STR(
+			Round((SD.LooseQty * (SD.SalePrice - SD.ItemFlatDisc) * (1 - SD.DiscPerc * 0.01)), 2), 12, 2),
+	REASONLen=7,
+	REASON=SPACE(6) + 'S',
+	COMPANY_PRODUCT_CODELen=60,
+	COMPANY_PRODUCT_CODE=SUBSTRING(LTRIM(RTRIM(I.Remarks)), 1, 60)
+FROM
+	SaleLedger SL,
+	SaleDetail SD,
+	Customer C,
+	Area AR,
+	SubArea SAR,
+	Accounts A,
+	CustomerCategory CC,
+	Item I
+WHERE
+	:ai_scope=1 AND
+	SL.SaleInvCode = SD.SaleInvCode AND
+	SL.POSTED = 'Y' AND
+	SD.ICode = I.ICode AND
+	I.ManfCode = :manfcode AND
+	SL.CustCode = C.CustCode AND
+	C.CustCode = A.AccCode AND 
+	C.CustCatCode = CC.CustCatCode AND
+	C.AreaCode = AR.AreaCode AND
+	C.SubAreaCode = SAR.SubAreaCode AND
+	SL.DATE >= :ar_startdate AND SL.DATE <= :ar_enddate
+UNION ALL
+SELECT 
+	DSTBIDLEN=6,
+	DSTBID=:as_dstcode + REPLICATE(' ', 6 - LEN(:as_dstcode)),
+	INVOICENOLEN=10,
+	INVOICENO = STR(SL.SRInvCode, 10),
+	INVOICEDATELEN=11,
+	INVOICEDATE=LTRIM(RTRIM(UPPER(REPLACE(Convert(VARCHAR(11), SL.Date, 103), '/', '-')))),
+	CUSTIDLEN=12,
+	CUSTID = LTRIM(RTRIM(A.AliasName)) + REPLICATE(' ', 12 - LEN(LTRIM(RTRIM(A.AliasName)))),
+	BrickIDLEN=9,
+	BrickID=REPLICATE('0', 4 - LEN(LTRIM(RTRIM(STR(SAR.SUBAREACODE))))) + LTRIM(RTRIM(STR(SAR.SUBAREACODE))) + SPACE(5),
+	PRODUCTIDLEN=12,
+	PRODUCTID=SUBSTRING(LTRIM(RTRIM(I.CustomICode)), 1, 12),
+	PRODUCTNAMELEN=60,
+	PRODUCTNAME=SUBSTRING(LTRIM(RTRIM(I.Name)), 1, 60),
+	BatchLEN=100,
+	Batch=SUBSTRING(SD.Batch, 1, 100),
+	RateLEN=12,
+	Rate=STR(SD.SRPrice, 12, 2),
+	QUANTITYLEN=12,
+	QUANTITY=STR(SD.LooseQty, 12),
+	BonusLEN=12,
+	Bonus=STR(SD.BonusQty, 12),
+	DiscountLEN=12,
+	Discount=STR(
+			Round((SD.LooseQty * SD.SRPrice * (SD.DiscPerc * 0.01)), 2), 12, 2),
+	NetAmountLEN=12,
+	NetAmount=STR(
+			Round((SD.LooseQty * SD.SRPrice * (1 - SD.DiscPerc * 0.01)), 2), 12, 2),
+	REASONLen=7,
+	REASON=SPACE(6) + 'R',
+	COMPANY_PRODUCT_CODELen=60,
+	COMPANY_PRODUCT_CODE=SUBSTRING(LTRIM(RTRIM(I.Remarks)), 1, 60)
+FROM
+	SRLedger SL,
+	SRDetail SD,
+	Customer C,
+	Area AR,
+	SubArea SAR,
+	Accounts A,
+	CustomerCategory CC,
+	Item I
+WHERE
+	:ai_scope=1 AND
+	SL.SRInvCode = SD.SRInvCode AND
+	SL.POSTED = 'Y' AND
+	SD.ICode = I.ICode AND
+	I.ManfCode = :manfcode AND
+	SL.CustCode = C.CustCode AND
+	C.CustCode = A.AccCode AND 
+	C.CustCatCode = CC.CustCatCode AND
+	C.AreaCode = AR.AreaCode AND
+	C.SubAreaCode = SAR.SubAreaCode AND
+	SL.DATE >= :ar_startdate AND SL.DATE <= :ar_enddate
+UNION ALL
+SELECT 
+	DSTBIDLEN=6,
+	DSTBID=:as_dstcode + REPLICATE(' ', 6 - LEN(:as_dstcode)),
+	INVOICENOLEN=10,
+	INVOICENO = STR(SL.SaleInvCode, 10),
+	INVOICEDATELEN=11,
+	INVOICEDATE=LTRIM(RTRIM(UPPER(REPLACE(Convert(VARCHAR(11), SL.Date, 103), '/', '-')))),
+	CUSTIDLEN=12,
+	CUSTID = LTRIM(RTRIM(A.AliasName)) + REPLICATE(' ', 12 - LEN(LTRIM(RTRIM(A.AliasName)))),
+	BrickIDLEN=9,
+	BrickID=REPLICATE('0', 4 - LEN(LTRIM(RTRIM(STR(SAR.SUBAREACODE))))) + LTRIM(RTRIM(STR(SAR.SUBAREACODE))) + SPACE(5),
+	PRODUCTIDLEN=12,
+	PRODUCTID=SUBSTRING(LTRIM(RTRIM(I.CustomICode)), 1, 12),
+	PRODUCTNAMELEN=60,
+	PRODUCTNAME=SUBSTRING(LTRIM(RTRIM(I.Name)), 1, 60),
+	BatchLEN=100,
+	Batch=SUBSTRING(SD.Batch, 1, 100),
+	RateLEN=12,
+	Rate=STR(SD.SalePrice, 12, 2),
+	QUANTITYLEN=12,
+	QUANTITY=STR(SD.LooseQty, 12),
+	BonusLEN=12,
+	Bonus=STR(SD.BonusQty, 12),
+	DiscountLEN=12,
+	Discount=STR(
+			Round((SD.LooseQty * SD.SalePrice * (SD.DiscPerc * 0.01)), 2) + 
+			(SD.LooseQty * SD.ItemFlatDisc), 12, 2),
+	NetAmountLEN=12,
+	NetAmount=STR(
+			Round((SD.LooseQty * (SD.SalePrice - SD.ItemFlatDisc) * (1 - SD.DiscPerc * 0.01)), 2), 12, 2),
+	REASONLen=7,
+	REASON=SPACE(6) + 'S',
+	COMPANY_PRODUCT_CODELen=60,
+	COMPANY_PRODUCT_CODE=SUBSTRING(LTRIM(RTRIM(I.Remarks)), 1, 60)
+FROM
+	CRS_ClientInstance CI, 
+	CRS_ClientList CL,
+	CRS_SaleLedger SL,
+	CRS_SaleDetail SD,
+	Customer C,
+	Area AR,
+	SubArea SAR,
+	Accounts A,
+	CustomerCategory CC,
+	Item I
+WHERE
+	:ai_scope=2 AND
+	CL.ClientID = CI.ClientID AND CI.ClientInstanceID = SL.ClientInstanceID AND
+	SL.ClientInstanceID = SD.ClientInstanceID AND
+	SL.SaleInvCode = SD.SaleInvCode AND
+	SL.POSTED = 'Y' AND
+	SD.ICode = I.ICode AND
+	I.ManfCode = :manfcode AND
+	SL.CustCode = C.CustCode AND
+	C.CustCode = A.AccCode AND 
+	C.CustCatCode = CC.CustCatCode AND
+	C.AreaCode = AR.AreaCode AND
+	C.SubAreaCode = SAR.SubAreaCode AND
+	SL.DATE BETWEEN :ar_startdate AND :ar_enddate
+UNION ALL
+SELECT 
+	DSTBIDLEN=6,
+	DSTBID=:as_dstcode + REPLICATE(' ', 6 - LEN(:as_dstcode)),
+	INVOICENOLEN=10,
+	INVOICENO = STR(SL.SRInvCode, 10),
+	INVOICEDATELEN=11,
+	INVOICEDATE=LTRIM(RTRIM(UPPER(REPLACE(Convert(VARCHAR(11), SL.Date, 103), '/', '-')))),
+	CUSTIDLEN=12,
+	CUSTID = LTRIM(RTRIM(A.AliasName)) + REPLICATE(' ', 12 - LEN(LTRIM(RTRIM(A.AliasName)))),
+	BrickIDLEN=9,
+	BrickID=REPLICATE('0', 4 - LEN(LTRIM(RTRIM(STR(SAR.SUBAREACODE))))) + LTRIM(RTRIM(STR(SAR.SUBAREACODE))) + SPACE(5),
+	PRODUCTIDLEN=12,
+	PRODUCTID=SUBSTRING(LTRIM(RTRIM(I.CustomICode)), 1, 12),
+	PRODUCTNAMELEN=60,
+	PRODUCTNAME=SUBSTRING(LTRIM(RTRIM(I.Name)), 1, 60),
+	BatchLEN=100,
+	Batch=SUBSTRING(SD.Batch, 1, 100),
+	RateLEN=12,
+	Rate=STR(SD.SRPrice, 12, 2),
+	QUANTITYLEN=12,
+	QUANTITY=STR(SD.LooseQty, 12),
+	BonusLEN=12,
+	Bonus=STR(SD.BonusQty, 12),
+	DiscountLEN=12,
+	Discount=STR(
+			Round((SD.LooseQty * SD.SRPrice * (SD.DiscPerc * 0.01)), 2), 12, 2),
+	NetAmountLEN=12,
+	NetAmount=STR(
+			Round((SD.LooseQty * SD.SRPrice * (1 - SD.DiscPerc * 0.01)), 2), 12, 2),
+	REASONLen=7,
+	REASON=SPACE(6) + 'R',
+	COMPANY_PRODUCT_CODELen=60,
+	COMPANY_PRODUCT_CODE=SUBSTRING(LTRIM(RTRIM(I.Remarks)), 1, 60)
+FROM
+	CRS_ClientInstance CI, 
+	CRS_ClientList CL,
+	CRS_SRLedger SL,
+	CRS_SRDetail SD,
+	Customer C,
+	Area AR,
+	SubArea SAR,
+	Accounts A,
+	CustomerCategory CC,
+	Item I
+WHERE
+	:ai_scope=2 AND
+	CL.ClientID = CI.ClientID AND CI.ClientInstanceID = SL.ClientInstanceID AND
+	SL.ClientInstanceID = SD.ClientInstanceID AND
+	SL.SRInvCode = SD.SRInvCode AND
+	SL.POSTED = 'Y' AND
+	SD.ICode = I.ICode AND
+	I.ManfCode = :manfcode AND
+	SL.CustCode = C.CustCode AND
+	C.CustCode = A.AccCode AND 
+	C.CustCatCode = CC.CustCatCode AND
+	C.AreaCode = AR.AreaCode AND
+	C.SubAreaCode = SAR.SubAreaCode AND
+	SL.DATE BETWEEN :ar_startdate AND :ar_enddate"
+  arguments=(("as_dstcode", string), ("manfcode", number), ("ar_startdate", datetime), ("ar_enddate", datetime), ("ai_scope", number))
+)
+column(name=batch visible="1" band=detail id=16 x="1225" y="8" height="64" width="274" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=discount visible="1" band=detail id=24 x="2240" y="12" height="64" width="357" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=12 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=bonus visible="1" band=detail id=22 x="1865" y="12" height="64" width="357" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=12 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=dstbidlen visible="1" band=detail id=1 x="2597" y="0" height="64" width="1161" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=dstbid visible="1" band=detail id=2 x="3758" y="0" height="64" width="4686" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=invoicenolen visible="1" band=detail id=3 x="8443" y="0" height="64" width="1161" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=invoiceno visible="1" band=detail id=4 x="9605" y="0" height="64" width="270" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=invoicedatelen visible="1" band=detail id=5 x="9874" y="0" height="64" width="1161" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=invoicedate visible="1" band=detail id=6 x="11035" y="0" height="64" width="270" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=custidlen visible="1" band=detail id=7 x="11305" y="0" height="64" width="1161" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=custid visible="1" band=detail id=8 x="12466" y="0" height="64" width="4686" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=brickidlen visible="1" band=detail id=9 x="17152" y="0" height="64" width="1161" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=brickid visible="1" band=detail id=10 x="18313" y="0" height="64" width="4686" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=productidlen visible="1" band=detail id=11 x="22999" y="0" height="64" width="1161" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=productid visible="1" band=detail id=12 x="24160" y="0" height="64" width="325" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=productnamelen visible="1" band=detail id=13 x="24485" y="0" height="64" width="1161" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=productname visible="1" band=detail id=14 x="25646" y="0" height="64" width="1623" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=ratelen visible="1" band=detail id=17 x="27269" y="0" height="64" width="1161" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=rate visible="1" band=detail id=18 x="28430" y="0" height="64" width="325" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=quantitylen visible="1" band=detail id=19 x="28754" y="0" height="64" width="1161" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=quantity visible="1" band=detail id=20 x="29915" y="0" height="64" width="325" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=netamountlen visible="1" band=detail id=25 x="30240" y="0" height="64" width="1161" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=netamount visible="1" band=detail id=26 x="31401" y="0" height="64" width="325" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=reasonlen visible="1" band=detail id=27 x="31726" y="0" height="64" width="1161" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=reason visible="1" band=detail id=28 x="32887" y="0" height="64" width="27" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=company_product_codelen visible="1" band=detail id=29 x="32914" y="0" height="64" width="1161" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=company_product_code visible="1" band=detail id=30 x="34075" y="0" height="64" width="1623" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+htmltable(border="1" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" encodeSelfLinkArgs="1" generateJavaScript="1" netscapeLayers="0" pagingMethod=0 )
+xhtmlgen() cssgen(sessionSpecific="0" )
+xmlgen(inline="0" )
+xsltgen()
+jsgen()
+export.xml(headGroups="1" includewhitespace="0" metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 distill.customPostScript="0" xslfop.print="0" )
+export.xhtml()

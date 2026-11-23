@@ -1,0 +1,204 @@
+release 12.5;
+datawindow ( units=0 timer_interval=60000 processing=0 color=1073741824 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.printername=""  print.documentname=""  print.orientation=0 print.margin.left=110 print.margin.right=110 print.margin.top=96 print.margin.bottom=96 print.paper.size=0 print.paper.source=0 print.canusedefaultprinter=yes selected.mouse=no hidegrayline=no showbackcoloronxp=no)
+header(height=548 color="536870912" )
+summary(height=108 color="536870912" )
+footer(height=0 color="536870912" )
+detail(height=84 color="536870912" )
+table(column=(type=long updatewhereclause=yes name=groupcode dbname="GroupCode"  )
+column=(type=char(60) updatewhereclause=yes name=groupname dbname="GroupName"  )
+column=(type=decimal(6) updatewhereclause=yes name=grosssales dbname="GrossSales"  )
+column=(type=decimal(6) updatewhereclause=yes name=discounts dbname="Discounts"  )
+column=(type=decimal(2) updatewhereclause=yes name=salesreturns dbname="SalesReturns"  )
+ retrieve="SELECT
+	GroupCode,
+	GroupName, 
+	GrossSales = Sum(GrossSales),
+	Discounts  = SUM(Discounts),
+	SalesReturns = SUM(SalesReturns)
+FROM
+	(SELECT 
+		GroupCode = A.AreaCode,
+		GroupName = A.Name,
+		GrossSales = Sum(SD.LooseQty * SD.SalePrice),
+		Discounts  = SUM( (SD.LooseQty * SD.ItemFlatDisc) + (SD.LooseQty * (SD.SalePrice - SD.ItemFlatDisc) * SD.DiscPerc * 0.01) 
+			+ (SD.LooseQty * (SD.SalePrice - SD.ItemFlatDisc) * (1 - SD.DiscPerc * 0.01) * (S.DiscPerc * 0.01) ) ),
+		SalesReturns = 0.00
+	FROM
+		SaleLedger S, SaleDetail SD, Customer C, Area A
+	WHERE
+		:as_group = 'A' AND
+		A.AreaCode IN (:ai_groupcode) AND 
+		A.AreaCode = C.AreaCode AND 
+		C.CustCode = S.CustCode AND 
+		S.Date BETWEEN :adt_startdate AND :adt_enddate AND 
+		S.SaleInvCode = SD.SaleInvCode
+	GROUP BY
+		A.AreaCode,
+		A.Name
+	UNION ALL
+	SELECT 
+		GroupCode = A.AreaCode,
+		GroupName = A.Name,
+		GrossSales = 0.00,
+		Discounts  = 0.00,
+		SalesReturns = SUM(DBO.fn_GetSRInvTotal(S.SRInvCode))
+	FROM
+		SRLedger S, Customer C, Area A
+	WHERE
+		:as_group = 'A' AND
+		A.AreaCode IN (:ai_groupcode) AND 
+		A.AreaCode = C.AreaCode AND 
+		C.CustCode = S.CustCode AND 
+		S.Date BETWEEN :adt_startdate AND :adt_enddate
+	GROUP BY
+		A.AreaCode,
+		A.Name) S
+WHERE 
+	:as_group = 'A'
+GROUP BY
+	GroupCode,
+	GroupName
+UNION ALL
+SELECT
+	GroupCode,
+	GroupName,
+	GrossSales = Sum(GrossSales),
+	Discounts  = SUM(Discounts),
+	SalesReturns = SUM(SalesReturns)
+FROM
+	(SELECT 
+		GroupCode = A.SubAreaCode,
+		GroupName = A.Name,
+		GrossSales = Sum(SD.LooseQty * SD.SalePrice),
+		Discounts  = SUM( (SD.LooseQty * SD.ItemFlatDisc) + (SD.LooseQty * (SD.SalePrice - SD.ItemFlatDisc) * SD.DiscPerc * 0.01) 
+			+ (SD.LooseQty * (SD.SalePrice - SD.ItemFlatDisc) * (1 - SD.DiscPerc * 0.01) * (S.DiscPerc * 0.01) ) ),
+		SalesReturns = 0.00
+	FROM
+		SaleLedger S, SaleDetail SD, Customer C, SubArea A
+	WHERE
+		:as_group = 'S' AND
+		A.SubAreaCode IN (:ai_groupcode) AND 
+		A.SubAreaCode = C.SubAreaCode AND 
+		C.CustCode = S.CustCode AND 
+		S.Date BETWEEN :adt_startdate AND :adt_enddate AND 
+		S.SaleInvCode = SD.SaleInvCode
+	GROUP BY
+		A.SubAreaCode,
+		A.Name
+	UNION ALL
+	SELECT 
+		GroupCode = A.SubAreaCode,
+		GroupName = A.Name,
+		GrossSales = 0.00,
+		Discounts  = 0.00,
+		SalesReturns = SUM(DBO.fn_GetSRInvTotal(S.SRInvCode))
+	FROM
+		SRLedger S, Customer C, SubArea A
+	WHERE
+		:as_group = 'S' AND
+		A.SubAreaCode IN (:ai_groupcode) AND 
+		A.SubAreaCode = C.SubAreaCode AND 
+		C.CustCode = S.CustCode AND 
+		S.Date BETWEEN :adt_startdate AND :adt_enddate
+	GROUP BY
+		A.SubAreaCode,
+		A.Name) S
+WHERE 
+	:as_group = 'S'
+GROUP BY
+	GroupCode,
+	GroupName
+UNION ALL
+SELECT
+	GroupCode,
+	GroupName,
+	GrossSales = Sum(GrossSales),
+	Discounts  = SUM(Discounts),
+	SalesReturns = SUM(SalesReturns)
+FROM
+	(SELECT 
+		GroupCode = A.AccCode,
+		GroupName = A.Name,
+		GrossSales = Sum(SD.LooseQty * SD.SalePrice),
+		Discounts  = SUM( (SD.LooseQty * SD.ItemFlatDisc) + (SD.LooseQty * (SD.SalePrice - SD.ItemFlatDisc) * SD.DiscPerc * 0.01) 
+			+ (SD.LooseQty * (SD.SalePrice - SD.ItemFlatDisc) * (1 - SD.DiscPerc * 0.01) * (S.DiscPerc * 0.01) ) ),
+		SalesReturns = 0.00
+	FROM
+		SaleLedger S, SaleDetail SD, Customer C, Accounts A
+	WHERE
+		:as_group = 'C' AND
+		A.AccCode IN (:ai_groupcode) AND 
+		A.AccCode = C.CustCode AND 
+		C.CustCode = S.CustCode AND 
+		S.Date BETWEEN :adt_startdate AND :adt_enddate AND 
+		S.SaleInvCode = SD.SaleInvCode
+	GROUP BY
+		A.AccCode,
+		A.Name
+	UNION ALL
+	SELECT 
+		GroupCode = A.AccCode,
+		GroupName = A.Name,
+		GrossSales = 0.00,
+		Discounts  = 0.00,
+		SalesReturns = SUM(DBO.fn_GetSRInvTotal(S.SRInvCode))
+	FROM
+		SRLedger S, Customer C, Accounts A
+	WHERE
+		:as_group = 'C' AND
+		A.AccCode IN (:ai_groupcode) AND 
+		A.AccCode = C.CustCode AND 
+		C.CustCode = S.CustCode AND 
+		S.Date BETWEEN :adt_startdate AND :adt_enddate
+	GROUP BY
+		A.AccCode,
+		A.Name) S
+WHERE 
+	:as_group = 'C'
+GROUP BY
+	GroupCode,
+	GroupName
+
+"
+  arguments=(("as_group", string), ("ai_groupcode", numberlist), ("adt_startdate", datetime), ("adt_enddate", datetime))
+)
+text(name=t_groupname visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="2" border="0" x="18" y="448" height="72" width="1673" text="	if( as_group = 'A', 'Area', if( as_group = 'S', 'Sub. Area', 'Customer')) + ' Name'" html.valueishtml="0" )
+text(name=t_grosssales visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="2" border="0" x="1710" y="448" height="72" width="416" text="Gross Sales" html.valueishtml="0" )
+text(name=t_salesreturns visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="2" border="0" x="2528" y="448" height="72" width="416" text="Sales Returns" html.valueishtml="0" )
+text(name=t_c_netsales visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="2" border="0" x="2962" y="448" height="72" width="439" text="Net Sales" html.valueishtml="0" )
+text(name=t_discounts visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="2" border="0" x="2144" y="448" height="72" width="366" text="Discounts" html.valueishtml="0" )
+compute(name=compute_4 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="174" y="20" height="60" width="402" format="dd/mm/yyyy" expression="today()" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_6 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="27" y="20" height="72" width="165" text="Date: " html.valueishtml="0" )
+compute(name=c_companyname visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" x="18" y="100" height="72" width="3387" format="[general]" expression="f_ReportHeaderInfo('clientname')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=c_address1 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="18" y="184" height="72" width="3387" format="[general]" expression="f_ReportHeaderInfo('address1')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=c_address2 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="18" y="268" height="72" width="3387" format="[general]" expression="f_ReportHeaderInfo('address2')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_4 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="18" y="352" height="72" width="325" text="From Date: " html.valueishtml="0" )
+compute(name=compute_8 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" x="357" y="352" height="72" width="709" format="dd/mm/yyyy hh:mm" expression=" adt_startdate " alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_5 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="1093" y="352" height="72" width="105" text="To: " html.valueishtml="0" )
+compute(name=compute_9 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" x="1211" y="352" height="72" width="709" format="dd/mm/yyyy hh:mm" expression=" adt_enddate " alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+line(name=l_1 visible="1" band=header background.mode="2" background.color="16777215" pen.style="2" pen.width="5" pen.color="0" x1="18" y1="436" x2="3406" y2="436" )
+text(name=t_3 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="700" background.mode="2" background.color="16777215" color="0" alignment="2" border="0" x="18" y="16" height="72" width="3387" text="	if( as_group = 'A', 'Area', if( as_group = 'S', 'Sub. Area', 'Customer')) + ' Wise Sales Report'" html.valueishtml="0" )
+compute(name=compute_5 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="2789" y="20" height="60" width="617" format="[general]" expression="'Page ' + page() + ' of ' + pageCount()" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+line(name=l_2 visible="1" band=header background.mode="2" background.color="16777215" pen.style="2" pen.width="5" pen.color="0" x1="18" y1="532" x2="3406" y2="532" )
+compute(name=compute_2 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" x="2962" y="16" height="72" width="439" format="###,###,##0.00" expression="sum( grosssales - discounts - salesreturns  for all)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_3 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" x="1710" y="16" height="76" width="416" format="###,###,##0.00" expression="sum(grosssales for all)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_7 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" x="2528" y="16" height="76" width="416" format="###,###,##0.00" expression="sum(salesreturns for all)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_6 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" x="2144" y="16" height="76" width="366" format="###,###,##0.00" expression="sum(discounts for all)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_2 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="1239" y="16" height="72" width="453" text="Report Total:" html.valueishtml="0" )
+line(name=l_3 visible="1" band=summary background.mode="2" background.color="16777215" pen.style="2" pen.width="5" pen.color="0" x1="18" y1="0" x2="3406" y2="0" )
+line(name=l_4 visible="1" band=summary background.mode="2" background.color="16777215" pen.style="2" pen.width="5" pen.color="0" x1="18" y1="100" x2="3406" y2="100" )
+column(name=groupname visible="1" band=detail id=2 x="18" y="4" height="76" width="1673" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=60 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-11" font.pitch="2" font.weight="400" tabsequence=0 )
+compute(name=c_netsales visible="1" band=detail font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" x="2962" y="4" height="72" width="439" format="###,###,##0.00" expression=" grosssales - discounts - salesreturns " alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+column(name=grosssales visible="1" band=detail id=3 x="1710" y="4" height="76" width="416" color="33554432" border="0" alignment="1" format="###,###,##0.00" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-11" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=discounts visible="1" band=detail id=4 x="2144" y="4" height="76" width="366" color="33554432" border="0" alignment="1" format="###,###,##0.00" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-11" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=salesreturns visible="1" band=detail id=5 x="2528" y="4" height="76" width="416" color="33554432" border="0" alignment="1" format="###,###,##0.00" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-11" font.pitch="2" font.weight="400" tabsequence=0 )
+htmltable(border="1" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" encodeSelfLinkArgs="1" generateJavaScript="1" netscapeLayers="0" pagingMethod=0 )
+xhtmlgen() cssgen(sessionSpecific="0" )
+xmlgen(inline="0" )
+xsltgen()
+jsgen()
+export.xml(headGroups="1" includewhitespace="0" metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 distill.customPostScript="0" xslfop.print="0" )
+export.xhtml()

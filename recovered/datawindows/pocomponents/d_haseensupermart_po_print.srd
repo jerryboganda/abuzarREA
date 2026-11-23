@@ -1,0 +1,160 @@
+release 12.5;
+datawindow ( units=2 timer_interval=60000 processing=0 color=16777215 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.printername=""  print.documentname=""  print.orientation=1 print.margin.left=250 print.margin.right=250 print.margin.top=250 print.margin.bottom=200 print.paper.size=1 print.paper.source=0 print.canusedefaultprinter=yes selected.mouse=no hidegrayline=no showbackcoloronxp=no)
+header(height=2041 color="536870912" )
+summary(height=250 color="536870912" )
+footer(height=0 color="536870912" )
+detail(height=187 color="536870912" )
+table(column=(type=char(60) updatewhereclause=yes name=item_name dbname="Item.name"  )
+column=(type=char(75) updatewhereclause=yes name=itemalias dbname="itemalias"  )
+column=(type=long updatewhereclause=yes name=pocode dbname="PurOrderHeader.POCode"  )
+column=(type=datetime updatewhereclause=yes name=date dbname="PurOrderHeader.Date"  )
+column=(type=char(12) updatewhereclause=yes name=accounts_aliasname dbname="Accounts.Aliasname"  )
+column=(type=char(60) updatewhereclause=yes name=accounts_name dbname="Accounts.name"  )
+column=(type=char(60) updatewhereclause=yes name=address1 dbname="Supplier.address1"  )
+column=(type=char(60) updatewhereclause=yes name=address2 dbname="Supplier.address2"  )
+column=(type=char(30) updatewhereclause=yes name=city dbname="Supplier.city"  )
+column=(type=char(30) updatewhereclause=yes name=phone dbname="Supplier.phone"  )
+column=(type=char(16) updatewhereclause=yes name=fax dbname="Supplier.fax"  )
+column=(type=char(100) updatewhereclause=yes name=remarks dbname="PurOrderHeader.remarks"  )
+column=(type=datetime updatewhereclause=yes name=startdate dbname="PurOrderHeader.startdate"  )
+column=(type=datetime updatewhereclause=yes name=enddate dbname="PurOrderHeader.Enddate"  )
+column=(type=long updatewhereclause=yes name=projectionperiod dbname="PurOrderHeader.projectionperiod"  )
+column=(type=decimal(2) updatewhereclause=yes name=purorderheader_discperc dbname="PurOrderHeader.Discperc"  )
+column=(type=char(50) updatewhereclause=yes name=packingdesc dbname="Item.packingdesc"  )
+column=(type=decimal(2) updatewhereclause=yes name=rate dbname="PurOrderDetail.rate"  )
+column=(type=decimal(4) updatewhereclause=yes name=qty dbname="PurOrderDetail.qty"  )
+column=(type=decimal(4) updatewhereclause=yes name=bonusqty dbname="PurOrderDetail.bonusqty"  )
+column=(type=long updatewhereclause=yes name=packunits dbname="packunits"  )
+column=(type=decimal(2) updatewhereclause=yes name=discperc dbname="PurOrderDetail.discperc"  )
+column=(type=long updatewhereclause=yes name=reorderqty dbname="PurOrderDetail.reorderqty"  )
+column=(type=long updatewhereclause=yes name=optimumqty dbname="PurOrderDetail.OptimumQty"  )
+column=(type=long updatewhereclause=yes name=minqty dbname="PurOrderDetail.minQty"  )
+column=(type=decimal(4) updatewhereclause=yes name=stock dbname="PurOrderDetail.Stock"  )
+column=(type=decimal(4) updatewhereclause=yes name=transitstock dbname="PurOrderDetail.TransitStock"  )
+column=(type=decimal(4) updatewhereclause=yes name=soldqty dbname="PurOrderDetail.SoldQty"  )
+column=(type=decimal(4) updatewhereclause=yes name=returnqty dbname="PurOrderDetail.ReturnQty"  )
+column=(type=decimal(6) updatewhereclause=yes name=amount dbname="amount"  )
+column=(type=long updatewhereclause=yes name=purordercatcode dbname="PurOrderHeader.PurOrderCatCode"  )
+column=(type=decimal(2) updatewhereclause=yes name=recentpurprice dbname="recentpurprice"  )
+column=(type=char(60) updatewhereclause=yes name=manufacturer dbname="Manufacturer"  )
+column=(type=char(60) updatewhereclause=yes name=category dbname="Category"  )
+column=(type=char(20) updatewhereclause=yes name=packing dbname="Packing"  )
+ retrieve="SELECT  
+	I.name, 
+	itemalias=I.customicode,
+	OH.POCode,
+	OH.Date,
+	Acc.Aliasname,
+	Acc.name,
+	S.address1,
+	S.address2,
+	S.city,
+	S.phone, 
+	S.fax,
+	OH.remarks,
+	OH.startdate,
+	OH.Enddate,
+	OH.projectionperiod,
+	OH.Discperc,
+	I.packingdesc,
+	OD.rate,
+	OD.qty,
+	OD.bonusqty,
+	packunits=(case OD.packunits when 0 then 1 else OD.packunits end),
+	OD.discperc,
+	OD.reorderqty,
+	OD.OptimumQty,
+	OD.minQty,
+	OD.Stock,
+	OD.TransitStock,
+	OD.SoldQty,
+	OD.ReturnQty,
+	/*amount= (OD.qty * OD.rate) * ( 1 - (OD.discperc * 0.01) ) ,*/
+	amount= (OD.qty * I.recentpurprice)  ,
+	OH.PurOrderCatCode,
+	recentpurprice=I.recentpurprice,
+	Manufacturer=(SELECT Manufacturer.Name FROM Manufacturer WHERE Manufacturer.ManfCode=I.ManfCode),
+	Category=(SELECT ItemCategory.Name FROM ItemCategory WHERE ItemCategory.ICatCode=I.ICatCode),
+	Packing=(SELECT ItemPacking.Name FROM ItemPacking WHERE ItemPacking.PackCode=I.PackCode)
+
+FROM item I, accounts Acc, purorderheader OH, purorderdetail OD , Supplier S
+
+WHERE OH.pocode= :ai_POCode AND
+		      OH.pocode=OD.pocode AND
+		OH.suppCode = S.SuppCode AND
+      OH.suppcode=Acc.acccode AND
+      OD.icode=I.icode
+
+order by oh.pocode, category, i.name, i.customicode, packing, manufacturer"
+  arguments=(("ai_POCode", number))
+ sort="pocode A, category A, packingdesc A, item_name A, packing A, manufacturer A"
+)
+group(level=1 header.height=197 trailer.height=0 by=("category"  ) header.color="536870912" trailer.color="536870912" newpage=yes resetpagecount=yes )
+text(name=t_13 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="700" background.mode="2" background.color="16777215" color="0" alignment="2" border="0" x="947" y="31" height="166" width="9354" text="Purchase Order" html.valueishtml="0" )
+compute(name=compute_1 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="989" y="31" height="166" width="677" format="dd/mm/yyyy" expression="today()" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_14 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="52" y="31" height="166" width="906" text="Print Date, Time: " html.valueishtml="0" )
+compute(name=compute_4 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="1697" y="31" height="166" width="885" format="hh:mm:ss" expression="Now()" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_16 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="52" y="791" height="156" width="635" text="Phone(s) :" html.valueishtml="0" )
+compute(name=c_phone visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="718" y="791" height="156" width="2281" format="[general]" expression="f_ReportHeaderInfo('phone')" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_2 visible="1" band=header font.charset="0" font.face="Arial Narrow" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="8781" y="31" height="156" width="1510" format="[general]" expression="'Page ' + page() + ' of ' + pageCount()" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+column(name=date visible="1" band=header id=4 x="2375" y="979" height="156" width="1333" color="0" border="0" alignment="0" format="dd/mm/yyyy" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+text(name=t_date visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="553648127" color="0" alignment="0" border="0" x="1906" y="979" height="156" width="427" text="Dated:" html.valueishtml="0" )
+column(name=pocode visible="1" band=header id=3 x="677" y="979" height="166" width="1114" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-11" font.pitch="2" font.weight="400" tabsequence=0 )
+text(name=t_pocode visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="553648127" color="0" alignment="0" border="0" x="62" y="979" height="156" width="572" text="Order No:" html.valueishtml="0" )
+text(name=t_15 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="553648127" color="0" alignment="0" border="0" x="7875" y="979" height="156" width="729" text="Alias Name:" html.valueishtml="0" )
+compute(name=c_companyname visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" x="52" y="229" height="156" width="10260" format="[general]" expression="f_ReportHeaderInfo('clientname')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=c_address1 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="52" y="416" height="156" width="10260" format="[general]" expression="f_ReportHeaderInfo('address1')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=c_fax visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="7468" y="791" height="156" width="2843" format="[general]" expression="'Fax : ' + f_ReportHeaderInfo('fax')" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+column(name=accounts_aliasname visible="1" band=header id=5 x="8645" y="979" height="166" width="1666" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+compute(name=c_address2 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="52" y="604" height="156" width="10260" format="[general]" expression="f_ReportHeaderInfo('address2')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_s_no visible="1" band=header font.charset="0" font.face="Arial Narrow" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="72" y="1645" height="333" width="291" text="Sr.
+No." html.valueishtml="0" )
+text(name=t_6 visible="1" band=header font.charset="0" font.face="Arial Narrow" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="427" y="1645" height="333" width="437" text="Alias
+Name" html.valueishtml="0" )
+text(name=t_rate visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="553648127" color="0" alignment="1" border="0" x="8843" y="1645" height="166" width="552" text="Price" html.valueishtml="0" )
+line(name=l_1 visible="1" band=header background.mode="2" background.color="16777215" pen.style="2" pen.width="10" pen.color="0" x1="52" y1="1604" x2="10312" y2="1604" )
+line(name=l_2 visible="1" band=header background.mode="2" background.color="16777215" pen.style="2" pen.width="10" pen.color="0" x1="52" y1="2010" x2="10312" y2="2010" )
+text(name=t_1 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="553648127" color="0" alignment="2" border="0" x="9864" y="1645" height="166" width="447" text="Amount" html.valueishtml="0" )
+text(name=t_accounts_name visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="553648127" color="0" alignment="0" border="0" x="3927" y="958" height="156" width="614" text="Order To:" html.valueishtml="0" )
+column(name=accounts_name visible="1" band=header id=6 x="4583" y="958" height="166" width="3250" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+text(name=t_address1 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="553648127" color="0" alignment="0" border="0" x="3927" y="1156" height="156" width="614" text="Address:" html.valueishtml="0" )
+column(name=address1 visible="1" band=header id=7 x="4572" y="1156" height="166" width="5479" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=remarks visible="1" band=header id=12 x="677" y="1166" height="156" width="3031" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+text(name=t_9 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="553648127" color="0" alignment="0" border="0" x="62" y="1166" height="156" width="572" text="Remarks:" html.valueishtml="0" )
+text(name=t_17 visible="1	if(purordercatcode=2,1,0)" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="2" border="0" x="93" y="1395" height="156" width="656" text="Start Date :" html.valueishtml="0" )
+text(name=t_18 visible="1	if(purordercatcode=2,1,0)" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="2" border="0" x="1510" y="1395" height="156" width="656" text="End Date :" html.valueishtml="0" )
+text(name=t_19 visible="1	if(purordercatcode=2,1,0)" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="2" border="0" x="2895" y="1395" height="156" width="656" text="Proj. Days:" html.valueishtml="0" )
+column(name=projectionperiod visible="1	if(purordercatcode=2,1,0)" band=header id=15 x="3604" y="1395" height="166" width="770" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=startdate visible="1	if(purordercatcode=2,1,0)" band=header id=13 x="781" y="1385" height="166" width="729" color="0" border="0" alignment="0" format="dd/mm/yy" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=enddate visible="1	if(purordercatcode=2,1,0)" band=header id=14 x="2208" y="1395" height="166" width="614" color="0" border="0" alignment="0" format="dd/mm/yy" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+text(name=t_qty visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="1" border="0" x="8218" y="1645" height="333" width="395" text="PO" html.valueishtml="0" )
+text(name=t_5 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="1" border="0" x="6697" y="1645" height="333" width="416" text="Stock
+in Hand" html.valueishtml="0" )
+text(name=t_10 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="2" border="0" x="7177" y="1645" height="333" width="385" text="Transit
+Stock" html.valueishtml="0" )
+text(name=t_11 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="1" border="0" x="7625" y="1645" height="333" width="406" text="Total
+Stock" html.valueishtml="0" )
+compute(name=compute_6 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" x="6166" y="1645" height="333" width="468" format="[GENERAL]" expression="if(purordercatcode=1, 'Reorder~~r~~nQty', 'Sold~~r~~nQty')" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_item_name visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="2" border="0" x="2135" y="1645" height="333" width="791" text="Item
+Name" html.valueishtml="0" )
+compute(name=c_sno visible="1" band=detail font.charset="0" font.face="Arial Narrow" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" x="72" y="10" height="166" width="291" format="[GENERAL]" expression="cumulativeSum( 1 for group 1 )" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+column(name=itemalias visible="1" band=detail id=2 x="427" y="10" height="166" width="1645" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=amount visible="1" band=detail id=30 x="9416" y="10" height="166" width="895" color="0" border="0" alignment="1" format="#####,##0.00" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=recentpurprice visible="1" band=detail id=32 x="8750" y="10" height="166" width="604" color="0" border="0" alignment="1" format="###0.00" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=qty visible="1" band=detail id=19 x="8218" y="10" height="166" width="395" color="0" border="0" alignment="1" format="	f_SetColumnFormat('Qty')" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+compute(name=compute_8 visible="1" band=detail font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" x="7625" y="10" height="166" width="406" format="[General]" expression="/*stock+transitstock*/string(int((stock+transitstock)/packunits)) + ' , ' +string(mod(stock+transitstock,packunits))" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_3 visible="1" band=detail font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" x="6166" y="10" height="166" width="468" format="[General]" expression="if(purordercatcode=1,string(int(reorderqty/packunits)) + ' , ' + string(Mod(reorderqty,packunits)),string(int((soldqty-returnqty)/packunits)) + ' , ' +string(mod((soldqty-returnqty),packunits)))" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+column(name=transitstock visible="1" band=detail id=27 x="7177" y="10" height="166" width="385" color="0" border="0" alignment="1" format="	f_SetColumnFormat('Qty')" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+compute(name=compute_9 visible="1" band=detail font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" x="6677" y="10" height="156" width="447" format="[GENERAL]" expression="string(int(stock/packunits)) + ' , ' +string(mod(stock,packunits))" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+column(name=item_name visible="1" band=detail id=1 x="2135" y="10" height="166" width="3947" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial Narrow" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=category visible="1" band=header.1 id=34 x="83" y="11" height="177" width="4041" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial Narrow" font.family="2" font.height="-9" font.pitch="2" font.weight="700" tabsequence=0 )
+htmltable(border="0" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" encodeSelfLinkArgs="1" generateJavaScript="1" netscapeLayers="0" pagingMethod=0 )
+xhtmlgen() cssgen(sessionSpecific="0" )
+xmlgen(inline="0" )
+xsltgen()
+jsgen()
+export.xml(headGroups="1" includewhitespace="0" metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 distill.customPostScript="0" xslfop.print="0" )
+export.xhtml()

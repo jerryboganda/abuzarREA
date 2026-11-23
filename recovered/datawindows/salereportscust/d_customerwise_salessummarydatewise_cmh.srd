@@ -1,0 +1,120 @@
+release 12.5;
+datawindow ( units=2 timer_interval=0 processing=0 color=16777215 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.printername=""  print.documentname=""  print.orientation=2 print.margin.left=250 print.margin.right=250 print.margin.top=250 print.margin.bottom=250 print.paper.size=1 print.paper.source=0 print.canusedefaultprinter=yes selected.mouse=no hidegrayline=no showbackcoloronxp=no)
+header(height=2187 color="536870912" )
+summary(height=958 color="536870912" )
+footer(height=0 color="536870912" )
+detail(height=197 color="536870912" )
+table(column=(type=char(15) updatewhereclause=yes name=date dbname="date"  )
+column=(type=decimal(6) updatewhereclause=yes name=amout dbname="amout"  )
+ retrieve="SELECT date = Convert(varchar(15), CASE lower(:as_datetype) 
+											  When 'originaldate' Then dbo.saleledger.originaldate 
+											  When 'lastsavingdate' Then dbo.saleledger.date
+ 											  When 'billingdate' Then dbo.saleledger.billingdate
+											  End ,   
+							 101), 
+		 amout = Sum ( dbo.saledetail.looseqty * dbo.saledetail.saleprice ) 
+		  
+FROM 	 dbo.saleledger, 
+		 dbo.saledetail,    
+		 dbo.item, 
+		 dbo.Customer
+
+WHERE  DBO.SaleLedger.impactinventory = 'N' AND
+		 CASE lower(:as_datetype) 
+		 	When 'originaldate'   Then dbo.saleledger.originaldate 
+			When 'lastsavingdate' Then dbo.saleledger.date
+ 			When 'billingdate'    Then dbo.saleledger.billingdate
+	  	 End Between :ad_StartDate AND :ad_EndDate AND
+		 dbo.saleledger.custcode IN (:al_custcode) AND
+		 dbo.saleledger.custcode = dbo.customer.custcode AND
+		 dbo.saleledger.salecatcode IN (1, 2, 3) AND
+		 dbo.saleledger.saleinvcode = dbo.saledetail.saleinvcode AND
+		 dbo.saledetail.icode = item.icode 
+
+Group by Convert(varchar(15), CASE lower(:as_datetype) 
+									 		When 'originaldate'   Then dbo.saleledger.originaldate 
+											When 'lastsavingdate' Then dbo.saleledger.date
+								 			When 'billingdate'    Then dbo.saleledger.billingdate
+									  	End,
+					 101)
+
+UNION ALL
+SELECT date = Convert(varchar(15), CASE lower(:as_datetype) 
+											  When 'originaldate' Then dbo.saleledger.originaldate 
+											  When 'lastsavingdate' Then dbo.saleledger.date
+ 											  When 'billingdate' Then dbo.saleledger.billingdate
+											  End ,   
+							 101),
+		 amout = Sum ( sd.looseqty * sd.saleprice ) 
+		  
+FROM 	 dbo.saleledger, 
+		 dbo.saleinvdetail sd,
+		 dbo.item, 
+		 dbo.Customer
+
+WHERE  CASE lower(:as_datetype) 
+		 	When 'originaldate'   Then dbo.saleledger.originaldate 
+			When 'lastsavingdate' Then dbo.saleledger.date
+ 			When 'billingdate'    Then dbo.saleledger.billingdate
+	  	 End Between :ad_StartDate AND :ad_EndDate AND
+		 dbo.saleledger.custcode IN (:al_custcode) AND
+		 dbo.saleledger.custcode = dbo.customer.custcode AND
+		 dbo.saleledger.salecatcode IN (1, 2, 3) AND
+		 dbo.saleledger.saleinvcode = sd.saleinvcode AND
+		 sd.icode = item.icode 
+
+Group by Convert(varchar(15), CASE lower(:as_datetype) 
+									 		When 'originaldate'   Then dbo.saleledger.originaldate 
+											When 'lastsavingdate' Then dbo.saleledger.date
+								 			When 'billingdate'    Then dbo.saleledger.billingdate
+									  	End,
+					 101)
+
+
+
+
+
+"
+  arguments=(("al_CustCode", numberlist), ("ad_StartDate", datetime), ("ad_EndDate", datetime), ("ad_discperc", number), ("as_line1", string), ("as_line2", string), ("as_datetype", string))
+ sort="date A"
+)
+compute(name=compute_2 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="6104" y="93" height="156" width="1343" format="[general]" expression="'Page ' + page() + ' of ' + pageCount()" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_3 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="2" border="0" x="177" y="291" height="166" width="312" text="M/s " html.valueishtml="0" )
+text(name=t_5 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" alignment="2" border="0" x="208" y="1104" height="166" width="7322" text="Summary" html.valueishtml="0" )
+compute(name=compute_3 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="3604" y="1343" height="145" width="791" format="dd/mm/yyyy" expression=" ad_StartDate " alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_4 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="4593" y="1343" height="145" width="812" format="dd/mm/yyyy" expression=" ad_EndDate " alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_12 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="4437" y="1343" height="145" width="114" text="to" html.valueishtml="0" )
+text(name=t_6 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="5447" y="1343" height="145" width="1239" text="are mentioned below." html.valueishtml="0" )
+text(name=t_1 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="1" border="0" x="270" y="1947" height="166" width="583" text="S No." html.valueishtml="0" )
+text(name=t_manufacurer visible="1" tag="N" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="1458" y="1927" height="166" width="593" text="Date" html.valueishtml="0" )
+text(name=t_9 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="553648127" color="0" alignment="1" border="0" x="5208" y="1927" height="166" width="479" text="Amount" html.valueishtml="0" )
+compute(name=compute_10 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="229" y="1708" height="145" width="7270" format="[GENERAL]" expression=" as_line2 " alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_13 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="229" y="1520" height="156" width="2187" text="Please issue cheque in  favour of M/s" html.valueishtml="0" )
+text(name=t_4 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="229" y="1343" height="145" width="3343" text="Details summary for payment of Bills for the period from" html.valueishtml="0" )
+compute(name=c_companyname visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="520" y="291" height="166" width="3739" format="[general]" expression="f_ReportHeaderInfo('clientname')" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_6 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="2458" y="1520" height="156" width="5031" format="[GENERAL]" expression="f_ReportHeaderInfo('clientname') + '   Account No.  ' + as_line1" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=c_address1 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="520" y="489" height="156" width="3739" format="[general]" expression="f_ReportHeaderInfo('address1')" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=c_address2 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="510" y="677" height="156" width="3750" format="[general]" expression="f_ReportHeaderInfo('address2')" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=c_phone visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="510" y="864" height="156" width="3750" format="[general]" expression="'Phone: ' + f_ReportHeaderInfo('phone')" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+line(name=l_6 visible="1" band=header background.mode="2" background.color="16777215" pen.style="2" pen.width="10" pen.color="0" x1="104" y1="2166" x2="7531" y2="2166" )
+line(name=l_2 visible="1" band=header background.mode="2" background.color="16777215" pen.style="2" pen.width="10" pen.color="0" x1="104" y1="1885" x2="7531" y2="1885" )
+text(name=t_30 visible="1" band=summary font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="0" border="0" x="1260" y="334" height="583" width="6250" text="	f_towords(     c_totalamount  , ~"~" , 1 )" html.valueishtml="0" )
+text(name=t_31 visible="1" band=summary font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="1" border="0" x="114" y="334" height="166" width="1104" text="A Sum of Rupees:" html.valueishtml="0" )
+text(name=t_25 visible="1" band=summary font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="1" border="0" x="3093" y="84" height="156" width="843" text="Total Amount:" html.valueishtml="0" )
+compute(name=c_totalamount visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" x="3989" y="84" height="156" width="1687" format="#############0.00" expression="Round ( sum( c_amount for all  ) , 0 ) " alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+line(name=l_5 visible="1" band=summary background.mode="2" background.color="16777215" pen.style="2" pen.width="10" pen.color="0" x1="104" y1="42" x2="7531" y2="42" )
+line(name=l_7 visible="1" band=summary background.mode="2" background.color="16777215" pen.style="2" pen.width="10" pen.color="0" x1="104" y1="282" x2="7531" y2="282" )
+compute(name=compute_1 visible="1" band=detail font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="270" y="11" height="166" width="562" format="[GENERAL]" expression="getrow()" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+column(name=amout visible="1	0" band=detail id=2 x="2760" y="11" height="166" width="1072" color="0" border="0" alignment="1" format="##############0.00" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="553648127" font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="400" tabsequence=0 )
+compute(name=c_amount visible="1" band=detail font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="400" background.mode="1" background.color="553648127" color="0" x="4177" y="11" height="166" width="1510" format="################0.00" expression="Round ( amout * ( 1 -  ( ad_discperc * 0.01 ) ) , 2 )" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=c_date visible="1" band=detail font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="553648127" color="0" x="1458" y="11" height="166" width="1031" format="dd/mm/yyyy" expression="Date( date )" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+htmltable(border="0" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" encodeSelfLinkArgs="1" generateJavaScript="1" netscapeLayers="0" pagingMethod=0 )
+xhtmlgen() cssgen(sessionSpecific="0" )
+xmlgen(inline="0" )
+xsltgen()
+jsgen()
+export.xml(headGroups="1" includewhitespace="0" metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 distill.customPostScript="0" xslfop.print="0" )
+export.xhtml()

@@ -1,0 +1,179 @@
+release 12.5;
+datawindow ( units=2 timer_interval=0 processing=0 color=16777215 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.printername=""  print.documentname=""  print.orientation=0 print.margin.left=0 print.margin.right=0 print.margin.top=0 print.margin.bottom=0 print.paper.size=0 print.paper.source=0 print.canusedefaultprinter=yes selected.mouse=no hidegrayline=no showbackcoloronxp=no)
+header(height=233 color="536870912" )
+summary(height=0 color="536870912" )
+footer(height=0 color="536870912" )
+detail(height=183 color="536870912" )
+table(column=(type=long updatewhereclause=yes name=rowtype dbname="RowType"  )
+column=(type=char(21) updatewhereclause=yes name=rowclass dbname="RowClass"  )
+column=(type=char(60) updatewhereclause=yes name=itemname dbname="itemname"  )
+column=(type=char(60) updatewhereclause=yes name=users_username dbname="Users.username"  )
+column=(type=long updatewhereclause=yes name=headerno dbname="headerno"  )
+column=(type=char(60) updatewhereclause=yes name=customername dbname="customername"  )
+column=(type=char(100) updatewhereclause=yes name=custref dbname="custref"  )
+column=(type=long updatewhereclause=yes name=serviceinvcode dbname="serviceinvcode"  )
+column=(type=long updatewhereclause=yes name=saleinvcode dbname="saleinvcode"  )
+column=(type=long updatewhereclause=yes name=altersaleinvcode dbname="altersaleinvcode"  )
+column=(type=datetime updatewhereclause=yes name=date dbname="date"  )
+column=(type=decimal(2) updatewhereclause=yes name=invdiscperc dbname="invdiscperc"  )
+column=(type=decimal(2) updatewhereclause=yes name=misccharges dbname="misccharges"  )
+column=(type=decimal(2) updatewhereclause=yes name=flatdisc dbname="flatdisc"  )
+column=(type=decimal(2) updatewhereclause=yes name=invsalestax dbname="invsalestax"  )
+column=(type=long updatewhereclause=yes name=saleledger_custcode dbname="custcode"  )
+column=(type=char(100) updatewhereclause=yes name=saleledger_remarks dbname="remarks"  )
+column=(type=long updatewhereclause=yes name=headerinv dbname="headerinv"  )
+column=(type=long updatewhereclause=yes name=saledetail_icode dbname="Icode"  )
+column=(type=long updatewhereclause=yes name=gcode dbname="GCode"  )
+column=(type=long identity=yes updatewhereclause=yes name=id dbname="ID"  )
+column=(type=decimal(4) updatewhereclause=yes name=looseqty dbname="looseqty"  )
+column=(type=decimal(4) updatewhereclause=yes name=packqty dbname="packqty"  )
+column=(type=long updatewhereclause=yes name=packunits dbname="packunits"  )
+column=(type=decimal(2) updatewhereclause=yes name=saledetail_saleprice dbname="saleprice"  )
+column=(type=decimal(4) updatewhereclause=yes name=saledetail_rate dbname="rate"  )
+column=(type=decimal(2) updatewhereclause=yes name=salestax dbname="salestax"  )
+column=(type=decimal(2) updatewhereclause=yes name=saledetail_discperc dbname="discperc"  )
+column=(type=decimal(2) updatewhereclause=yes name=itemflatdisc dbname="itemflatdisc"  )
+column=(type=decimal(2) updatewhereclause=yes name=unitsalestax dbname="unitsalestax"  )
+column=(type=decimal(2) updatewhereclause=yes name=gstperc dbname="gstperc"  )
+column=(type=decimal(2) updatewhereclause=yes name=invgstperc dbname="invgstperc"  )
+column=(type=long updatewhereclause=yes name=reprintcounter dbname="reprintcounter"  )
+column=(type=decimal(2) updatewhereclause=yes name=invtotal dbname="InvTotal"  )
+ retrieve="SELECT 
+	RowType = 2,
+	RowClass = 'Investigation/Test(s)',
+	itemname = service.name,
+	users.username,  
+	headerno=serviceheader.headerno,
+	customername=(select name from accounts where acccode=serviceheader.custcode),
+	custref=SPACE(100),
+	serviceinvcode = dbo.serviceheader.serviceinvcode,   
+	saleinvcode = dbo.serviceheader.saleinvcode,   
+	altersaleinvcode=NULL,
+	date = dbo.serviceheader.date,   
+	invdiscperc=dbo.serviceheader.discperc,
+	misccharges=dbo.serviceheader.misccharges,   
+	flatdisc=dbo.serviceheader.flatdisc,   
+	invsalestax=0.00,
+	custcode=dbo.serviceheader.custcode,   
+	remarks=dbo.serviceheader.remarks,
+	headerinv=null,  
+	Icode=dbo.service.servicecode,   
+	GCode = NULL,
+	ID = dbo.servicedetail.srvrowid,
+	looseqty = servicedetail.qty,
+	packqty = 0.0000,
+	packunits = 1,
+	saleprice = servicedetail.price, 
+	rate      = 0.0000,
+	salestax  = 0.00,   
+	discperc  = servicedetail.discperc,
+	itemflatdisc  = servicedetail.serviceflatdisc,
+	unitsalestax  = 0.00,
+	gstperc       = 0.00,
+	invgstperc    = 0.00,
+	reprintcounter=serviceheader.reprintingcounter,
+	InvTotal = serviceheader.InvTotal
+FROM 
+	(SELECT TOP 2 SH.ServiceInvCode FROM ServiceHeader SH WHERE SH.patientcode  = :ai_patientcode AND SH.Date <= :adt_date AND SH.ServiceCatCode <> 10 ORDER BY SH.ServiceInvCode DESC) TS,
+	dbo.serviceheader,   
+	dbo.servicedetail,  
+	service, 
+	users 
+WHERE 
+	( dbo.serviceheader.serviceinvcode = TS.ServiceInvCode ) AND
+	( dbo.serviceheader.serviceinvcode = dbo.servicedetail.serviceinvcode ) AND 
+	( dbo.serviceheader.salesmancode = dbo.users.usercode ) AND
+	( servicedetail.servicecode = service.servicecode )  
+UNION ALL
+SELECT 
+	RowType = 1,
+	RowClass = 'Medicine',
+	itemname = case printable when  0  then ltrim(str(item.icode)) + ' Counter Sale'   else item.name end, 
+	users.username, 
+	headerno = dbo.saleledger.headerno,
+	customername=(select name from accounts where acccode=saleledger.custcode)  ,
+	custref=max(dbo.saleledger.custrefno),
+	serviceinvcode = NULL,   
+	saleinvcode=dbo.saleledger.saleinvcode,   
+	altersaleinvcode=dbo.saleledger.altersaleinvcode,
+	date=dbo.saleledger.date,   
+	invdiscperc=dbo.saleledger.discperc,   
+	misccharges=dbo.saleledger.misccharges,   
+	flatdisc=dbo.saleledger.flatdisc,   
+	invsalestax=dbo.saleledger.salestax,   
+	custcode=dbo.saleledger.custcode,   
+	remarks=dbo.saleledger.remarks, 
+	headerinv=max(dbo.saleledger.headerinvno),  
+	icode=dbo.saledetail.icode,   
+	gcode=dbo.saledetail.gcode, 
+	Id        = max(dbo.saledetail.IDENTITYCOL),  
+	looseqty  = sum(saledetail.looseqty), 
+	packqty   = sum(saledetail.packqty), 
+	packunits = max(saledetail.packunits), 
+	saleprice = max(saledetail.saleprice), 
+	rate      = max(saledetail.rate),
+	salestax  = max(saledetail.salestax),   
+	discperc  = max(saledetail.discperc), 
+	itemflatdisc  = max(saledetail.itemflatdisc),
+	unitsalestax  = max(saledetail.unitsalestax),
+	gstperc       = max(saledetail.gstperc),
+	invgstperc    = max(saleledger.invgstperc1),
+	reprintcounter=max(saleledger.reprintingcounter),
+	InvTotal = MAX(saleledger.InvTotal)
+FROM 
+	(SELECT TOP 2 SH.SaleInvCode FROM SaleLedger SH WHERE SH.patientcode  = :ai_patientcode AND SH.Date <= :adt_date AND SH.SaleCatCode <> 3 ORDER BY SH.SaleInvCode DESC) S,
+	dbo.saleledger,   
+	dbo.saledetail,  
+	item,
+	Users 
+WHERE 
+	( S.SaleInvCode = dbo.saleledger.SaleInvCode ) AND
+	( dbo.saleledger.saleinvcode = dbo.saledetail.saleinvcode ) AND 
+	( saleLedger.SalesManCode = users.userCode ) and
+	( saledetail.icode = item.icode )
+GROUP BY 
+	S.SaleInvCode,
+	saleledger.saleinvcode, 
+	saleledger.altersaleinvcode,
+	saleledger.date, 
+	saleledger.custcode, 
+	saleledger.discperc, 
+	saleledger.flatdisc, 
+	saleledger.misccharges, 
+	saleledger.headerno,
+	saleledger.salestax, 
+	saleledger.remarks, 
+	saledetail.icode, 
+	saledetail.rowgroup,
+	saledetail.gcode, 
+	item.name,
+	item.icode,
+	item.printable,
+	users.username
+ORDER BY 
+	RowType, ID
+"
+  arguments=(("ai_patientcode", number), ("adt_date", datetime))
+ sort="rowtype A, id A"
+)
+group(level=1 header.height=183 trailer.height=0 by=("rowtype"  ) header.color="536870912" trailer.color="536870912" )
+group(level=2 header.height=175 trailer.height=0 by=("date"  ) header.color="536870912" trailer.color="536870912" )
+line(name=l_4 visible="1" band=header background.mode="2" background.color="16777215" pen.style="0" pen.width="8" pen.color="0" x1="25" y1="16" x2="3200" y2="16" )
+line(name=l_5 visible="1" band=header background.mode="2" background.color="16777215" pen.style="0" pen.width="8" pen.color="0" x1="25" y1="225" x2="3200" y2="225" )
+text(name=t_6 visible="1" band=header font.charset="0" font.face="Arial Narrow" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="2" border="0" x="25" y="41" height="166" width="675" text="Description" html.valueishtml="0" )
+text(name=t_7 visible="1" band=header font.charset="0" font.face="Arial Narrow" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="1" border="0" x="2725" y="41" height="166" width="450" text="Qty" html.valueishtml="0" )
+column(name=itemname visible="1" band=detail id=3 x="33" y="9" height="166" width="2650" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial Narrow" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=looseqty visible="1" band=detail id=22 x="2725" y="9" height="166" width="450" color="0" border="0" alignment="1" format="	f_SetColumnFormat('Qty')" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=rowclass visible="1" band=header.1 id=2 x="25" y="8" height="166" width="1541" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial Narrow" font.family="2" font.height="-9" font.pitch="2" font.weight="700" font.underline="1" tabsequence=0 )
+column(name=date visible="1" band=header.2 id=11 x="375" y="9" height="158" width="1425" color="0" border="0" alignment="0" format="dd/mm/yyyy hh:mm" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-9" font.pitch="2" font.weight="700" tabsequence=0 )
+text(name=t_1 visible="1" band=header.2 font.charset="0" font.face="Arial Narrow" font.family="2" font.height="-9" font.pitch="2" font.weight="700" background.mode="2" background.color="16777215" color="0" alignment="0" border="0" x="25" y="9" height="166" width="325" text="Date:" html.valueishtml="0" )
+htmltable(border="0" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" encodeSelfLinkArgs="1" generateJavaScript="1" netscapeLayers="0" pagingMethod=0 )
+xhtmlgen() cssgen(sessionSpecific="0" )
+xmlgen(inline="0" )
+xsltgen()
+jsgen()
+export.xml(headGroups="1" includewhitespace="0" metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 distill.customPostScript="0" xslfop.print="0" )
+export.xhtml()

@@ -1,0 +1,220 @@
+release 12.5;
+datawindow ( units=2 timer_interval=0 processing=0 color=16777215 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.printername=""  print.documentname=""  print.orientation=2 print.margin.left=0 print.margin.right=0 print.margin.top=0 print.margin.bottom=0 print.paper.size=0 print.paper.source=0 print.canusedefaultprinter=yes selected.mouse=no hidegrayline=no showbackcoloronxp=no)
+header(height=1908 color="536870912" )
+summary(height=3491 color="536870912" )
+footer(height=0 color="536870912" )
+detail(height=175 color="536870912" )
+table(column=(type=char(60) updatewhereclause=yes name=itemname dbname="itemname"  )
+column=(type=char(60) updatewhereclause=yes name=users_username dbname="Users.username"  )
+column=(type=char(60) updatewhereclause=yes name=accounts_name dbname="Accounts.name"  )
+column=(type=datetime updatewhereclause=yes name=reprintdate dbname="reprintdate"  )
+column=(type=long updatewhereclause=yes name=reprintingcounter dbname="ReprintingCounter"  )
+column=(type=long updatewhereclause=yes name=code dbname="code"  )
+column=(type=datetime updatewhereclause=yes name=date dbname="date"  )
+column=(type=datetime updatewhereclause=yes name=duedate dbname="duedate"  )
+column=(type=long updatewhereclause=yes name=headerno dbname="headerno"  )
+column=(type=decimal(2) updatewhereclause=yes name=invdiscperc dbname="invdiscperc"  )
+column=(type=decimal(2) updatewhereclause=yes name=flatdisc dbname="flatdisc"  )
+column=(type=decimal(2) updatewhereclause=yes name=misccharges dbname="misccharges"  )
+column=(type=long updatewhereclause=yes name=serviceheader_custcode dbname="custcode"  )
+column=(type=char(100) updatewhereclause=yes name=remarks dbname="remarks"  )
+column=(type=long updatewhereclause=yes name=service_servicecode dbname="servicecode"  )
+column=(type=decimal(2) updatewhereclause=yes name=price dbname="price"  )
+column=(type=decimal(2) updatewhereclause=yes name=serviceflatdisc dbname="serviceflatdisc"  )
+column=(type=decimal(2) updatewhereclause=yes name=qty dbname="Qty"  )
+column=(type=decimal(2) updatewhereclause=yes name=discperc dbname="discperc"  )
+column=(type=char(60) updatewhereclause=yes name=regno dbname="RegNo"  )
+column=(type=long updatewhereclause=yes name=studentcode dbname="StudentCode"  )
+column=(type=char(100) updatewhereclause=yes name=studentname dbname="StudentName"  )
+column=(type=char(100) updatewhereclause=yes name=fathername dbname="FatherName"  )
+column=(type=char(100) updatewhereclause=yes name=schoolname dbname="SchoolName"  )
+column=(type=char(100) updatewhereclause=yes name=class dbname="Class"  )
+column=(type=char(100) updatewhereclause=yes name=section dbname="Section"  )
+column=(type=char(100) updatewhereclause=yes name=medium dbname="Medium"  )
+column=(type=char(40) updatewhereclause=yes name=rollno dbname="RollNo"  )
+column=(type=decimal(2) updatewhereclause=yes name=studentbalance dbname="StudentBalance"  )
+ retrieve="SELECT 
+	itemname = service.name,
+	users.username,  
+	accounts.name, 
+	reprintdate = getDate(),
+	ReprintingCounter = dbo.ServiceHeader.ReprintingCounter,
+	code=dbo.serviceheader.serviceinvcode,   
+	date=dbo.serviceheader.date,  
+	duedate=dbo.serviceheader.duedate,  
+	headerno=dbo.serviceheader.headerno, 
+	invdiscperc=dbo.serviceheader.discperc,  
+	flatdisc=dbo.serviceheader.flatdisc,	 
+	misccharges=dbo.serviceheader.misccharges,   
+	custcode=dbo.serviceheader.custcode,   
+	remarks=dbo.serviceheader.remarks,
+	servicecode=dbo.service.servicecode,   
+	price = dbo.servicedetail.price, 
+	serviceflatdisc = dbo.servicedetail.serviceflatdisc, 
+	Qty = dbo.servicedetail.qty,
+	discperc = dbo.servicedetail.discperc,
+	RegNo = Student.Regno,
+	StudentCode = Student.StudentCode,
+	StudentName=Student.Name,
+	FatherName=Student.FName,
+	SchoolName = (SELECT SC.Name FROM School SC, Class C WHERE C.ClassCode = Student.CurrentClass AND SC.SchoolCode = C.SchoolCode),
+	Class = (SELECT G.Name FROM Grade G, Class C WHERE C.ClassCode = Student.CurrentClass AND C.GradeCode = G.GradeCode),
+	Section = (SELECT LTRIM(RTRIM(SUBSTRING(C.Name, CHARINDEX(',', C.Name, 1)+1, CHARINDEX(',', SUBSTRING(C.Name, CHARINDEX(',', C.Name, 1)-1, LEN(C.Name)),1)))) FROM Class C WHERE C.ClassCode = Student.CurrentClass),
+	Medium = (SELECT CM.Name FROM Class C, ClassMedium CM WHERE C.ClassCode = Student.CurrentClass AND C.ClassMediumCode = CM.ClassMediumCode),
+	RollNo = (SELECT SC.RollNo FROM Class C, StudentClass SC
+		WHERE Student.Studentcode = SC.StudentCode AND 
+			Student.CurrentClass=C.ClassCode AND
+			C.ClassCode = SC.ClassCode),
+	StudentBalance= ISNULL(
+		(SELECT Balance=SUM(V.Debit - V.Credit)
+		FROM
+			VirtualGL V,
+			Accounts A,
+			Customer C,
+			SubAccounts S,
+			Student P,
+			ServiceHeader SH
+		WHERE 
+			SH.ServiceInvCode = :ra_InvCode AND
+			SH.StudentCode = P.StudentCode AND
+			P.StudentCode = V.StudentCode AND
+			V.Date < SH.Date AND 
+			V.AccCode = A.AccCode AND
+			A.AccCode = C.CustCode AND
+			V.AccCode = C.CustCode AND
+			A.SubCode = S.SubAccCode 
+		GROUP BY 
+			P.StudentCode), 0)
+FROM 
+	dbo.serviceheader LEFT OUTER JOIN Student ON (dbo.serviceheader.studentcode = student.studentcode),   
+	dbo.servicedetail,  
+	service, 
+	customer, 
+	accounts,
+	users
+WHERE 
+	( dbo.serviceheader.serviceinvcode = :ra_InvCode ) AND
+	( dbo.serviceheader.serviceinvcode = dbo.servicedetail.serviceinvcode ) AND 
+	( dbo.serviceheader.custcode = dbo.customer.custcode ) AND 
+	( dbo.customer.custcode = dbo.accounts.acccode ) AND 
+	( dbo.serviceheader.salesmancode = dbo.users.usercode ) AND
+	( servicedetail.servicecode = service.servicecode ) 
+ORDER BY itemname
+
+/*
+SELECT
+	itemname = S.Name,
+	UserName = (SELECT U.UserName FROM Users U, ServiceHeader SH WHERE SH.ServiceInvCode = :ra_InvCode AND SH.SalesManCode = U.UserCode),
+	AliasName = (SELECT A.AliasName FROM Accounts A, ServiceHeader SH WHERE SH.ServiceInvCode = :ra_InvCode AND SH.CustCode = A.AccCode),
+	Name = (SELECT A.Name FROM Accounts A, ServiceHeader SH WHERE SH.ServiceInvCode = :ra_InvCode AND SH.CustCode = A.AccCode),
+	reprintdate = GETDATE(),
+	ReprintingCounter = (SELECT SH.ReprintingCounter FROM ServiceHeader SH WHERE SH.ServiceInvCode = :ra_InvCode),
+	Code = (SELECT SH.ServiceInvCode FROM ServiceHeader SH WHERE SH.ServiceInvCode = :ra_InvCode),
+	Date = (SELECT SH.date FROM ServiceHeader SH WHERE SH.ServiceInvCode = :ra_InvCode),
+	DueDate = (SELECT SH.Duedate FROM ServiceHeader SH WHERE SH.ServiceInvCode = :ra_InvCode),
+	headerno = (SELECT SH.headerno FROM ServiceHeader SH WHERE SH.ServiceInvCode = :ra_InvCode),
+	invdiscperc = (SELECT SH.discperc FROM ServiceHeader SH WHERE SH.ServiceInvCode = :ra_InvCode),
+	flatdisc = (SELECT SH.flatdisc FROM ServiceHeader SH WHERE SH.ServiceInvCode = :ra_InvCode),
+	misccharges = (SELECT SH.misccharges FROM ServiceHeader SH WHERE SH.ServiceInvCode = :ra_InvCode),
+	CustCode = (SELECT SH.CustCode FROM ServiceHeader SH WHERE SH.ServiceInvCode = :ra_InvCode),
+	remarks = (SELECT SH.remarks FROM ServiceHeader SH WHERE SH.ServiceInvCode = :ra_InvCode),
+	S.ServiceCode,
+	price = (SELECT MAX(SD.Price) FROM ServiceHeader SH, ServiceDetail SD WHERE SH.ServiceInvCode = :ra_InvCode AND SH.ServiceInvCode = SD.ServiceInvCode AND SD.ServiceCode = S.ServiceCode), 
+	serviceflatdisc = (SELECT MAX(SD.serviceflatdisc) FROM ServiceHeader SH, ServiceDetail SD WHERE SH.ServiceInvCode = :ra_InvCode AND SH.ServiceInvCode = SD.ServiceInvCode AND SD.ServiceCode = S.ServiceCode), 
+	Qty = (SELECT MAX(SD.Qty) FROM ServiceHeader SH, ServiceDetail SD WHERE SH.ServiceInvCode = :ra_InvCode AND SH.ServiceInvCode = SD.ServiceInvCode AND SD.ServiceCode = S.ServiceCode), 
+	discperc = (SELECT MAX(SD.discperc) FROM ServiceHeader SH, ServiceDetail SD WHERE SH.ServiceInvCode = :ra_InvCode AND SH.ServiceInvCode = SD.ServiceInvCode AND SD.ServiceCode = S.ServiceCode), 
+	RegNo = (SELECT ST.Regno FROM ServiceHeader SH, Student ST WHERE SH.ServiceInvCode = :ra_InvCode AND SH.StudentCode=ST.StudentCode),
+	StudentCode = (SELECT ST.StudentCode FROM ServiceHeader SH, Student ST WHERE SH.ServiceInvCode = :ra_InvCode AND SH.StudentCode=ST.StudentCode),
+	StudentName = (SELECT ST.Name FROM ServiceHeader SH, Student ST WHERE SH.ServiceInvCode = :ra_InvCode AND SH.StudentCode=ST.StudentCode),
+	FatherName = (SELECT ST.FName FROM ServiceHeader SH, Student ST WHERE SH.ServiceInvCode = :ra_InvCode AND SH.StudentCode=ST.StudentCode),
+	SchoolName = (SELECT SC.Name FROM ServiceHeader SH, Student ST, School SC, Class C WHERE SH.ServiceInvCode = :ra_InvCode AND SH.StudentCode=ST.StudentCode AND C.ClassCode = ST.CurrentClass AND SC.SchoolCode = C.SchoolCode),
+	Grade = (SELECT G.Name FROM ServiceHeader SH, Student ST, Grade G, Class C WHERE SH.ServiceInvCode = :ra_InvCode AND SH.StudentCode=ST.StudentCode AND C.ClassCode = ST.CurrentClass AND C.GradeCode = G.GradeCode),
+	Class = (SELECT C.Name FROM ServiceHeader SH, Student ST, Grade G, Class C WHERE SH.ServiceInvCode = :ra_InvCode AND SH.StudentCode=ST.StudentCode AND C.ClassCode = ST.CurrentClass AND C.GradeCode = G.GradeCode),
+	Section = (SELECT LTRIM(RTRIM(SUBSTRING(C.Name, CHARINDEX(',', C.Name, 1)+1, CHARINDEX(',', SUBSTRING(C.Name, CHARINDEX(',', C.Name, 1)-1, LEN(C.Name)),1))))  FROM ServiceHeader SH, Student ST, Class C WHERE SH.ServiceInvCode = :ra_InvCode AND SH.StudentCode=ST.StudentCode AND C.ClassCode = ST.CurrentClass),
+	Medium = (SELECT CM.Name FROM ServiceHeader SH, Student ST, Class C, ClassMedium CM WHERE SH.ServiceInvCode = :ra_InvCode AND SH.StudentCode=ST.StudentCode AND C.ClassCode = ST.CurrentClass AND C.ClassMediumCode = CM.ClassMediumCode),
+	RollNo = (SELECT SC.RollNo FROM ServiceHeader SH, Student ST, Class C, StudentClass SC WHERE SH.ServiceInvCode = :ra_InvCode AND SH.StudentCode=ST.StudentCode AND C.ClassCode = ST.CurrentClass AND ST.Studentcode = SC.StudentCode AND ST.CurrentClass=C.ClassCode AND C.ClassCode = SC.ClassCode)
+FROM ServiceTemplateHeader H, ServiceTemplateDetail D, Service S
+WHERE H.ServiceTemplateCode = 1 AND 
+	H.ServiceTemplateCode = D.ServiceTemplateCode AND
+	D.ServiceCode = S.ServiceCode
+ORDER BY RowID
+*/"
+  arguments=(("ra_InvCode", number))
+)
+text(name=t_1 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="0" border="0" x="50" y="16" height="158" width="550" text="text	if ( reprintingcounter >1, ('Reprint' + '( ' + string( reprintingcounter -1) + ' )'  ),'')" html.valueishtml="0" )
+compute(name=compute_3 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-12" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" x="58" y="200" height="191" width="3250" format="[GENERAL]" expression="f_ReportHeaderInfosale('clientname',  headerno )" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+column(name=reprintdate visible="1	if( reprintcount >1,1,0)" band=header id=4 x="633" y="16" height="158" width="825" color="0" border="0" alignment="0" format="dd/mm/yy hh:mm:ss" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+compute(name=compute_1 visible="1	if(pagecount()=1,0,1)" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="2408" y="16" height="158" width="900" format="[general]" expression="'Page ' + page() + ' of ' + pageCount()" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_4 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" x="58" y="416" height="141" width="3250" format="[GENERAL]" expression="f_ReportHeaderInfosale('address1',  headerno )" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_5 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" x="58" y="591" height="150" width="3250" format="[GENERAL]" expression="f_StringPreferences('ownertaxregno')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=saleledger_date_t visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="553648127" color="0" alignment="0" border="0" x="50" y="766" height="150" width="1075" text="Challan Issue Date:" html.valueishtml="0" )
+column(name=date visible="1" band=header id=7 x="1183" y="766" height="150" width="2125" color="0" border="0" alignment="0" format="dd-mmm-yyyy hh:mm am/pm" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+text(name=t_3 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="553648127" color="0" alignment="0" border="0" x="50" y="933" height="158" width="966" text="Admission Number:" html.valueishtml="0" )
+column(name=regno visible="1" band=header id=20 x="1200" y="933" height="158" width="2108" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+text(name=t_4 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="553648127" color="0" alignment="0" border="0" x="50" y="1116" height="150" width="758" text="Student Name:" html.valueishtml="0" )
+column(name=studentname visible="1" band=header id=22 x="866" y="1116" height="166" width="2433" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=class visible="1" band=header id=25 x="558" y="1308" height="141" width="2733" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+text(name=t_14 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="553648127" color="0" alignment="0" border="0" x="50" y="1308" height="166" width="466" text="Class:" html.valueishtml="0" )
+text(name=t_2 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="58" y="1500" height="150" width="583" text="Due Date:" html.valueishtml="0" )
+text(name=t_5 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="100" y="1708" height="150" width="858" text="PARTICULARS" html.valueishtml="0" )
+line(name=l_7 visible="1" band=header background.mode="1" background.color="553648127" pen.style="0" pen.width="8" pen.color="0" x1="2308" y1="1683" x2="2308" y2="1916" )
+line(name=l_8 visible="1" band=header background.mode="1" background.color="553648127" pen.style="0" pen.width="8" pen.color="0" x1="50" y1="1683" x2="50" y2="1916" )
+line(name=l_1 visible="1" band=header background.mode="1" background.color="553648127" pen.style="0" pen.width="8" pen.color="0" x1="50" y1="1883" x2="3308" y2="1883" )
+text(name=t_7 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="2" border="0" x="2366" y="1708" height="150" width="900" text="AMOUNT" html.valueishtml="0" )
+line(name=l_2 visible="1" band=header background.mode="1" background.color="553648127" pen.style="0" pen.width="8" pen.color="0" x1="50" y1="1675" x2="3308" y2="1675" )
+line(name=l_6 visible="1" band=header background.mode="1" background.color="553648127" pen.style="0" pen.width="8" pen.color="0" x1="3308" y1="1683" x2="3308" y2="1916" )
+column(name=duedate visible="1" band=header id=8 x="691" y="1500" height="150" width="2341" color="0" border="0" alignment="0" format="dd-mmmm-yyyy" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-9" font.pitch="2" font.weight="700" tabsequence=0 )
+line(name=l_3 visible="1" band=summary background.mode="1" background.color="536870912" pen.style="0" pen.width="8" pen.color="0" x1="50" y1="0" x2="3308" y2="0" )
+line(name=l_4 visible="1" band=summary background.mode="1" background.color="553648127" pen.style="0" pen.width="8" pen.color="0" x1="50" y1="392" x2="3308" y2="392" )
+line(name=l_5 visible="1" band=summary background.mode="1" background.color="553648127" pen.style="0" pen.width="8" pen.color="0" x1="50" y1="808" x2="3308" y2="808" )
+line(name=l_16 visible="1" band=summary background.mode="1" background.color="536870912" pen.style="0" pen.width="8" pen.color="0" x1="50" y1="200" x2="3308" y2="200" )
+line(name=l_17 visible="1" band=summary background.mode="1" background.color="553648127" pen.style="0" pen.width="8" pen.color="0" x1="50" y1="600" x2="3308" y2="600" )
+text(name=t_6 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="100" y="633" height="150" width="2158" text="Current Month Receipt:" html.valueishtml="0" )
+line(name=l_18 visible="1" band=summary background.mode="1" background.color="553648127" pen.style="0" pen.width="8" pen.color="0" x1="50" y1="1017" x2="3308" y2="1017" )
+compute(name=c_grosstotal visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="2366" y="17" height="166" width="900" format="##,###,##0.00" expression="Sum ( c_amount for all )" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_12 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="100" y="17" height="158" width="2158" text="Month Total (Rupees):" html.valueishtml="0" )
+compute(name=c_invdiscount visible="1	if(Sum (  c_amount  for all )  * (invdiscperc  * .01) + flatdisc = 0, 0,1)" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="2366" y="225" height="158" width="900" format="##,###,##0.00" expression="Sum (  c_amount  for all )  * (invdiscperc  * .01) + flatdisc" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_19 visible="1	if(Sum (  c_amount  for all )  * (invdiscperc  * .01) + flatdisc = 0, 0,1)" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="0" border="0" x="1600" y="225" height="158" width="491" text="Discount:" html.valueishtml="0" )
+column(name=misccharges visible="1	if(misccharges =0, 0, 1)" band=summary id=12 x="550" y="225" height="158" width="783" color="0" border="0" alignment="0" format="##,###,##0.00" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+text(name=t_11 visible="1	if(misccharges =0, 0, 1)" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="100" y="225" height="158" width="416" text="Others:" html.valueishtml="0" )
+text(name=t_10 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="100" y="433" height="150" width="2158" text="Grand Total (Rupees):" html.valueishtml="0" )
+compute(name=c_nettotal visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" x="2366" y="425" height="166" width="900" format="##,###,##0.00" expression="Round(Sum (  c_netamount for all ) -  flatdisc +  misccharges   , 0)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_18 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="100" y="833" height="141" width="2158" text="Receiveable:" html.valueishtml="0" )
+compute(name=compute_7 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" x="2366" y="833" height="166" width="900" format="##,###,##0.00" expression="Round(Sum (  c_netamount for all ) -  flatdisc +  misccharges   , 0)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+column(name=studentbalance visible="1	if(studentbalance > 0, 1, 0)" band=summary id=29 x="2366" y="1042" height="166" width="900" color="0" border="0" alignment="1" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="700" tabsequence=0 )
+text(name=t_20 visible="1	if(studentbalance > 0, 1, 0)" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="100" y="1042" height="150" width="2166" text="Previous Balance:" html.valueishtml="0" )
+text(name=t_21 visible="1	if(studentbalance > 0, 1, 0)" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="100" y="1250" height="150" width="2166" text="Total Receiveable:" html.valueishtml="0" )
+compute(name=compute_6 visible="1	if(studentbalance > 0, 1, 0)" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" x="2366" y="1250" height="150" width="900" format="##,###,##0.00" expression="Round(Sum (  c_netamount for all ) -  flatdisc +  misccharges   , 0) + IF(studentbalance > 0, studentbalance, 0)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_8 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-12" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" x="58" y="1450" height="200" width="3250" format="[GENERAL]" expression="'PAYMENT TERMS'" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_8 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="0" border="0" x="50" y="3317" height="166" width="91" text="." html.valueishtml="0" )
+text(name=t_9 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="0" border="0" x="50" y="1675" height="166" width="3258" text="1. The Bill Must be Deposited within Due Date." html.valueishtml="0" )
+text(name=t_17 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="0" border="0" x="50" y="2800" height="316" width="3258" text="5. Students will not be allowed to attend class if dues are not paid within due date." html.valueishtml="0" )
+text(name=t_16 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="0" border="0" x="58" y="2433" height="325" width="3250" text="4. One month notice in writing is required for the withdrawal of a child to make you eligible for security refund." html.valueishtml="0" )
+text(name=t_15 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="0" border="0" x="50" y="2067" height="333" width="3250" text="3. It will be the parents responsibility to contact the office if you do not get the bill by 25th of the previous month." html.valueishtml="0" )
+text(name=t_13 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="0" border="0" x="50" y="1867" height="166" width="3258" text="2. Surcharge of Rs. 5 Per Day will be charged on late Deposit." html.valueishtml="0" )
+text(name=t_22 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="0" border="0" x="50" y="3142" height="150" width="3250" text="6. Dues once paid will not be refunded." html.valueishtml="0" )
+line(name=l_15 visible="1" band=summary background.mode="1" background.color="553648127" pen.style="0" pen.width="8" pen.color="0" x1="50" y1="0" x2="50" y2="1025" )
+line(name=l_13 visible="1" band=summary background.mode="1" background.color="553648127" pen.style="0" pen.width="8" pen.color="0" x1="3308" y1="0" x2="3308" y2="1025" )
+line(name=l_14 visible="1" band=summary background.mode="1" background.color="553648127" pen.style="0" pen.width="8" pen.color="0" x1="2308" y1="0" x2="2308" y2="1025" )
+line(name=l_22 visible="1	if(studentbalance > 0, 1, 0)" band=summary background.mode="1" background.color="553648127" pen.style="0" pen.width="8" pen.color="0" x1="50" y1="1017" x2="50" y2="1425" )
+line(name=l_23 visible="1	if(studentbalance > 0, 1, 0)" band=summary background.mode="1" background.color="553648127" pen.style="0" pen.width="8" pen.color="0" x1="2308" y1="1017" x2="2308" y2="1425" )
+line(name=l_21 visible="1	if(studentbalance > 0, 1, 0)" band=summary background.mode="1" background.color="553648127" pen.style="0" pen.width="8" pen.color="0" x1="3308" y1="1017" x2="3308" y2="1425" )
+line(name=l_19 visible="1	if(studentbalance > 0, 1, 0)" band=summary background.mode="1" background.color="553648127" pen.style="0" pen.width="8" pen.color="0" x1="50" y1="1225" x2="3308" y2="1225" )
+line(name=l_20 visible="1	if(studentbalance > 0, 1, 0)" band=summary background.mode="1" background.color="553648127" pen.style="0" pen.width="8" pen.color="0" x1="58" y1="1417" x2="3316" y2="1417" )
+compute(name=c_netamount visible="1	0" band=detail font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="508" y="8" height="125" width="416" format="##########0.00" expression="c_amount *  ( 1 -   invdiscperc   * .01 )" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+line(name=l_9 visible="1" band=detail background.mode="1" background.color="553648127" pen.style="0" pen.width="8" pen.color="0" x1="50" y1="175" x2="3308" y2="175" )
+line(name=l_10 visible="1" band=detail background.mode="1" background.color="553648127" pen.style="0" pen.width="8" pen.color="0" x1="3308" y1="0" x2="3308" y2="225" )
+line(name=l_11 visible="1" band=detail background.mode="1" background.color="553648127" pen.style="0" pen.width="8" pen.color="0" x1="2308" y1="0" x2="2308" y2="225" )
+line(name=l_12 visible="1" band=detail background.mode="1" background.color="553648127" pen.style="0" pen.width="8" pen.color="0" x1="50" y1="0" x2="50" y2="225" )
+compute(name=c_amount visible="1" band=detail font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="553648127" color="0" x="2366" y="8" height="158" width="900" format="##,###,##0.00" expression="(price - serviceflatdisc) * qty *  ( 1 -  (    discperc * .01 )  ) " alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+column(name=itemname visible="1" band=detail id=1 x="100" y="8" height="158" width="2158" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+htmltable(border="0" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" encodeSelfLinkArgs="1" generateJavaScript="1" netscapeLayers="0" pagingMethod=0 )
+xhtmlgen() cssgen(sessionSpecific="0" )
+xmlgen(inline="0" )
+xsltgen()
+jsgen()
+export.xml(headGroups="1" includewhitespace="0" metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 distill.customPostScript="0" xslfop.print="0" )
+export.xhtml()

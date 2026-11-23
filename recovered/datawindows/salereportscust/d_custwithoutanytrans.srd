@@ -1,0 +1,163 @@
+release 12.5;
+datawindow ( units=2 timer_interval=60000 processing=0 color=16777215 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.printername=""  print.documentname=""  print.orientation=2 print.margin.left=0 print.margin.right=0 print.margin.top=0 print.margin.bottom=500 print.paper.size=1 print.paper.source=0 print.canusedefaultprinter=yes selected.mouse=no hidegrayline=no showbackcoloronxp=no)
+header(height=2041 color="536870912" )
+summary(height=0 color="536870912" )
+footer(height=0 color="536870912" )
+detail(height=187 color="536870912" )
+table(column=(type=datetime updatewhereclause=yes name=date dbname="date"  )
+column=(type=char(15) updatewhereclause=yes name=type dbname="type"  )
+column=(type=long updatewhereclause=yes name=custcode dbname="custcode"  )
+column=(type=char(60) updatewhereclause=yes name=customername dbname="CUSTOMERNAME"  )
+column=(type=char(12) updatewhereclause=yes name=custaliasname dbname="custaliasname"  )
+column=(type=char(60) updatewhereclause=yes name=area dbname="area"  )
+ retrieve="select 
+	B.date, 
+	B.type,
+	B.custcode,
+	CUSTOMERNAME=(select name from accounts where acccode=B.custcode),
+	custaliasname=(select aliasname from accounts where acccode=B.custcode),
+	area=(select name from area,customer where  customer.custcode=B.custcode and Customer.areacode=area.areacode)
+
+from (	
+
+	SELECT A.DATE,
+		A.CUSTCODE,
+		A.TYPE
+	FROM customer C,
+			(select  distinct(custcode),
+				type='S-'+ convert(varchar(12),saleinvcode),
+				date=date
+			from saleledger
+			where date<:ad_StartDate
+			union all
+			select  distinct(custcode),
+				type='SR-'+ convert(varchar(12),srinvcode),
+				date=date
+			from srledger
+			where date<:ad_StartDate 
+
+			) AS A
+
+
+	WHERE A.custcode NOT IN
+
+				(
+
+					select  distinct(custcode)
+					from saleledger
+					where date>=:ad_StartDate and
+						date<=:ad_EndDate
+					union all
+					select  distinct(custcode)
+					from srledger
+					where date>=:ad_StartDate and
+						date<=:ad_EndDate
+
+					) AND
+
+ 		A.custcode=C.custcode AND
+     		C.areacode IN (:aa_areacode)
+
+
+	) AS B
+
+
+
+
+
+
+
+
+
+where B. date IN (select max(K.date) from  (
+					   SELECT A.DATE,
+						A.CUSTCODE,
+						A.TYPE
+					   FROM customer C,
+							(select  distinct(custcode),
+									type='S-'+ convert(varchar(12),saleinvcode),
+									date=date
+							from saleledger
+							where date<:ad_StartDate
+							union all
+							select  distinct(custcode),
+								type='SR-'+ convert(varchar(12),saleinvcode),
+								date=date
+							from srledger
+							where date<:ad_StartDate 
+
+							) AS A
+
+
+					WHERE A.custcode NOT IN
+
+								(
+
+								select  distinct(custcode)
+	
+								from saleledger
+								where date>=:ad_StartDate and
+									date<=:ad_EndDate
+								union all
+								select  distinct(custcode)
+								from srledger
+								where date>=:ad_StartDate and
+								date<=:ad_EndDate
+
+							)
+
+						AND A.custcode=C.custcode AND
+    					 	    C.areacode IN (:aa_areacode)
+
+						) AS K
+				GROUP BY K.custcode
+			)
+ORDER BY 
+	area,
+	customername
+"
+  arguments=(("ad_StartDate", datetime), ("ad_EndDate", datetime), ("aa_areacode", numberlist))
+)
+group(level=1 header.height=197 trailer.height=0 by=("area"  ) header.color="536870912" trailer.color="536870912" )
+text(name=t_3 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="700" background.mode="2" background.color="16777215" color="0" alignment="2" border="0" x="114" y="218" height="156" width="6614" text="Customer Wise Recent Sale/Return Activity" html.valueishtml="0" )
+compute(name=c_phone visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="781" y="968" height="156" width="3906" format="[general]" expression="f_ReportHeaderInfo('phone')" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=c_companyname visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" x="114" y="406" height="156" width="6614" format="[general]" expression="f_ReportHeaderInfo('clientname')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=c_address1 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="114" y="593" height="156" width="6614" format="[general]" expression="f_ReportHeaderInfo('address1')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=c_address2 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="125" y="781" height="156" width="6614" format="[general]" expression="f_ReportHeaderInfo('address2')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=c_fax visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="4927" y="968" height="156" width="1802" format="[general]" expression="'Fax : '+f_ReportHeaderInfo('fax')" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_5 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="1" border="0" x="114" y="968" height="156" width="593" text="Phone(s) :" html.valueishtml="0" )
+compute(name=compute_2 visible="1" band=header font.charset="0" font.face="Arial Narrow" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="5291" y="20" height="156" width="1427" format="[general]" expression="'Page ' + page() + ' of ' + pageCount()" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_6 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="114" y="20" height="156" width="302" text="Date: " html.valueishtml="0" )
+compute(name=compute_1 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="447" y="20" height="156" width="656" format="dd/mm/yyyy" expression="today()" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_2 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="2" border="0" x="135" y="1239" height="156" width="385" text="FROM:" html.valueishtml="0" )
+compute(name=compute_5 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="553648127" color="0" x="562" y="1239" height="156" width="1052" format="dd/mm/yy hh:mm:ss" expression=" ad_StartDate " alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_4 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="0" border="0" x="1677" y="1239" height="156" width="187" text="To:" html.valueishtml="0" )
+compute(name=compute_6 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="553648127" color="0" x="2062" y="1239" height="156" width="1041" format="dd/mm/yy hh:mm:ss" expression=" ad_EndDate " alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+line(name=l_2 visible="1" band=header background.mode="1" background.color="553648127" pen.style="2" pen.width="10" pen.color="0" x1="114" y1="2010" x2="7322" y2="2010" )
+line(name=l_1 visible="1" band=header background.mode="1" background.color="553648127" pen.style="2" pen.width="10" pen.color="0" x1="104" y1="1614" x2="7312" y2="1614" )
+text(name=t_17 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="1" border="0" x="166" y="1656" height="156" width="364" text="S. No." html.valueishtml="0" )
+text(name=t_date visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="4093" y="1656" height="156" width="916" text="Last Trans.Date" html.valueishtml="0" )
+text(name=t_type visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="5729" y="1656" height="156" width="739" text="Description" html.valueishtml="0" )
+text(name=t_customername visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="1500" y="1656" height="239" width="1031" text="Customer" html.valueishtml="0" )
+text(name=t_custaliasname visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="625" y="1656" height="166" width="520" text="Alias" html.valueishtml="0" )
+line(name=l_3 visible="1" band=summary background.mode="1" background.color="553648127" pen.style="2" pen.width="10" pen.color="0" x1="510" y1="0" x2="7062" y2="0" )
+line(name=l_4 visible="1" band=summary background.mode="1" background.color="553648127" pen.style="2" pen.width="10" pen.color="0" x1="510" y1="250" x2="7062" y2="250" )
+text(name=t_15 visible="1" band=summary font.charset="0" font.face="Arial Narrow" font.family="2" font.height="-9" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="1947" y="31" height="166" width="354" text="Total :" html.valueishtml="0" )
+compute(name=compute_4 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" background.mode="2" background.color="16777215" color="0" x="2395" y="41" height="156" width="979" format="#,##,##0.00" expression="/* sum(  Round ( (amount  -   itemdiscpercvalue  -  invdiscpercvalue  - flatdisc   +   misccharges),  0)   for all) */" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_3 visible="1" band=detail font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="114" y="10" height="156" width="364" format="[GENERAL]" expression="getrow()" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+column(name=date visible="1" band=detail id=1 x="4093" y="10" height="156" width="1031" color="0" border="0" alignment="0" format="dd/mm/yy hh:mm:ss" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="553648127" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=type visible="1" band=detail id=2 x="5729" y="10" height="156" width="947" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="553648127" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=customername visible="1" band=detail id=4 x="1500" y="10" height="156" width="2531" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="553648127" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=custaliasname visible="1" band=detail id=5 x="625" y="10" height="156" width="708" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="553648127" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=area visible="1" band=header.1 id=6 x="541" y="21" height="156" width="2458" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="553648127" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+text(name=t_1 visible="1" band=header.1 font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="700" background.mode="2" background.color="16777215" color="0" alignment="0" border="0" x="166" y="21" height="156" width="312" text="Area:" html.valueishtml="0" )
+htmltable(border="0" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" encodeSelfLinkArgs="1" generateJavaScript="1" netscapeLayers="0" pagingMethod=0 )
+xhtmlgen() cssgen(sessionSpecific="0" )
+xmlgen(inline="0" )
+xsltgen()
+jsgen()
+export.xml(headGroups="1" includewhitespace="0" metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 distill.customPostScript="0" xslfop.print="0" )
+export.xhtml()

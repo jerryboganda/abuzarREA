@@ -1,0 +1,28 @@
+# w_purchasereturn
+
+- title: Normal Purchase Return
+- library: prcomponents (Purchase & stock)
+- ancestor: `w_multi_entry`
+- size: 2995 x 1971 PBU
+- reached from: Purchase > Purchase Return; Purchase > Purchase Return > Normal Purchase; Purchase > Purchase Return > Opening Purchase
+- script size: 3354 lines; 17 events, 78 functions
+
+## Controls (3)
+
+- `tab_retrieve` (tab_retrieve)
+- `dw_purretinvrep` (u_dwstandard) dataobject `d_prinvreport`
+- `dw_prinvdetail` (datawindow) dataobject `d_openpurchasereturndetail`
+
+## Data
+
+- DataWindows: `d_NormalPurchaseDetail`, `d_OpenWholeSaleReturnDetail`, `d_expiryintimation_detail`, `d_expiryintimation_header`, `d_groupallowedmoduleheader`, `d_groupsuppcategory_detail`, `d_itemstockinfo`, `d_loosepurchasedetail`, `d_loosepurchaseheader`, `d_normalpurchasedetail`, `d_normalpurchaseheader`, `d_openpurchasereturndetail`, `d_populateditems`, `d_populateditems_and`, `d_prinvreport`, `d_transfer_detail`
+- tables touched by embedded SQL: accounts, godown, godowndetail, groupallowedgodown, groupsuppliercategory, item, itemcategory, itemsgroupcategory, prdetail, prledger, purdetail, purledger, supplier, usergroups
+- stored procedures: deleteitemstockbatch, getglobalcode, getitemavgprice, getitemstockall, getitemstockbatch, getitemstockinallowedgodown, getitemstocktotal, getitemtotalpiecesinhand, getmaxutn, postprledger, pushprtodropbox, updateactivitymonitor, updateitemavgprice, updateitemstockbatch, updateitemtotalpiecesinhand, virtualgl
+- global functions: f_fetch_sites, f_generateheaderinvcode, f_get_colprecision, f_getgroupcode, f_groupallowedgodowncount, f_groupgodownstrategy, f_is_specialright_enabled, f_numberpreferences, f_reportheaderinfosale, f_rightexists, f_setcolumnstyle, f_stringpreferences, f_validatedw
+- windows opened: w_account_ledger, w_amountoninvoice, w_arg_item_populate3, w_arg_purchasefromcustomer, w_arg_sinvcode_linvcode, w_copypurreturninvoicefrom, w_editpostedinvoice, w_itemprhistory, w_itempurchasehistory, w_preview_invoices, w_printer_copies, w_quotationremarks, w_salesmanpassword, w_special_rights_password
+
+## Events and functions
+
+`w_purchasereturn.ue_accepttext`, `w_purchasereturn.create`, `w_purchasereturn.destroy`, `w_purchasereturn.ue_save`, `w_purchasereturn.ue_newform`, `w_purchasereturn.ue_detail`, `w_purchasereturn.close`, `w_purchasereturn.ue_deleteitem`, `w_purchasereturn.ue_newitem`, `w_purchasereturn.ue_new`, `w_purchasereturn.ue_list`, `w_purchasereturn.ue_refreshddw`, `w_purchasereturn.ue_print`, `w_purchasereturn.ue_postopen`, `w_purchasereturn.ue_settitle`, `dw_detail.itemchanged`, `dw_itemsdetail.itemchanged`, `w_purchasereturn.wf_validaterow`, `w_purchasereturn.wf_assigndatawindowobjects`, `w_purchasereturn.wf_checkitemstock`, `w_purchasereturn.wf_deleteprinvoice`, `w_purchasereturn.wf_editpurchaseinvoice`, `w_purchasereturn.wf_finditem`, `w_purchasereturn.wf_findnormalpurinvoice`, `w_purchasereturn.wf_findopenpurinvoice`, `w_purchasereturn.wf_findunpostedpurret`, `w_purchasereturn.wf_genfullcode`, `w_purchasereturn.wf_iteminfo`, `w_purchasereturn.wf_lockprinvoices`, `w_purchasereturn.wf_lockpurinvoice`, `w_purchasereturn.wf_protectdw`, `w_purchasereturn.wf_releaselock`, `w_purchasereturn.wf_validatefullcode`, `w_purchasereturn.wf_setfooterinfo`, `w_purchasereturn.wf_setiteminfo`, `w_purchasereturn.wf_setiteminfobatch`, `w_purchasereturn.wf_setpurinvinfo`, `w_purchasereturn.wf_setpurrettype`, `w_purchasereturn.wf_setsuppinfo`, `w_purchasereturn.wf_setsuppname`, `w_purchasereturn.wf_updateitemavgprice`, `w_purchasereturn.wf_updateitemstock`, `w_purchasereturn.wf_retrievelistall`, `w_purchasereturn.wf_itempurchasehistory`, `w_purchasereturn.wf_populatepurinvds`, `w_purchasereturn.wf_lockprinvoice`, `w_purchasereturn.wf_initmodify`, `w_purchasereturn.wf_post`, `w_purchasereturn.wf_grandtotal`, `w_purchasereturn.wf_populateprdetail`, `w_purchasereturn.wf_returnprinvoice`, `w_purchasereturn.wf_copyinvoice`, `w_purchasereturn.wf_validatebatch`, `w_purchasereturn.wf_validateitem`, `w_purchasereturn.wf_isinvoiceinuse`, `w_purchasereturn.wf_retrievelist`, `w_purchasereturn.wf_inititeminfo`, `w_purchasereturn.wf_findfullcode`, `w_purchasereturn.wf_setamountoninvoice`, `w_purchasereturn.wf_allowreturnmodification`, `w_purchasereturn.wf_selectprintreport`, `w_purchasereturn.wf_validatebonusqty`, `w_purchasereturn.wf_itemprevretqty`, `w_purchasereturn.wf_itemprevretlbqty`, `w_purchasereturn.wf_itemstockinfo`, `w_purchasereturn.wf_validatelooseqty`, `w_purchasereturn.wf_setterms`, `w_purchasereturn.wf_set_itemtotal_formatmask`, `w_purchasereturn.wf_populatefiltereditems`, `w_purchasereturn.wf_editpostedinvoice`, `w_purchasereturn.wf_fetchserverdate`, `w_purchasereturn.wf_purchase_from_customer`, `w_purchasereturn.wf_validate_pcs`, `w_purchasereturn.wf_replace_postdate_with_date`, `w_purchasereturn.wf_setgodownoption`, `w_purchasereturn.wf_itemprhistory`, `w_purchasereturn.wf_apply_groupsuppliercategory`, `w_purchasereturn.wf_check_groupsuppliercategory`, `w_purchasereturn.wf_fetch_pur_batch_details`, `w_purchasereturn.wf_set_historical_batch_details`, `w_purchasereturn.wf_showaccountledger`, `w_purchasereturn.wf_push_pr_to_dropbox`, `w_purchasereturn.wf_check_pr_below_avgprice`, `tab_retrieve.selectionchanged`, `dw_footer.itemerror`, `dw_footer.editchanged`, `dw_detail.itemerror`, `dw_detail.losefocus`, `dw_itemsdetail.itemfocuschanged`, `dw_itemsdetail.losefocus`, `dw_itemsdetail.rowfocuschanged`, `dw_itemsdetail.itemerror`, `dw_itemsdetail.getfocus`, `dw_find.keypressed`, `dw_purretinvrep.printstart`
+
+Source: `recovered/scripts/prcomponents/w_purchasereturn.pbs`

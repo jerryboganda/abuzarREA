@@ -1,0 +1,114 @@
+release 12.5;
+datawindow ( units=0 timer_interval=60000 processing=1 color=80263581 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.printername=""  print.documentname=""  print.orientation=0 print.margin.left=110 print.margin.right=110 print.margin.top=97 print.margin.bottom=97 print.paper.size=0 print.paper.source=0 print.canusedefaultprinter=yes grid.lines=0 selected.mouse=yes hidegrayline=no showbackcoloronxp=no)
+header(height=72 color="536870912" )
+summary(height=0 color="536870912" )
+footer(height=68 color="536870912" )
+detail(height=64 color="536870912" )
+table(column=(type=char(75) updatewhereclause=yes name=fullcode dbname="Item.customicode"  )
+column=(type=char(60) updatewhereclause=yes name=itemname dbname="Item.name"  )
+column=(type=long updatewhereclause=yes initial="0" name=currlistrow dbname="currlistrow"  )
+column=(type=decimal(4) updatewhereclause=yes name=stock dbname="stock"  )
+column=(type=decimal(4) updatewhereclause=yes name=totalstock dbname="totalstock"  )
+column=(type=long update=yes updatewhereclause=yes name=code dbname="ReceiptDetail.receiptinvcode"  )
+column=(type=long update=yes updatewhereclause=yes initial="1" name=gcode dbname="ReceiptDetail.gcode" 
+ values=""  )
+column=(type=long update=yes updatewhereclause=yes name=icode dbname="ReceiptDetail.icode"  )
+column=(type=char(100) update=yes updatewhereclause=yes validation="gettext()<>''" validationmsg="'Please type batch number'" initial="." name=batch dbname="ReceiptDetail.batch"  )
+column=(type=datetime update=yes updatewhereclause=yes name=expiry dbname="ReceiptDetail.expiry"  )
+column=(type=decimal(5) update=yes updatewhereclause=yes validation="real(gettext()) >= 0" validationmsg="'Price should be greater than zero'" initial="0" name=price dbname="ReceiptDetail.price"  )
+column=(type=long update=yes updatewhereclause=yes validation="real(gettext()) > 0" name=packunits dbname="ReceiptDetail.packunits"  )
+column=(type=decimal(2) update=yes updatewhereclause=yes validation="real(gettext()) > 0" name=purchaseprice dbname="ReceiptDetail.purchaseprice"  )
+column=(type=long update=yes updatewhereclause=yes initial="10" name=priority dbname="ReceiptDetail.priority"  )
+column=(type=decimal(5) update=yes updatewhereclause=yes initial="0.0" name=avgprice dbname="ReceiptDetail.avgprice"  )
+column=(type=decimal(2) update=yes updatewhereclause=yes initial="0.0" name=mrpp dbname="ReceiptDetail.mrpp"  )
+column=(type=decimal(2) update=yes updatewhereclause=yes name=saleprice dbname="ReceiptDetail.saleprice"  )
+column=(type=long update=yes updatewhereclause=yes name=sectcode dbname="ReceiptDetail.Sectcode" 
+ values=""  )
+column=(type=char(1) update=yes updatewhereclause=yes name=updateavgprice dbname="ReceiptDetail.UpdateAvgPrice" 
+ values="Yes	Y/No	N/"  )
+column=(type=decimal(5) update=yes updatewhereclause=yes name=newavgprice dbname="ReceiptDetail.NewAvgPrice"  )
+column=(type=decimal(4) update=yes updatewhereclause=yes name=currstock dbname="ReceiptDetail.CurrStock"  )
+column=(type=decimal(0) update=yes updatewhereclause=yes name=receiptutn dbname="receiptutn"  )
+column=(type=decimal(4) updatewhereclause=yes name=populatedqty dbname="populatedqty"  )
+column=(type=decimal(4) update=yes updatewhereclause=yes validation="real(gettext()) > 0" validationmsg="~"Quantity should be greater than zero~"" initial="1" name=qty dbname="ReceiptDetail.qty"  )
+ retrieve="SELECT 	
+	item.customicode,
+	item.name, 
+	currlistrow = 0,
+	stock=0.0000, 
+	totalstock=0.0000,
+	dbo.ReceiptDetail.receiptinvcode,
+	dbo.ReceiptDetail.gcode,
+	dbo.ReceiptDetail.icode,
+	dbo.ReceiptDetail.batch,
+	dbo.ReceiptDetail.expiry,
+	dbo.ReceiptDetail.price,
+	dbo.ReceiptDetail.packunits,      
+	dbo.ReceiptDetail.purchaseprice,   
+	dbo.ReceiptDetail.priority,
+	dbo.ReceiptDetail.avgprice,
+	dbo.ReceiptDetail.mrpp,
+	dbo.ReceiptDetail.saleprice,
+	dbo.ReceiptDetail.Sectcode,
+	dbo.ReceiptDetail.UpdateAvgPrice,
+	dbo.ReceiptDetail.NewAvgPrice,
+	dbo.ReceiptDetail.CurrStock,
+	receiptutn=dbo.ReceiptDetail.receiptutn,
+	populatedqty = 
+		(SELECT 
+			SUM(
+				CASE WHEN PPD.PackQty = 0 THEN (PPD.LooseQty + PPD.BonusQty) 
+				ELSE ((PPD.PackQty + PPD.BonusQty) * PPD.PackUnits) END
+				) 
+		FROM ProformaPurDetail PPD WHERE PPD.ReceiptRowID = ReceiptDetail.ReceiptUTN),
+	dbo.ReceiptDetail.qty
+	
+FROM 
+	dbo.ReceiptDetail, 
+	dbo.item
+
+WHERE 
+	( dbo.ReceiptDetail.receiptinvcode IN (:r_InvCode) )   and
+	( dbo.ReceiptDetail.icode = dbo.item.icode )
+"
+  arguments=(("r_InvCode", numberlist))
+ sort="code A, itemname A, gcode A, batch A, expiry A"
+)
+group(level=1 header.height=0 trailer.height=0 by=("code"  ) header.color="536870912" trailer.color="536870912" )
+text(name=serialno_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80263581" color="0" alignment="2" border="6" x="9" y="8" height="60" width="128" text="No." html.valueishtml="0" )
+text(name=obj_5712734 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80263581" color="0" alignment="2" border="6" x="146" y="8" height="60" width="375" text="Item Code" html.valueishtml="0" )
+text(name=t_5 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80263581" color="0" alignment="2" border="6" x="530" y="8" height="60" width="1001" text="Item &Name" html.valueishtml="0" )
+text(name=t_1 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80263581" color="0" alignment="2" border="6" x="1541" y="8" height="60" width="357" text="Godown" html.valueishtml="0" )
+text(name=obj_5069489 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80263581" color="0" alignment="2" border="6" x="1906" y="8" height="60" width="274" text="Batch" html.valueishtml="0" )
+text(name=obj_5070631 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80263581" color="0" alignment="2" border="6" x="2190" y="8" height="60" width="315" text="Expiry" html.valueishtml="0" )
+text(name=obj_5072493 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80263581" color="0" alignment="2" border="6" x="2514" y="8" height="60" width="265" text="Qty" html.valueishtml="0" )
+text(name=t_2 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80269524" color="0" alignment="2" border="6" x="2789" y="8" height="60" width="370" text="Price" html.valueishtml="0" )
+text(name=total_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80269524" color="0" alignment="2" border="6" x="3168" y="8" height="60" width="421" text="Amount" html.valueishtml="0" )
+text(name=t_3 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80269524" color="0" alignment="2" border="6" x="3598" y="8" height="60" width="439" text="Section" html.valueishtml="0" )
+text(name=updateavgprice_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80269524" color="0" alignment="2" border="6" x="4046" y="8" height="60" width="448" text="Update Avg Price" html.valueishtml="0" )
+text(name=populatedqty_t visible="1" band=header font.charset="0" font.face="Tahoma" font.family="2" font.height="-12" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="0" border="0" x="4503" y="4" height="76" width="407" text="Populatedqty" html.valueishtml="0" )
+compute(name=d_detaildwtotal visible="1" band=footer font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80263581" color="0" x="3168" y="4" height="60" width="421" format="###,###,###0.00" expression="sum(  price *  qty   for all)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_4 visible="1" band=footer font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="700" background.mode="2" background.color="80269524" color="0" alignment="1" border="0" x="530" y="4" height="60" width="1001" text="Total: " html.valueishtml="0" )
+compute(name=compute_1 visible="1" band=footer font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80263581" color="0" x="2514" y="4" height="60" width="265" format="	f_SetColumnFormat('Qty')" expression="SUM( qty )" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+column(name=itemname visible="1" band=detail id=2 x="530" y="0" height="60" width="1001" color="0" border="0" alignment="0" format="[general]" accelerator="N" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=yes edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=20 )
+column(name=fullcode visible="1" band=detail id=1 x="146" y="0" height="60" width="375" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=10 )
+column(name=batch visible="1" band=detail id=9 x="1906" y="0" height="60" width="274" color="0" border="0" alignment="0" format="[general]" accelerator="B" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=10 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=yes edit.required=yes edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=40 )
+column(name=expiry visible="1" band=detail id=10 x="2190" y="0" height="60" width="315" color="0" border="0" alignment="0" format="[shortdate] [time]" html.valueishtml="0" editmask.focusrectangle=no editmask.autoskip=no editmask.required=yes editmask.readonly=no editmask.codetable=no editmask.ddcalendar=no editmask.spin=no editmask.useformat=no editmask.mask="dd/mm/yyyy" editmask.imemode=0 editmask.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=50 )
+column(name=qty visible="1" band=detail id=24 x="2514" y="0" height="60" width="265" color="0" border="0" alignment="1" format="[general]" html.valueishtml="0" edit.name="<qtystyle>" editmask.focusrectangle=yes editmask.autoskip=no editmask.required=yes editmask.readonly=no editmask.codetable=no editmask.ddcalendar=no editmask.spin=no editmask.useformat=no editmask.mask="##,###,##0.0000" editmask.imemode=0 editmask.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=60 )
+column(name=gcode visible="1" band=detail id=7 x="1541" y="0" height="60" width="357" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" dddw.allowedit=no dddw.autohscroll=no dddw.autoretrieve=yes dddw.useasborder=no dddw.datacolumn=gcode dddw.displaycolumn=name dddw.hscrollbar=no dddw.hsplitscroll=no dddw.imemode=0 dddw.limit=0 dddw.name=ddd_godownpriority dddw.nilisnull=no dddw.percentwidth=130 dddw.required=yes dddw.showlist=no dddw.vscrollbar=yes criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=30 )
+compute(name=c_serialno visible="1" band=detail font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80263581" color="0" x="9" y="0" height="60" width="128" format="####" expression="getRow()" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+column(name=sectcode visible="1" band=detail id=18 x="3598" y="0" height="60" width="439" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" dddw.allowedit=no dddw.autohscroll=no dddw.autoretrieve=yes dddw.useasborder=no dddw.datacolumn=sectcode dddw.displaycolumn=name dddw.hscrollbar=no dddw.hsplitscroll=no dddw.imemode=0 dddw.limit=0 dddw.name=ddd_departmentsection dddw.nilisnull=yes dddw.percentwidth=0 dddw.required=no dddw.showlist=no dddw.vscrollbar=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=80 )
+compute(name=c_total visible="1" band=detail font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80263581" color="0" x="3168" y="0" height="60" width="421" format="###,###,###0.00" expression="price * qty" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+column(name=price visible="1" band=detail id=11 x="2789" y="0" height="60" width="370" color="0" border="0" alignment="1" format="[general]" html.valueishtml="0" editmask.focusrectangle=yes editmask.autoskip=no editmask.required=yes editmask.readonly=no editmask.codetable=no editmask.ddcalendar=no editmask.spin=no editmask.useformat=no editmask.mask="###,###0.00" editmask.imemode=0 editmask.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=70 )
+column(name=updateavgprice visible="1" band=detail id=19 x="4046" y="0" height="60" width="448" color="0" border="0" alignment="2" format="[general]" html.valueishtml="0" ddlb.allowedit=no ddlb.autohscroll=no ddlb.imemode=0 ddlb.limit=0 ddlb.showlist=no ddlb.sorted=no ddlb.useasborder=yes ddlb.vscrollbar=no ddlb.nilisnull=no ddlb.required=yes criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=90 )
+column(name=populatedqty visible="1" band=detail id=23 x="4503" y="0" height="60" width="407" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=100 )
+htmltable(border="0" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" encodeSelfLinkArgs="1" generateJavaScript="1" netscapeLayers="0" pagingMethod=0 )
+xhtmlgen() cssgen(sessionSpecific="0" )
+xmlgen(inline="0" )
+xsltgen()
+jsgen()
+export.xml(headGroups="1" includewhitespace="0" metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 distill.customPostScript="0" xslfop.print="0" )
+export.xhtml()

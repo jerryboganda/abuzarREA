@@ -1,0 +1,186 @@
+release 12.5;
+datawindow ( units=2 timer_interval=60000 processing=1 color=16777215 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.printername=""  print.documentname=""  print.orientation=1 print.margin.left=200 print.margin.right=200 print.margin.top=200 print.margin.bottom=200 print.paper.size=1 print.paper.source=0 print.canusedefaultprinter=yes grid.lines=0 selected.mouse=yes hidegrayline=no showbackcoloronxp=no)
+header(height=1416 color="536870912" )
+summary(height=183 color="536870912" )
+footer(height=200 color="536870912" )
+detail(height=183 color="536870912" )
+table(column=(type=char(60) updatewhereclause=yes name=salesman dbname="SalesMan"  )
+column=(type=char(12) updatewhereclause=yes name=customeralias dbname="CustomerAlias"  )
+column=(type=char(60) updatewhereclause=yes name=customername dbname="CustomerName"  )
+column=(type=char(60) updatewhereclause=yes name=region dbname="Region"  )
+column=(type=char(60) updatewhereclause=yes name=area dbname="Area"  )
+column=(type=char(75) updatewhereclause=yes name=itemalias dbname="ItemAlias"  )
+column=(type=char(60) updatewhereclause=yes name=itemname dbname="ItemName"  )
+column=(type=char(60) updatewhereclause=yes name=itemcategory dbname="ItemCategory"  )
+column=(type=char(60) updatewhereclause=yes name=itemclass dbname="ItemClass"  )
+column=(type=decimal(4) updatewhereclause=yes name=qty dbname="Qty"  )
+column=(type=decimal(4) updatewhereclause=yes name=bonus dbname="Bonus"  )
+column=(type=decimal(6) updatewhereclause=yes name=salevolume dbname="SaleVolume"  )
+column=(type=decimal(6) updatewhereclause=yes name=grosssale dbname="GrossSale"  )
+column=(type=decimal(6) updatewhereclause=yes name=discount dbname="Discount"  )
+column=(type=decimal(6) updatewhereclause=yes name=discountedsale dbname="DiscountedSale"  )
+ retrieve="SELECT 
+	SalesMan=(SELECT SM.Name FROM SalesMan SM WHERE SM.SalesManCode=C.SalesManCode),
+	CustomerAlias=C.AliasName,
+	CustomerName=C.Customer,
+	Region = C.Region, 
+	Area = C.Area,
+	ItemAlias=I.CustomICode,
+	ItemName=I.ItemName,
+	ItemCategory=I.ItemCategory,
+	ItemClass=I.ItemClass,
+	Qty=SUM(CASE ST.SaleType WHEN 'S' THEN ST.Qty ELSE - ST.Qty END),
+	Bonus=SUM(CASE ST.SaleType WHEN 'S' THEN ST.Bonus ELSE - ST.Bonus END),
+	SaleVolume=SUM(CASE ST.SaleType WHEN 'S' THEN (ST.Qty + ST.Bonus) ELSE - (ST.Qty + ST.Bonus ) END * I.AreaVolume),
+	GrossSale = SUM(CASE ST.SaleType WHEN 'S' THEN ST.Gross ELSE - ST.Gross END),
+	Discount = SUM(CASE ST.SaleType WHEN 'S' THEN ST.Discount ELSE - ST.Discount END),
+	DiscountedSale = SUM(CASE ST.SaleType WHEN 'S' THEN (ST.Gross - ST.Discount) ELSE - (ST.Gross - ST.Discount) END)
+FROM 
+	(SELECT 
+		SaleType='S',
+		C.CustCode,
+		I.ICode,
+		Qty=0.0000,
+		Bonus=0.0000,
+		Gross = 0.0000,
+		Discount = 0.0000
+	FROM 
+		Customer C, Item I
+	WHERE
+		I.ICode IN (:ai_icode) AND
+		C.CustCode IN (:ai_custcode)
+	GROUP BY
+		C.CustCode,
+		I.ICode
+	UNION ALL
+	SELECT 
+		SaleType='S',
+		S.CustCode,
+		SD.ICode,
+		Qty=SUM(SD.LooseQty),
+		Bonus=SUM(SD.BonusQty),
+		Gross = SUM(SD.SalePrice * (SD.LooseQty + SD.BonusQty)),
+		Discount = SUM(
+		(SD.ItemFlatDisc * SD.LooseQty) + 
+		((SD.SalePrice - SD.ItemFlatDisc) * SD.LooseQty * SD.DiscPerc * 0.01) + 
+		((SD.SalePrice - SD.ItemFlatDisc) * SD.LooseQty * (1 - SD.DiscPerc * 0.01) * S.DiscPerc * 0.01))
+	FROM 
+		SaleLedger S, SaleDetail SD
+	WHERE
+		S.SaleInvCode=SD.SaleInvCode AND
+		S.Date BETWEEN :adt_startdate AND :adt_enddate AND
+		SD.ICode IN (:ai_icode) AND
+		S.CustCode IN (:ai_custcode)
+	GROUP BY
+		S.CustCode,
+		SD.ICode
+	UNION ALL
+	SELECT 
+		SaleType='R',
+		S.CustCode,
+		SD.ICode,
+		Qty=SUM(SD.LooseQty),
+		Bonus=SUM(SD.BonusQty),
+		Gross = SUM(SD.SalePrice * (SD.LooseQty + SD.BonusQty)),
+		Discount = SUM(
+		(SD.SRPrice * SD.LooseQty * SD.DiscPerc * 0.01) + 
+		(SD.SRPrice * SD.LooseQty * (1 - SD.DiscPerc * 0.01) * S.DiscPerc * 0.01))
+	FROM 
+		SRLedger S, SRDetail SD
+	WHERE
+		S.SRInvCode=SD.SRInvCode AND
+		S.Date BETWEEN :adt_startdate AND :adt_enddate AND
+		SD.ICode IN (:ai_icode) AND
+		S.CustCode IN (:ai_custcode)
+	GROUP BY
+		S.CustCode,
+		SD.ICode) AS ST 
+			RIGHT OUTER JOIN 
+				(SELECT 
+					IT.ICode, IT.CustomICode, ItemName=IT.Name, IT.AreaVolume, IT.ICatCode, IT.ICCode,
+					ItemCategory=(SELECT C.Name FROM ItemCategory C WHERE C.ICatCode = IT.ICatCode),
+					ItemClass=(SELECT C.Name FROM ItemClass C WHERE C.ICCode = IT.ICCode)
+				FROM 
+					Item IT 
+				WHERE IT.ICode IN (:ai_icode)) AS I ON (ST.ICode = I.ICode)
+			RIGHT OUTER JOIN 
+				(SELECT 
+					Cu.SalesManCode, Cu.CustCode, A.AliasName, Customer=A.Name, Region=R.Name, Area=AR.Name
+				FROM 
+					Customer Cu, Area AR, Region R, Accounts A
+				WHERE 
+					Cu.CustCode IN (:ai_custcode) AND
+					Cu.CustCode = A.AccCode AND
+					Cu.AreaCode = AR.AreaCode AND
+					AR.RegionCode = R.RegionCode) AS C ON (ST.CustCode = C.CustCode)
+GROUP BY
+	C.SalesManCode,
+	C.AliasName,
+	C.Customer,
+	C.Region,
+	C.Area,
+	I.CustomICode,
+	I.ItemName,
+	I.ICatCode,
+	I.ICCode,
+	ItemCategory,
+	ItemClass"
+  arguments=(("adt_startdate", datetime), ("adt_enddate", datetime), ("ai_icode", numberlist), ("ai_custcode", numberlist))
+ sort="customername A, itemname A"
+)
+compute(name=c_companyname visible="1" moveable=1 band=background font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="33" y="258" height="166" width="7650" format="[GENERAL]" expression="f_ReportHeaderInfo('clientname')" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=c_address1 visible="1" moveable=1 band=background font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="33" y="458" height="166" width="7650" format="[GENERAL]" expression="f_ReportHeaderInfo('address1')" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=c_address2 visible="1" moveable=1 band=background font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="33" y="658" height="166" width="7650" format="[GENERAL]" expression="f_ReportHeaderInfo('address2')" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_1 visible="1" moveable=1 band=background font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" x="33" y="850" height="183" width="7650" format="[GENERAL]" expression="~"Report Date:~" + STRING(day( today() )) + '/' + STRING(month( today() )) + '/' + STRING(year( today() )) + SPACE(10) + SPACE(5) + ~"From :~" +  STRING(day(adt_startdate )) + '/' + STRING(month(adt_startdate )) + '/' + STRING(year(adt_startdate )) + SPACE(10) + ~"To :~" +  STRING(day(adt_enddate)) + '/' + STRING(month(adt_enddate)) + '/' + STRING(year(adt_enddate)) + SPACE(20) + 'Page ' + page() + ':' + pageAcross() + ' of ' + pageCount() + ':' + pageCountAcross()" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_6 visible="1" moveable=1 band=background font.charset="0" font.face="Times New Roman" font.family="1" font.height="-12" font.pitch="2" font.weight="700" background.mode="2" background.color="16777215" color="0" x="33" y="16" height="208" width="7650" format="[GENERAL]" expression="~"Customer / Item Wise Regional Sales Summary~"" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=customername_t visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" background.mode="2" background.color="12632256" color="33554432" alignment="2" border="0" x="1583" y="1075" height="333" width="1802" text="Customer
+Name" html.valueishtml="0" )
+text(name=region_t visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" background.mode="2" background.color="12632256" color="33554432" alignment="2" border="0" x="3406" y="1075" height="333" width="770" text="Region
+Name" html.valueishtml="0" )
+text(name=area_t visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" background.mode="2" background.color="12632256" color="33554432" alignment="2" border="0" x="4197" y="1075" height="333" width="531" text="Area
+Name" html.valueishtml="0" )
+text(name=itemname_t visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" background.mode="2" background.color="12632256" color="33554432" alignment="2" border="0" x="4750" y="1075" height="333" width="1854" text="Item
+Name" html.valueishtml="0" )
+text(name=salevolume_t visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" background.mode="2" background.color="12632256" color="33554432" alignment="2" border="0" x="7927" y="1075" height="333" width="843" text="Sales
+Volume" html.valueishtml="0" )
+text(name=itemcategory_t visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" background.mode="2" background.color="12632256" color="33554432" alignment="2" border="0" x="6625" y="1075" height="333" width="687" text="Item
+Category" html.valueishtml="0" )
+text(name=itemclass_t visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" background.mode="2" background.color="12632256" color="33554432" alignment="2" border="0" x="7333" y="1075" height="333" width="572" text="Item
+Class" html.valueishtml="0" )
+text(name=discountedsale_t visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" background.mode="2" background.color="12632256" color="33554432" alignment="2" border="0" x="10312" y="1075" height="333" width="729" text="Discounted
+Sale Value" html.valueishtml="0" )
+text(name=discount_t visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" background.mode="2" background.color="12632256" color="33554432" alignment="2" border="0" x="9593" y="1075" height="333" width="697" text="Discount
+Value" html.valueishtml="0" )
+text(name=grosssale_t visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" background.mode="2" background.color="12632256" color="33554432" alignment="2" border="0" x="8791" y="1075" height="333" width="781" text="Gross
+Sales" html.valueishtml="0" )
+text(name=salesman_t visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" background.mode="2" background.color="12632256" color="33554432" alignment="2" border="0" x="20" y="1075" height="333" width="843" text="Sales
+Person" html.valueishtml="0" )
+text(name=customeralias_t visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" background.mode="2" background.color="12632256" color="33554432" alignment="2" border="0" x="885" y="1075" height="333" width="677" text="Customer
+Alias Name" html.valueishtml="0" )
+compute(name=compute_2 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" x="7927" y="8" height="166" width="843" format="######0.0000" expression="sum(salevolume for all)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_3 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" x="8791" y="8" height="166" width="781" format="######0.00" expression="sum(grosssale for all)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_5 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" x="9593" y="8" height="166" width="697" format="######0.00" expression="sum(discount for all)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_7 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" x="10312" y="8" height="166" width="729" format="######0.00" expression="sum(discountedsale for all)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_1 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" background.mode="2" background.color="12632256" color="33554432" alignment="1" border="0" x="1583" y="8" height="166" width="1802" text="Grand Total: " html.valueishtml="0" )
+column(name=customername visible="1" band=detail id=3 x="1583" y="9" height="166" width="1800" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=60 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=region visible="1" band=detail id=4 x="3406" y="9" height="166" width="766" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=60 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=area visible="1" band=detail id=5 x="4197" y="9" height="166" width="533" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=60 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=itemname visible="1" band=detail id=7 x="4750" y="9" height="166" width="1850" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=60 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=salevolume visible="1	if(salevolume=0 OR ISNULL(salevolume),0,1)" band=detail id=12 x="7927" y="9" height="166" width="841" color="33554432" border="0" alignment="1" format="######0.0000" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=grosssale visible="1	if( grosssale =0 OR ISNULL(grosssale ),0,1)" band=detail id=13 x="8791" y="9" height="166" width="783" color="33554432" border="0" alignment="1" format="######0.00" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=discount visible="1	if(  discount =0 OR ISNULL( discount  ),0,1)" band=detail id=14 x="9593" y="9" height="166" width="700" color="33554432" border="0" alignment="1" format="######0.00" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=discountedsale visible="1	if(  discountedsale =0 OR ISNULL( discountedsale ),0,1)" band=detail id=15 x="10312" y="9" height="166" width="725" color="33554432" border="0" alignment="1" format="######0.00" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=itemcategory visible="1" band=detail id=8 x="6625" y="0" height="166" width="683" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=itemclass visible="1" band=detail id=9 x="7333" y="0" height="166" width="575" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=salesman visible="1" band=detail id=1 x="20" y="9" height="166" width="841" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=60 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=customeralias visible="1" band=detail id=2 x="885" y="9" height="166" width="675" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+htmltable(border="1" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" encodeSelfLinkArgs="1" generateJavaScript="1" netscapeLayers="0" pagingMethod=0 )
+xhtmlgen() cssgen(sessionSpecific="0" )
+xmlgen(inline="0" )
+xsltgen()
+jsgen()
+export.xml(headGroups="1" includewhitespace="0" metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 distill.customPostScript="0" xslfop.print="0" )
+export.xhtml()

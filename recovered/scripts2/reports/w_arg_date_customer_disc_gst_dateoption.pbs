@@ -1,0 +1,183 @@
+// window w_arg_date_customer_disc_gst_dateoption (reports)  ancestor: w_listarguments
+
+// w_arg_date_customer_disc_gst_dateoption.create() returns 0
+	integer icurrent
+	call super::create
+	this.gb_5 = create gb_5
+	this.st_4 = create st_4
+	this.st_8 = create st_8
+	this.st_9 = create st_9
+	this.em_discperc = create em_discperc
+	this.sle_line1 = create sle_line1
+	this.sle_line2 = create sle_line2
+	this.st_10 = create st_10
+	this.st_11 = create st_11
+	this.rb_originaldate = create rb_originaldate
+	this.rb_lastsavingdate = create rb_lastsavingdate
+	this.rb_billingdate = create rb_billingdate
+	this.cbx_suppressheader = create cbx_suppressheader
+	this.sle_line3 = create sle_line3
+	this.st_12 = create st_12
+	this.st_13 = create st_13
+	this.st_14 = create st_14
+	this.em_gstperc = create em_gstperc
+	icurrent = upperbound(this.control)
+	this.control[icurrent + 1] = this.gb_5
+	this.control[icurrent + 2] = this.st_4
+	this.control[icurrent + 3] = this.st_8
+	this.control[icurrent + 4] = this.st_9
+	this.control[icurrent + 5] = this.em_discperc
+	this.control[icurrent + 6] = this.sle_line1
+	this.control[icurrent + 7] = this.sle_line2
+	this.control[icurrent + 8] = this.st_10
+	this.control[icurrent + 9] = this.st_11
+	this.control[icurrent + 10] = this.rb_originaldate
+	this.control[icurrent + 11] = this.rb_lastsavingdate
+	this.control[icurrent + 12] = this.rb_billingdate
+	this.control[icurrent + 13] = this.cbx_suppressheader
+	this.control[icurrent + 14] = this.sle_line3
+	this.control[icurrent + 15] = this.st_12
+	this.control[icurrent + 16] = this.st_13
+	this.control[icurrent + 17] = this.st_14
+	this.control[icurrent + 18] = this.em_gstperc
+
+// w_arg_date_customer_disc_gst_dateoption.destroy() returns 0
+	call super::destroy
+	destroy this.gb_5
+	destroy this.st_4
+	destroy this.st_8
+	destroy this.st_9
+	destroy this.em_discperc
+	destroy this.sle_line1
+	destroy this.sle_line2
+	destroy this.st_10
+	destroy this.st_11
+	destroy this.rb_originaldate
+	destroy this.rb_lastsavingdate
+	destroy this.rb_billingdate
+	destroy this.cbx_suppressheader
+	destroy this.sle_line3
+	destroy this.st_12
+	destroy this.st_13
+	destroy this.st_14
+	destroy this.em_gstperc
+
+// w_arg_date_customer_disc_gst_dateoption.open() returns long
+	long ancestorreturnvalue
+	long ll_counter
+	long ll_rowcount
+	integer rtncode
+	ancestorreturnvalue = super::open()
+	this.dw_control.settransobject(sqlca)
+	this.dw_control.insertrow(0)
+	this.dw_control.scrolltorow(0)
+	rtncode = this.dw_control.getchild("custcode", this.idc_categories)
+	if rtncode = -1 then
+		messagebox("Error", "Not a DataWindowChild")
+	end if
+	ll_rowcount = this.idc_categories.rowcount()
+	for ll_counter = 1 to ll_rowcount
+		this.lb_categories.additem(this.idc_categories.getitemstring(ll_counter, "customer_name"))
+	next
+	this.lb_categories.setfocus()
+	this.lb_categories.selectitem(1)
+	return ::message.returnvalue
+
+// cb_ok.clicked() returns long
+	long ancestorreturnvalue
+	long ll_count
+	long ll_counter
+	long ll_innercounter
+	long ll_found
+	string ls_temp
+	ancestorreturnvalue = super::clicked()
+	if parent.cbx_all.checked = true then
+		for ll_counter = 1 to parent.idc_categories.rowcount()
+			parent.istr_arg.ia_integerlist[ll_counter] = parent.idc_categories.getitemnumber(ll_counter, "accounts_acccode")
+			ls_temp = ls_temp + string(parent.istr_arg.ia_integerlist[ll_counter]) + ","
+		next
+	else
+		for ll_counter = 1 to ll_counter
+			ll_found = parent.idc_categories.find("customer_name ='" + parent.lb_selectedcategories.text(ll_counter) + "'", 1, parent.idc_categories.rowcount())
+			if ll_found > 0 then
+				parent.istr_arg.ia_integerlist[ll_counter] = parent.idc_categories.getitemnumber(ll_found, "accounts_acccode")
+				ls_temp = ls_temp + string(parent.istr_arg.ia_integerlist[ll_counter]) + ","
+			end if
+		next
+	end if
+	parent.em_startdate.getdata(parent.istr_arg.d_sdate)
+	parent.em_enddate.getdata(parent.istr_arg.d_edate)
+	parent.em_discperc.getdata(parent.istr_arg.db_code1)
+	parent.em_gstperc.getdata(parent.istr_arg.db_code2)
+	parent.istr_arg.s_name1 = parent.sle_line1.text
+	parent.istr_arg.s_name2 = parent.sle_line2.text
+	parent.istr_arg.s_name6 = parent.sle_line3.text
+	parent.istr_arg.i_supress = parent.cbx_supress.checked
+	parent.istr_arg.i_hide = parent.cbx_hide.checked
+	parent.istr_arg.i_status = 1
+	if parent.rb_originaldate.checked = true then
+		parent.istr_arg.l_code3 = 1
+		parent.istr_arg.s_name4 = "originaldate"
+	elseif parent.rb_lastsavingdate.checked = true then
+		parent.istr_arg.l_code3 = 2
+		parent.istr_arg.s_name4 = "lastsavingdate"
+	else
+		parent.istr_arg.l_code3 = 3
+		parent.istr_arg.s_name4 = "billingdate"
+	end if
+	if parent.cbx_suppressheader.checked = true then
+		parent.istr_arg.s_name3 = "N"
+	else
+		parent.istr_arg.s_name3 = "Y"
+	end if
+	parent.istr_arg.s_name5 = ls_temp
+	parent.post event ue_close(1)
+	return ::message.returnvalue
+
+// em_discperc.ue_enterkey(keycode key, unsignedlong keyflags) returns long
+	if key = keyenter! then
+		send(handle(this), 256, 9, long(90))
+	end if
+	return ::message.returnvalue
+
+// sle_line1.ue_enterkey(keycode key, unsignedlong keyflags) returns long
+	if key = keyenter! then
+		send(handle(this), 256, 9, long(90))
+	end if
+	return ::message.returnvalue
+
+// sle_line2.ue_enterkey(keycode key, unsignedlong keyflags) returns long
+	if key = keyenter! then
+		send(handle(this), 256, 9, long(90))
+	end if
+	return ::message.returnvalue
+
+// rb_originaldate.ue_enterkey(keycode key, unsignedlong keyflags) returns long
+	if key = keyenter! then
+		parent.em_discperc.setfocus()
+	end if
+	return ::message.returnvalue
+
+// rb_lastsavingdate.ue_enterkey(keycode key, unsignedlong keyflags) returns long
+	if key = keyenter! then
+		parent.em_discperc.setfocus()
+	end if
+	return ::message.returnvalue
+
+// rb_billingdate.ue_enterkey(keycode key, unsignedlong keyflags) returns long
+	if key = keyenter! then
+		parent.em_discperc.setfocus()
+	end if
+	return ::message.returnvalue
+
+// sle_line3.ue_enterkey(keycode key, unsignedlong keyflags) returns long
+	if key = keyenter! then
+		send(handle(this), 256, 9, long(90))
+	end if
+	return ::message.returnvalue
+
+// em_gstperc.ue_enterkey(keycode key, unsignedlong keyflags) returns long
+	if key = keyenter! then
+		send(handle(this), 256, 9, long(90))
+	end if
+	return ::message.returnvalue

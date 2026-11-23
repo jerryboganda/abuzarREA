@@ -1,0 +1,3 @@
+SET NOCOUNT ON; SET STATISTICS IO ON; SET STATISTICS TIME ON;
+SELECT COUNT(*) FROM VirtualGl WHERE AccCode=2 AND Date>='2023-03-01' AND Date<'2023-04-01';
+SELECT DocumentType, DocumentCode, Date, Debit, Credit FROM VirtualGl WHERE AccCode=2 AND Date>='2023-03-01' AND Date<'2023-04-01' ORDER BY Date;

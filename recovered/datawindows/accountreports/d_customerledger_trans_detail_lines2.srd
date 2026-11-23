@@ -1,0 +1,369 @@
+release 12.5;
+datawindow ( units=2 timer_interval=0 processing=0 color=1073741824 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.file=""  picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.printername=""  print.documentname=""  print.orientation=2 print.margin.left=0 print.margin.right=0 print.margin.top=0 print.margin.bottom=0 print.paper.size=1 print.paper.source=0 print.canusedefaultprinter=yes selected.mouse=no hidegrayline=no showbackcoloronxp=no)
+header(height=383 color="536870912" transparency="0" gradient.color="8421504" gradient.transparency="0" gradient.angle="0" brushmode="0" gradient.repetition.mode="0" gradient.repetition.length="100" gradient.repetition.count="0" gradient.focus="0" gradient.scale="100" gradient.spread="100" )
+summary(height=0 color="536870912" transparency="0" gradient.color="8421504" gradient.transparency="0" gradient.angle="0" brushmode="0" gradient.repetition.mode="0" gradient.repetition.length="100" gradient.repetition.count="0" gradient.focus="0" gradient.scale="100" gradient.spread="100" )
+footer(height=0 color="536870912" transparency="0" gradient.color="8421504" gradient.transparency="0" gradient.angle="0" brushmode="0" gradient.repetition.mode="0" gradient.repetition.length="100" gradient.repetition.count="0" gradient.focus="0" gradient.scale="100" gradient.spread="100" )
+detail(height=183 color="536870912" transparency="0" gradient.color="8421504" gradient.transparency="0" gradient.angle="0" brushmode="0" gradient.repetition.mode="0" gradient.repetition.length="100" gradient.repetition.count="0" gradient.focus="0" gradient.scale="100" gradient.spread="100" )
+table(column=(type=long updatewhereclause=yes name=invcode dbname="InvCode"  )
+column=(type=char(100) updatewhereclause=no name=vehicle dbname="Vehicle"  )
+column=(type=long updatewhereclause=yes name=icode dbname="ICode"  )
+column=(type=char(75) updatewhereclause=yes name=aliasname dbname="AliasName"  )
+column=(type=char(60) updatewhereclause=yes name=itemname dbname="ItemName"  )
+column=(type=decimal(4) updatewhereclause=yes name=packqty dbname="PackQty"  )
+column=(type=decimal(2) updatewhereclause=yes name=discperc dbname="DiscPerc"  )
+column=(type=decimal(2) updatewhereclause=yes name=qty dbname="Qty"  )
+column=(type=decimal(4) updatewhereclause=yes name=bonusqty dbname="BonusQty"  )
+column=(type=decimal(2) updatewhereclause=yes name=rate dbname="Rate"  )
+column=(type=decimal(6) updatewhereclause=yes name=discount dbname="Discount"  )
+column=(type=decimal(6) updatewhereclause=yes name=salestax dbname="SalesTax"  )
+column=(type=decimal(2) updatewhereclause=yes name=misccharges dbname="MiscCharges"  )
+column=(type=decimal(2) updatewhereclause=yes name=flatdisc dbname="FlatDisc"  )
+ retrieve="SELECT
+	InvCode = SL.SaleInvCode,
+	Vehicle = MAX(SL.Vehicle),
+	ICode = SD.ICode, 
+	AliasName = I.CustomICode,
+	ItemName = I.Name,
+	PackQty = SUM(SD.PackQtyForSale),
+	DiscPerc = SD.DiscPerc,
+	Qty = SUM(SD.LooseQty),
+	BonusQty = SUM(SD.BonusQty),
+	Rate = SD.SalePrice,
+	Discount = SUM( 
+		(SD.LooseQty * SD.ItemFlatDisc) + 
+		(SD.LooseQty * (SD.SalePrice - SD.ItemFlatDisc) * (SD.DiscPerc * 0.01)) + 
+		(SD.LooseQty * (SD.SalePrice - SD.ItemFlatDisc) * (1 - SD.DiscPerc * 0.01) * (SL.DiscPerc * 0.01))),
+	SalesTax = SUM( ((SD.LooseQty + SD.BonusQty) * SD.UnitSalesTax) + 
+		(SD.LooseQty * (SD.SalePrice - SD.ItemFlatDisc) * (1 - SD.DiscPerc * 0.01) * (SD.GSTPerc * 0.01))),
+	MiscCharges = SL.MiscCharges,
+	FlatDisc = SL.FlatDisc
+FROM
+	SaleLedger SL, 
+	SaleDetail SD,
+	Item I
+WHERE
+	:as_type = 'SV' AND
+	SL.SaleInvCode = :ai_invcode AND
+	SL.SaleInvCode = SD.SaleInvCode AND
+	SD.ICode = I.ICode
+GROUP BY
+	SL.SaleInvCode,
+	SL.MiscCharges,
+	SL.FlatDisc,
+	SD.ICode,
+	I.CustomICode,
+	I.Name,
+	SD.SalePrice,
+	SD.DiscPerc
+UNION ALL
+SELECT 
+	InvCode = SL.SRInvCode,
+	Vehicle = NULL,
+	ICode = SD.ICode, 
+	AliasName = I.CustomICode,
+	ItemName = I.Name,
+	PackQty = 0,
+	DiscPerc = SD.DiscPerc,
+	Qty = SUM(SD.LooseQty),
+	BonusQty = SUM(SD.BonusQty),
+	Rate = SD.SRPrice,
+	Discount = SUM( 
+		(SD.LooseQty * SD.SRPrice * SD.DiscPerc * 0.01) + 
+		(SD.LooseQty * SD.SRPrice * (1 - SD.DiscPerc * 0.01) * (SL.DiscPerc * 0.01))),
+	SalesTax = SUM( ((SD.LooseQty + SD.BonusQty) * SD.UnitSalesTax) + 
+		(SD.LooseQty * SD.SRPrice * (1 - SD.DiscPerc * 0.01) * (SD.GSTPerc * 0.01))),
+	MiscCharges = SL.MiscCharges,
+	FlatDisc = SL.FlatDisc
+FROM
+	SRLedger SL, 
+	SRDetail SD,
+	Item I
+WHERE
+	:as_type = 'SR' AND
+	SL.SRInvCode = :ai_invcode AND
+	SL.SRInvCode = SD.SRInvCode AND
+	SD.ICode = I.ICode
+GROUP BY
+	SL.SRInvCode,
+	SL.MiscCharges,
+	SL.FlatDisc,
+	SD.ICode,
+	I.CustomICode,
+	I.Name,
+	SD.SRPrice,
+	SD.DiscPerc
+UNION ALL
+SELECT 
+	InvCode = PL.PurInvCode,
+	Vehicle = MAX(PL.Vehicle),
+	ICode = PD.ICode, 
+	AliasName = I.CustomICode,
+	ItemName = I.Name,
+	PackQty = 0,
+	DiscPerc = PD.DiscPerc,
+	Qty = SUM(PD.LooseQty + PD.PackQty),
+	BonusQty = SUM(PD.BonusQty),
+	Rate = PD.PurPrice,
+	Discount = SUM( 
+		(PD.LooseQty * PD.PurPrice * (PD.DiscPerc * 0.01)) + 
+		(PD.LooseQty * PD.PurPrice * (1 - PD.DiscPerc * 0.01) * (PL.DiscPerc * 0.01))),
+	SalesTax = SUM( ((PD.LooseQty + PD.BonusQty) * PD.UnitSalesTax) + 
+		(PD.LooseQty * PD.PurPrice * (1 - PD.DiscPerc * 0.01) * (PD.GSTPerc * 0.01))),
+	MiscCharges = PL.MiscCharges,
+	FlatDisc = PL.FlatDisc
+FROM
+	PurLedger PL, 
+	PurDetail PD,
+	Item I
+WHERE
+	:as_type = 'PV' AND
+	PL.PurInvCode = :ai_invcode AND
+	PL.PurInvCode = PD.PurInvCode AND
+	PD.ICode = I.ICode
+GROUP BY
+	PL.PurInvCode,
+	PL.MiscCharges,
+	PL.FlatDisc,
+	PD.ICode,
+	I.CustomICode,
+	I.Name,
+	PD.PurPrice,
+	PD.DiscPerc
+UNION ALL
+SELECT 
+	InvCode = PL.PrInvCode,
+	Vehicle = NULL,
+	ICode = PD.ICode, 
+	AliasName = I.CustomICode,
+	ItemName = I.Name,
+	PackQty = 0,
+	DiscPerc = PD.DiscPerc,
+	Qty = SUM(PD.LooseQty),
+	BonusQty = SUM(PD.BonusQty),
+	Rate = PD.PrPrice,
+	Discount = SUM( 
+		(PD.LooseQty * PD.PrPrice * (PD.DiscPerc * 0.01)) + 
+		(PD.LooseQty * PD.PrPrice * (1 - PD.DiscPerc * 0.01) * (PL.DiscPerc * 0.01))),
+	SalesTax = SUM( ((PD.LooseQty + PD.BonusQty) * PD.UnitSalesTax) + 
+		(PD.LooseQty * PD.PrPrice * (1 - PD.DiscPerc * 0.01) * (PD.GSTPerc * 0.01))),
+	MiscCharges = PL.MiscCharges,
+	FlatDisc = PL.FlatDisc
+FROM
+	PrLedger PL, 
+	PrDetail PD,
+	Item I
+WHERE
+	:as_type = 'PR' AND
+	PL.PrInvCode = :ai_invcode AND
+	PL.PrInvCode = PD.PrInvCode AND
+	PD.ICode = I.ICode
+GROUP BY
+	PL.PrInvCode,
+	PL.MiscCharges,
+	PL.FlatDisc,
+	PD.ICode,
+	I.CustomICode,
+	I.Name,
+	PD.PrPrice,
+	PD.DiscPerc
+UNION ALL
+SELECT
+	InvCode = SL.ServiceInvCode,
+	Vehicle = NULL,
+	ICode = SD.ServiceCode, 
+	AliasName = I.AliasName,
+	ItemName = I.Name,
+	PackQty = 0,
+	DiscPerc = SD.DiscPerc,
+	Qty = SUM(SD.Qty),
+	BonusQty = 0,
+	Rate = SD.Price,
+	Discount = SUM( 
+		(SD.Qty * SD.ServiceFlatDisc) + 
+		(SD.Qty * (SD.Price - SD.ServiceFlatDisc) * (SD.DiscPerc * 0.01)) + 
+		(SD.Qty * (SD.Price - SD.ServiceFlatDisc) * (1 - SD.DiscPerc * 0.01) * (SL.DiscPerc * 0.01))),
+	SalesTax = SUM( (SD.Qty * SD.ServiceFlatTax) + 
+		(SD.Qty * (SD.Price - SD.ServiceFlatDisc) * (1 - SD.DiscPerc * 0.01) * (SD.ServiceGSTPerc * 0.01))),
+	MiscCharges = SL.MiscCharges,
+	FlatDisc = SL.FlatDisc
+FROM
+	ServiceHeader SL, 
+	ServiceDetail SD,
+	Service I
+WHERE
+	:as_type = 'RS' AND
+	SL.ServiceInvCode = :ai_invcode AND
+	SL.ServiceInvCode = SD.ServiceInvCode AND
+	SD.ServiceCode = I.ServiceCode
+GROUP BY
+	SL.ServiceInvCode,
+	SL.MiscCharges,
+	SL.FlatDisc,
+	SD.ServiceCode,
+	I.AliasName,
+	I.Name,
+	SD.Price,
+	SD.DiscPerc
+UNION ALL
+SELECT
+	InvCode = SL.ServiceRInvCode,
+	Vehicle = NULL,
+	ICode = SD.ServiceCode, 
+	AliasName = I.AliasName,
+	ItemName = I.Name,
+	PackQty = 0,
+	DiscPerc = SD.DiscPerc,
+	Qty = SUM(SD.Qty),
+	BonusQty = 0,
+	Rate = SD.ServicePrice,
+	Discount = SUM( 
+		(SD.Qty * SD.ServiceFlatDisc) + 
+		(SD.Qty * (SD.ServicePrice - SD.ServiceFlatDisc) * (SD.DiscPerc * 0.01)) + 
+		(SD.Qty * (SD.ServicePrice - SD.ServiceFlatDisc) * (1 - SD.DiscPerc * 0.01) * (SL.DiscPerc * 0.01))),
+	SalesTax = SUM( (SD.Qty * SD.ServiceFlatTax) + 
+		(SD.Qty * (SD.ServicePrice - SD.ServiceFlatDisc) * (1 - SD.DiscPerc * 0.01) * (SD.ServiceGSTPerc * 0.01))),
+	MiscCharges = SL.MiscCharges,
+	FlatDisc = SL.FlatDisc
+FROM
+	ServiceRHeader SL, 
+	ServiceRDetail SD,
+	Service I
+WHERE
+	:as_type = 'RR' AND
+	SL.ServiceRInvCode = :ai_invcode AND
+	SL.ServiceRInvCode = SD.ServiceRInvCode AND
+	SD.ServiceCode = I.ServiceCode
+GROUP BY
+	SL.ServiceRInvCode,
+	SL.MiscCharges,
+	SL.FlatDisc,
+	SD.ServiceCode,
+	I.AliasName,
+	I.Name,
+	SD.ServicePrice,
+	SD.DiscPerc
+UNION ALL
+SELECT  
+	InvCode = P.ServicePurInvCode,
+	Vehicle = NULL,
+	ICode = D.ServiceCode, 
+	AliasName = I.AliasName,
+	ItemName = I.Name,
+	PackQty = 0,
+	DiscPerc = D.DiscPerc,
+	Qty = SUM(D.Qty),
+	BonusQty = 0,
+	Rate = D.Price,
+	Discount=
+		SUM(D.Qty * (D.Price - D.serviceflatdisc) * 0.01 * D.discperc) + 
+		SUM(D.qty * (D.Price - D.serviceflatdisc) * (1- (0.01 * D.discperc)) * (0.01 * P.discperc)),
+	SalesTax = 0.00,
+	MiscCharges = P.MiscCharges,
+	FlatDisc = P.FlatDisc
+FROM
+	ServicePurHeader p,	 
+	ServicePurDetail D,
+	Service I
+WHERE   
+	:as_type = 'SP' AND
+	P.Posted = 'Y' AND 
+	P.ServicePurInvCode = D.ServicePurInvCode AND 
+	P.ServicePurInvCode = :ai_invcode AND
+	D.ServiceCode = I.ServiceCode
+GROUP BY 
+	P.ServicePurInvCode,
+	P.DiscPerc,
+	P.MiscCharges,
+	P.FlatDisc,
+	D.ServiceCode,
+	I.AliasName,
+	I.Name,
+	D.Price,
+	D.DiscPerc
+UNION ALL
+SELECT  
+	InvCode = P.ServicePrInvCode,
+	Vehicle = NULL,
+	ICode = D.ServiceCode, 
+	AliasName = I.AliasName,
+	ItemName = I.Name,
+	PackQty=0,
+	DiscPerc=D.DiscPerc,
+	Qty = SUM(D.Qty),
+	BonusQty = 0,
+	Rate = D.Price,
+	Discount=
+		SUM(D.Qty * (D.Price - D.serviceflatdisc) * 0.01 * D.discperc) + 
+		SUM(D.qty * (D.Price - D.serviceflatdisc) * (1- (0.01 * D.discperc)) * (0.01 * P.discperc)),
+	SalesTax = 0.00,
+	MiscCharges = P.MiscCharges,
+	FlatDisc = P.FlatDisc
+FROM
+	ServicePrHeader p,	 
+	ServicePrDetail D,
+	Service I
+WHERE   
+	:as_type = 'RP' AND
+	P.Posted = 'Y' AND 
+	P.ServicePRInvCode = D.ServicePRInvCode AND 
+	P.ServicePRInvCode = :ai_invcode AND
+	D.ServiceCode = I.ServiceCode
+GROUP BY 
+	P.ServicePRInvCode,
+	P.DiscPerc,
+	P.MiscCharges,
+	P.FlatDisc,
+	D.ServiceCode,
+	I.AliasName,
+	I.Name,
+	D.Price,
+	D.DiscPerc"
+  arguments=(("as_type", string), ("ai_invcode", number))
+)
+line(name=l_1 visible="1" band=header background.mode="2" background.color="16777215" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="0" pen.width="8" pen.color="0" x1="16" y1="166" x2="5066" y2="166" )
+line(name=l_7 visible="1" band=header background.mode="2" background.color="16777215" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="0" pen.width="8" pen.color="0" x1="16" y1="366" x2="5066" y2="366" )
+text(name=t_5 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="2" background.color="16777215" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" alignment="2" border="0" x="4300" y="208" height="133" width="741" text="Total" html.valueishtml="0" )
+text(name=t_6 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="2" background.color="16777215" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" alignment="2" border="0" x="3825" y="208" height="133" width="416" text="Disc. %" html.valueishtml="0" )
+text(name=t_4 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="2" background.color="16777215" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" alignment="2" border="0" x="3183" y="208" height="133" width="583" text="Price" html.valueishtml="0" )
+text(name=t_3 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="2" background.color="16777215" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" alignment="2" border="0" x="2675" y="208" height="133" width="450" text="Qty" html.valueishtml="0" )
+text(name=t_2 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="2" background.color="16777215" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" alignment="2" border="0" x="416" y="208" height="133" width="1716" text="Item Name" html.valueishtml="0" )
+text(name=t_1 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="2" background.color="16777215" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" alignment="2" border="0" x="50" y="208" height="133" width="300" text="S.No." html.valueishtml="0" )
+text(name=t_7 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="2" background.color="16777215" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" alignment="2" border="0" x="2200" y="208" height="133" width="416" text="Carton" html.valueishtml="0" )
+line(name=l_15 visible="1" band=header background.mode="2" background.color="16777215" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="0" pen.width="8" pen.color="0" x1="16" y1="175" x2="16" y2="425" )
+line(name=l_14 visible="1" band=header background.mode="2" background.color="16777215" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="0" pen.width="8" pen.color="0" x1="383" y1="175" x2="383" y2="425" )
+line(name=l_10 visible="1" band=header background.mode="2" background.color="16777215" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="0" pen.width="8" pen.color="0" x1="5066" y1="175" x2="5066" y2="425" )
+line(name=l_2 visible="1" band=header background.mode="2" background.color="16777215" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="0" pen.width="8" pen.color="0" x1="4266" y1="175" x2="4266" y2="425" )
+line(name=l_11 visible="1" band=header background.mode="2" background.color="16777215" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="0" pen.width="8" pen.color="0" x1="3791" y1="175" x2="3791" y2="425" )
+line(name=l_12 visible="1" band=header background.mode="2" background.color="16777215" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="0" pen.width="8" pen.color="0" x1="3150" y1="175" x2="3150" y2="425" )
+line(name=l_19 visible="1" band=header background.mode="2" background.color="16777215" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="0" pen.width="8" pen.color="0" x1="2641" y1="175" x2="2641" y2="425" )
+line(name=l_13 visible="1" band=header background.mode="2" background.color="16777215" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="0" pen.width="8" pen.color="0" x1="2166" y1="175" x2="2166" y2="425" )
+column(name=flatdisc visible="1	if(flatdisc > 0, 1, 0)" band=header id=14 x="3491" y="16" height="133" width="733" color="33554432" border="0" alignment="0" format="###,##0.00" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" transparency="0" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="400" tabsequence=0 )
+text(name=t_9 visible="1	if(flatdisc > 0, 1, 0)" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="2" background.color="16777215" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" alignment="0" border="0" x="1950" y="16" height="133" width="1516" text="Flat Discount/Transport Charges:" html.valueishtml="0" )
+column(name=vehicle visible="1	if(len(vehicle) > 0, 1, 0)" band=header id=2 x="475" y="16" height="133" width="1433" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" transparency="0" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="400" tabsequence=0 )
+text(name=t_8 visible="1	if(len(vehicle) > 0, 1, 0)" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="2" background.color="16777215" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" alignment="0" border="0" x="66" y="16" height="133" width="383" text="Vehicle:" html.valueishtml="0" )
+line(name=l_5 visible="1" band=detail background.mode="2" background.color="16777215" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="0" pen.width="8" pen.color="0" x1="383" y1="0" x2="383" y2="267" )
+line(name=l_9 visible="1" band=detail background.mode="2" background.color="16777215" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="0" pen.width="8" pen.color="0" x1="16" y1="0" x2="16" y2="267" )
+line(name=l_3 visible="1" band=detail background.mode="2" background.color="16777215" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="0" pen.width="8" pen.color="0" x1="5066" y1="0" x2="5066" y2="267" )
+line(name=l_16 visible="1" band=detail background.mode="2" background.color="16777215" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="0" pen.width="8" pen.color="0" x1="16" y1="167" x2="5066" y2="167" )
+line(name=l_17 visible="1" band=detail background.mode="2" background.color="16777215" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="0" pen.width="8" pen.color="0" x1="4266" y1="0" x2="4266" y2="267" )
+column(name=discperc visible="1	if(discperc=0,0,1)" band=detail id=7 x="3825" y="8" height="141" width="416" color="33554432" border="0" alignment="1" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" transparency="0" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="400" tabsequence=0 )
+line(name=l_4 visible="1" band=detail background.mode="2" background.color="16777215" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="0" pen.width="8" pen.color="0" x1="3791" y1="0" x2="3791" y2="267" )
+line(name=l_6 visible="1" band=detail background.mode="2" background.color="16777215" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="0" pen.width="8" pen.color="0" x1="3150" y1="0" x2="3150" y2="267" )
+line(name=l_18 visible="1" band=detail background.mode="2" background.color="16777215" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="0" pen.width="8" pen.color="0" x1="2641" y1="0" x2="2641" y2="267" )
+line(name=l_8 visible="1" band=detail background.mode="2" background.color="16777215" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="0" pen.width="8" pen.color="0" x1="2166" y1="0" x2="2166" y2="267" )
+column(name=rate visible="1" band=detail id=10 x="3183" y="8" height="141" width="583" color="33554432" border="0" alignment="1" format="###,###,##0.00" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" transparency="0" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=qty visible="1" band=detail id=8 x="2675" y="8" height="141" width="450" color="33554432" border="0" alignment="1" format="	f_SetColumnFormat('Qty')" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" transparency="0" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=packqty visible="1	if(packqty=0,0,1)" band=detail id=6 x="2200" y="8" height="141" width="416" color="33554432" border="0" alignment="1" format="	f_SetColumnFormat('Qty')" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" transparency="0" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=itemname visible="1" band=detail id=5 x="416" y="8" height="141" width="1716" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" transparency="0" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="400" tabsequence=0 )
+compute(name=compute_2 visible="1" band=detail font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="33554432" x="58" y="8" height="141" width="283" format="[GENERAL]" expression="getrow()" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_1 visible="1" band=detail font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="33554432" x="4300" y="0" height="141" width="741" format="[General]" expression="qty * rate * (1 - discperc * 0.01)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+htmltable(border="1" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" encodeSelfLinkArgs="1" generateDDDWFrames="1" generateJavaScript="1" netscapeLayers="0" pagingMethod=0 )
+xhtmlgen() cssgen(sessionSpecific="0" )
+xmlgen(inline="0" )
+xsltgen()
+jsgen()
+export.xml(headGroups="1" includewhitespace="0" metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 distill.customPostScript="0" xslfop.print="0" )
+export.xhtml()

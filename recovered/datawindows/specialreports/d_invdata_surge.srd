@@ -1,0 +1,155 @@
+release 12.5;
+datawindow ( units=0 timer_interval=0 processing=0 color=16777215 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.printername=""  print.documentname=""  print.orientation=0 print.margin.left=110 print.margin.right=110 print.margin.top=96 print.margin.bottom=96 print.paper.size=0 print.paper.source=0 print.canusedefaultprinter=yes selected.mouse=no hidegrayline=no showbackcoloronxp=no)
+header(height=152 color="536870912" )
+summary(height=0 color="536870912" )
+footer(height=0 color="536870912" )
+detail(height=84 color="536870912" )
+table(column=(type=long updatewhereclause=yes name=dstbidlen dbname="DSTBIDLEN"  )
+column=(type=char(6) updatewhereclause=yes name=dstbid dbname="DSTBID"  )
+column=(type=long updatewhereclause=yes name=documentnolen dbname="DOCUMENTNOLEN"  )
+column=(type=char(12) updatewhereclause=yes name=documentno dbname="DOCUMENTNO"  )
+column=(type=long updatewhereclause=yes name=docdatelen dbname="DOCDATELEN"  )
+column=(type=char(10) updatewhereclause=yes name=docdate dbname="DOCDATE"  )
+column=(type=long updatewhereclause=yes name=custidlen dbname="CUSTIDLEN"  )
+column=(type=char(10) updatewhereclause=yes name=custid dbname="CUSTID"  )
+column=(type=long updatewhereclause=yes name=townidlen dbname="TownIDLEN"  )
+column=(type=char(16) updatewhereclause=yes name=townid dbname="TownID"  )
+column=(type=long updatewhereclause=yes name=prdidlen dbname="PRDIDLEN"  )
+column=(type=char(9) updatewhereclause=yes name=prdid dbname="PRDID"  )
+column=(type=long updatewhereclause=yes name=prdlen dbname="PRDLEN"  )
+column=(type=char(50) updatewhereclause=yes name=prd dbname="PRD"  )
+column=(type=long updatewhereclause=yes name=batchnolen dbname="BatchNoLEN"  )
+column=(type=char(10) updatewhereclause=yes name=batchno dbname="BatchNo"  )
+column=(type=long updatewhereclause=yes name=pricelen dbname="PRICELEN"  )
+column=(type=char(12) updatewhereclause=yes name=price dbname="PRICE"  )
+column=(type=long updatewhereclause=yes name=quantitylen dbname="QuantityLEN"  )
+column=(type=char(12) updatewhereclause=yes name=quantity dbname="Quantity"  )
+column=(type=long updatewhereclause=yes name=bonuslen dbname="BonusLEN"  )
+column=(type=char(12) updatewhereclause=yes name=bonus dbname="Bonus"  )
+column=(type=long updatewhereclause=yes name=discountamntlen dbname="DISCOUNTAMNTLEN"  )
+column=(type=char(12) updatewhereclause=yes name=discountamount dbname="DISCOUNTAMOUNT"  )
+column=(type=long updatewhereclause=yes name=reasonlen dbname="ReasonLen"  )
+column=(type=char(1) updatewhereclause=yes name=reason dbname="Reason"  )
+ retrieve="SELECT
+	DSTBIDLEN=6, 
+	DSTBID=:as_dstcode + REPLICATE(' ', 6 - LEN(:as_dstcode)),
+	DOCUMENTNOLEN=12,
+	DOCUMENTNO = SUBSTRING(LTRIM(RTRIM(STR(SL.SaleInvCode, 12))), 1, 12), 
+	DOCDATELEN=10,
+	DOCDATE=Convert(varchar(10), SL.DATE, 103),
+	CUSTIDLEN=10,
+	CUSTID = (SELECT SUBSTRING(LTRIM(RTRIM(A.AliasName)), 1, 10) FROM Accounts A WHERE A.AccCode = C.CustCode),
+	TownIDLEN=16,
+	TownID=SUBSTRING(LTRIM(RTRIM(STR(C.AREACODE, 16))), 1, 16), 
+	PRDIDLEN=9,
+	PRDID=SUBSTRING(LTRIM(RTRIM(I.CustomICode)), 1, 9),
+	PRDLEN=50,
+	PRD=SUBSTRING(LTRIM(RTRIM(I.Name)), 1, 50),
+	BatchNoLEN=10,
+	BatchNo=SUBSTRING(SD.Batch, 1, 10),
+	PRICELEN=12,
+	PRICE=SUBSTRING(LTRIM(RTRIM(STR(SD.SalePrice, 12, 2))), 1, 12), 
+	QuantityLEN=12,
+	Quantity=SUBSTRING(LTRIM(RTRIM(STR(SD.LooseQty, 12, 2))), 1, 12),
+	BonusLEN=12,
+	Bonus=SUBSTRING(LTRIM(RTRIM(STR(SD.BonusQty, 12, 2))), 1, 12), 
+	DISCOUNTAMNTLEN=12,
+	DISCOUNTAMOUNT=SUBSTRING(LTRIM(RTRIM(STR(Round((SD.LooseQty * SD.SalePrice * (SD.DiscPerc * 0.01)), 2) + SD.ItemFlatDisc, 12, 2))),1, 12),
+	ReasonLen=1,
+	Reason = 'S'
+FROM
+	SaleLedger SL,
+	SaleDetail SD,
+	Customer C,
+	CustomerCategory CC,
+	Item I
+WHERE
+	SL.SaleInvCode = SD.SaleInvCode AND
+	SL.POSTED = 'Y' AND
+	SD.ICode = I.ICode AND
+	I.ManfCode = :manfcode AND
+	SL.CustCode = C.CustCode AND
+	C.CustCatCode = CC.CustCatCode AND
+	SL.DATE >= :ar_startdate AND SL.DATE <= :ar_enddate
+UNION ALL
+SELECT 
+	DSTBIDLEN=6,
+	DSTBID=:as_dstcode + REPLICATE(' ', 6 - LEN(:as_dstcode)),
+	DOCUMENTNOLEN=12,
+	DOCUMENTNO = SUBSTRING(LTRIM(RTRIM(STR(SL.SRInvCode, 12))), 1, 12), 
+	DOCDATELEN=10,
+	DOCDATE=Convert(varchar(10), SL.DATE, 103),
+	CUSTIDLEN=10,
+	CUSTID = (SELECT SUBSTRING(LTRIM(RTRIM(A.AliasName)), 1, 10) FROM Accounts A WHERE A.AccCode = C.CustCode),
+	TownIDLEN=16,
+	TownID=SUBSTRING(LTRIM(RTRIM(STR(C.AREACODE, 16))), 1, 16), 
+	PRDIDLEN=9,
+	PRDID=SUBSTRING(LTRIM(RTRIM(I.CustomICode)), 1, 9),
+	PRDLEN=50,
+	PRD=SUBSTRING(LTRIM(RTRIM(I.Name)), 1, 50),
+	BatchNoLEN=10,
+	BatchNo=SUBSTRING(SD.Batch, 1, 10),
+	PRICELEN=12,
+	PRICE=SUBSTRING(LTRIM(RTRIM(STR(SD.SRPrice, 12, 2))), 1, 12), 
+	QuantityLEN=12,
+	Quantity=SUBSTRING(LTRIM(RTRIM(STR(- SD.LooseQty, 12, 2))), 1, 12),
+	BonusLEN=12,
+	Bonus=SUBSTRING(LTRIM(RTRIM(STR(- SD.BonusQty, 12, 2))), 1, 12), 
+	DISCOUNTAMNTLEN=12,
+	DISCOUNTAMOUNT=SUBSTRING(LTRIM(RTRIM(STR(- (Round((SD.LooseQty * SD.SRPrice * (SD.DiscPerc * 0.01)), 2)), 12, 2))),1, 12),
+	ReasonLen=1,
+	Reason = 'R'
+FROM
+	SRLedger SL,
+	SRDetail SD,
+	Customer C,
+	CustomerCategory CC,
+	Item I
+WHERE
+	SL.SRInvCode = SD.SRInvCode AND
+	SL.POSTED = 'Y' AND
+	SD.ICode = I.ICode AND
+	I.ManfCode = :manfcode AND
+	SL.CustCode = C.CustCode AND
+	C.CustCatCode = CC.CustCatCode AND
+	SL.DATE >= :ar_startdate AND SL.DATE <= :ar_enddate
+"
+  arguments=(("as_dstcode", string), ("manfcode", number), ("ar_startdate", datetime), ("ar_enddate", datetime))
+)
+text(name=dstbid_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="2" border="0" x="5" y="80" height="64" width="192" text="Dstbid" html.valueishtml="0" )
+text(name=docdate_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="2" border="0" x="210" y="80" height="64" width="603" text="DocumentDate" html.valueishtml="0" )
+text(name=documentno_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="2" border="0" x="832" y="80" height="64" width="270" text="Docno" html.valueishtml="0" )
+text(name=price_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="2" border="0" x="3451" y="80" height="64" width="357" text="Price" html.valueishtml="0" )
+text(name=bonus_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="2" border="0" x="4169" y="80" height="64" width="357" text="Bonus" html.valueishtml="0" )
+text(name=custid_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="2" border="0" x="1125" y="80" height="64" width="192" text="Custid" html.valueishtml="0" )
+text(name=prdid_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="2" border="0" x="1897" y="80" height="64" width="274" text="Prdid" html.valueishtml="0" )
+text(name=ct_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="1339" y="80" height="60" width="247" text="CT" html.valueishtml="0" )
+text(name=townid_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="1600" y="80" height="60" width="279" text="TownID" html.valueishtml="0" )
+text(name=prd_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="2" border="0" x="2190" y="84" height="64" width="928" text="Prd" html.valueishtml="0" )
+text(name=batchno_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="2" border="0" x="3136" y="80" height="64" width="302" text="Batch No" html.valueishtml="0" )
+text(name=quantity_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="2" border="0" x="3826" y="80" height="64" width="329" text="Quantity" html.valueishtml="0" )
+text(name=discountamnt_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="2" border="0" x="4549" y="80" height="64" width="357" text="Discount" html.valueishtml="0" )
+text(name=reason_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="4933" y="80" height="64" width="201" text="Reason" html.valueishtml="0" )
+column(name=dstbid visible="1" band=detail id=2 x="5" y="4" height="72" width="192" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=6 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=docdate visible="1" band=detail id=6 x="210" y="4" height="72" width="603" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=documentno visible="1" band=detail id=4 x="832" y="4" height="72" width="270" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=custid visible="1" band=detail id=8 x="1125" y="4" height="72" width="192" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=6 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=bonus visible="1" band=detail id=22 x="4169" y="4" height="72" width="357" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=12 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=prdid visible="1" band=detail id=12 x="1897" y="4" height="72" width="274" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=9 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=prd visible="1" band=detail id=14 x="2190" y="4" height="72" width="928" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=batchno visible="1" band=detail id=16 x="3136" y="4" height="72" width="302" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=townid visible="1" band=detail id=10 x="1600" y="4" height="72" width="283" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=price visible="1" band=detail id=18 x="3451" y="4" height="72" width="357" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=quantity visible="1" band=detail id=20 x="3826" y="4" height="72" width="329" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=discountamount visible="1" band=detail id=24 x="4553" y="12" height="64" width="325" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=reason visible="1" band=detail id=26 x="4933" y="4" height="72" width="201" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+htmltable(border="1" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" encodeSelfLinkArgs="1" generateJavaScript="1" netscapeLayers="0" pagingMethod=0 )
+xhtmlgen() cssgen(sessionSpecific="0" )
+xmlgen(inline="0" )
+xsltgen()
+jsgen()
+export.xml(headGroups="1" includewhitespace="0" metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 distill.customPostScript="0" xslfop.print="0" )
+export.xhtml()

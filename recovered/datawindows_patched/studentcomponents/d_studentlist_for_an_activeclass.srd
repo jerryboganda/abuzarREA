@@ -1,0 +1,225 @@
+release 12.5;
+datawindow ( units=0 timer_interval=0 processing=1 color=67108864 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.printername=""  print.documentname=""  print.orientation=0 print.margin.left=110 print.margin.right=110 print.margin.top=96 print.margin.bottom=96 print.paper.size=0 print.paper.source=0 print.canusedefaultprinter=yes grid.lines=0 selected.mouse=yes hidegrayline=no showbackcoloronxp=no)
+header(height=72 color="536870912" )
+summary(height=0 color="536870912" )
+footer(height=0 color="536870912" )
+detail(height=72 color="536870912" )
+table(column=(type=char(100) updatewhereclause=yes name=schoolbranch dbname="SchoolBranch"  )
+column=(type=char(100) updatewhereclause=yes name=schoolfaculty dbname="SchoolFaculty"  )
+column=(type=char(100) updatewhereclause=yes name=class dbname="Class"  )
+column=(type=long updatewhereclause=yes name=studentcode dbname="StudentCode"  )
+column=(type=char(60) updatewhereclause=yes name=regno dbname="RegNo"  )
+column=(type=char(100) updatewhereclause=yes name=name dbname="Name"  )
+column=(type=char(163) updatewhereclause=yes name=studentname dbname="StudentName"  )
+column=(type=char(1) updatewhereclause=yes name=mobileselected dbname="MobileSelected" 
+ values="	Y/	N"  )
+column=(type=char(60) update=yes updatewhereclause=yes name=mobile dbname="Student.Mobile"  )
+column=(type=char(100) updatewhereclause=yes name=fathername dbname="FatherName"  )
+column=(type=char(1) updatewhereclause=yes name=fmobileselected dbname="FMobileSelected" 
+ values="	Y/	N"  )
+column=(type=char(60) updatewhereclause=yes name=fmobile dbname="FMobile"  )
+column=(type=char(100) updatewhereclause=yes name=mothername dbname="MotherName"  )
+column=(type=char(1) updatewhereclause=yes name=mmobileselected dbname="MMobileSelected" 
+ values="	Y/	N"  )
+column=(type=char(60) updatewhereclause=yes name=mmobile dbname="MMobile"  )
+column=(type=char(60) updatewhereclause=yes name=customer dbname="customer"  )
+column=(type=char(1) update=yes updatewhereclause=yes name=gender dbname="Student.Gender"  )
+column=(type=datetime update=yes updatewhereclause=yes name=birthdate dbname="Student.BirthDate"  )
+column=(type=char(60) update=yes updatewhereclause=yes name=phone dbname="Student.Phone"  )
+column=(type=char(1) update=yes updatewhereclause=yes name=status dbname="Student.Status" 
+ values="Registered	R/Admitted	A/School Leaving	L/"  )
+ retrieve="SELECT
+	SchoolBranch = (SELECT SC.Name FROM SchoolBranch SC WHERE SC.SchoolBranchCode = Class.SchoolBranchCode),
+	SchoolFaculty = (SELECT SC.Name FROM School SC WHERE SC.SchoolCode = Class.SchoolCode),
+	Class = Class.Name,
+	StudentCode=Student.StudentCode,   
+	RegNo=Student.RegNo,   
+	Name=Student.Name,   
+	StudentName = Student.Name + ' (' + Student.RegNo + ')',
+	MobileSelected='N',
+	Student.Mobile,   
+	FatherName=Student.FName,   
+	FMobileSelected='N',
+	FMobile = Student.FMobile,
+	MotherName=Student.MName,   
+	MMobileSelected='N',
+	MMobile = Student.MMobile,
+	customer=(select accounts.name from accounts where acccode=Student.custcode),
+	Student.Gender,   
+	Student.BirthDate,   
+	Student.Phone,   
+	Student.Status  
+FROM 
+	Student, StudentClass, Class
+WHERE
+	:ai_type = 1 AND
+	Student.StudentCode = StudentClass.StudentCode AND 
+	StudentClass.ClassCode = Class.ClassCode AND
+	Class.ClassCode in (:ai_code)
+UNION ALL
+SELECT
+	SchoolBranch = (SELECT SC.Name FROM SchoolBranch SC WHERE SC.SchoolBranchCode = Class.SchoolBranchCode),
+	SchoolFaculty = (SELECT SC.Name FROM School SC WHERE SC.SchoolCode = Class.SchoolCode),
+	Class = Class.Name,
+	StudentCode=Student.StudentCode,   
+	RegNo=Student.RegNo,   
+	Name=Student.Name,   
+	StudentName = Student.Name + ' (' + Student.RegNo + ')',
+	MobileSelected='N',
+	Student.Mobile,   
+	FatherName=Student.FName,   
+	FMobileSelected='N',
+	FMobile = Student.FMobile,
+	MotherName=Student.MName,   
+	MMobileSelected='N',
+	MMobile = Student.MMobile,
+	customer=(select accounts.name from accounts where acccode=Student.custcode),
+	Student.Gender,   
+	Student.BirthDate,   
+	Student.Phone,   
+	Student.Status  
+FROM 
+	Student, StudentClass, Class, School
+WHERE
+	:ai_type = 2 AND
+	Student.StudentCode = StudentClass.StudentCode AND 
+	StudentClass.ClassCode = Class.ClassCode AND
+	Class.SchoolCode = School.SchoolCode AND 
+	School.SchoolCode in (:ai_code)
+UNION ALL
+SELECT
+	SchoolBranch = (SELECT SC.Name FROM SchoolBranch SC WHERE SC.SchoolBranchCode = Class.SchoolBranchCode),
+	SchoolFaculty = (SELECT SC.Name FROM School SC WHERE SC.SchoolCode = Class.SchoolCode),
+	Class = Class.Name,
+	StudentCode=Student.StudentCode,   
+	RegNo=Student.RegNo,   
+	Name=Student.Name,   
+	StudentName = Student.Name + ' (' + Student.RegNo + ')',
+	MobileSelected='N',
+	Student.Mobile,   
+	FatherName=Student.FName,   
+	FMobileSelected='N',
+	FMobile = Student.FMobile,
+	MotherName=Student.MName,   
+	MMobileSelected='N',
+	MMobile = Student.MMobile,
+	customer=(select accounts.name from accounts where acccode=Student.custcode),
+	Student.Gender,   
+	Student.BirthDate,   
+	Student.Phone,   
+	Student.Status  
+FROM 
+	Student, StudentClass, Class, SchoolBranch
+WHERE
+	:ai_type = 3 AND
+	Student.StudentCode = StudentClass.StudentCode AND 
+	StudentClass.ClassCode = Class.ClassCode AND
+	Class.SchoolBranchCode = SchoolBranch.SchoolBranchCode AND 
+	SchoolBranch.SchoolBranchCode in (:ai_code)
+UNION ALL
+SELECT
+	SchoolBranch = (SELECT SC.Name FROM SchoolBranch SC WHERE SC.SchoolBranchCode = Class.SchoolBranchCode),
+	SchoolFaculty = (SELECT SC.Name FROM School SC WHERE SC.SchoolCode = Class.SchoolCode),
+	Class = Class.Name,
+	StudentCode=Student.StudentCode,   
+	RegNo=Student.RegNo,   
+	Name=Student.Name,   
+	StudentName = Student.Name + ' (' + Student.RegNo + ')',
+	MobileSelected='N',
+	Student.Mobile,   
+	FatherName=Student.FName,   
+	FMobileSelected='N',
+	FMobile = Student.FMobile,
+	MotherName=Student.MName,   
+	MMobileSelected='N',
+	MMobile = Student.MMobile,
+	customer=(select accounts.name from accounts where acccode=Student.custcode),
+	Student.Gender,   
+	Student.BirthDate,   
+	Student.Phone,   
+	Student.Status  
+FROM 
+	Student, StudentClass, Class, SchoolBranch,
+	(SELECT 
+		SH.ServiceInvCode, 
+		SH.Date, 
+		SH.StudentCode, 
+		StudentStatus = (SELECT ST.Status FROM Student ST WHERE ST.StudentCode = SH.StudentCode),
+		Class = (SELECT C.Name FROM Class C, Student S WHERE S.StudentCode = SH.StudentCode AND S.CurrentClass=C.ClassCode),
+		RollNo = (SELECT SC.RollNo FROM StudentClass SC, Student S WHERE S.StudentCode = SH.StudentCode AND S.StudentCode = SC.StudentCode AND S.CurrentClass=SC.ClassCode),
+		Grade = (SELECT G.Name FROM Grade G, Class C, Student S WHERE S.StudentCode = SH.StudentCode AND S.CurrentClass=C.ClassCode AND C.GradeCode = G.GradeCode),
+		SchoolName= (SELECT SB.Name FROM Class C, Student S, SchoolBranch SB WHERE S.StudentCode = SH.StudentCode AND S.CurrentClass=C.ClassCode AND C.SchoolBranchCode = SB.SchoolBranchCode),
+		SchoolBranchCode= (SELECT SB.SchoolBranchCode FROM Class C, Student S, SchoolBranch SB WHERE S.StudentCode = SH.StudentCode AND S.CurrentClass=C.ClassCode AND C.SchoolBranchCode = SB.SchoolBranchCode), 
+		UnpaidAmount = SH.OutstandingAmt,
+		Remarks = SH.Remarks,
+		Age = DATEDIFF(d, SH.Date, GetDate()),
+		DefaulterlistInstruction = (SELECT ST.DefaulterlistInstruction FROM Student ST WHERE ST.StudentCode = SH.StudentCode),
+		DefaulterlistInstructionExpiry = (SELECT ST.DefaulterlistInstructionExpiresOn FROM Student ST WHERE ST.StudentCode = SH.StudentCode)
+	FROM ServiceHeader SH
+	WHERE SH.Date BETWEEN :adt_startdate AND :adt_enddate AND
+		SH.OutstandingAmt > 0 AND 
+		DATEDIFF(d, SH.Date, GetDate()) >= :ai_daysold) T
+WHERE
+	:ai_type = 4 AND
+	Student.StudentCode = StudentClass.StudentCode AND 
+	StudentClass.ClassCode = Class.ClassCode AND
+	Class.SchoolBranchCode = SchoolBranch.SchoolBranchCode AND 
+	SchoolBranch.SchoolBranchCode in (:ai_code) AND
+	Student.StudentCode = T.StudentCode AND
+	T.StudentStatus <> 'L'
+ORDER BY 
+	SchoolBranch,
+	SchoolFaculty,
+	Class,
+	StudentName
+"
+  arguments=(("ai_type", number), ("ai_code", numberlist), ("adt_startdate", datetime), ("adt_enddate", datetime), ("ai_daysold", number))
+)
+text(name=studentcode_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="2" border="6" x="9" y="8" height="60" width="229" text="Code" html.valueishtml="0" )
+text(name=regno_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="2" border="6" x="247" y="8" height="60" width="274" text="Regd. No." html.valueishtml="0" )
+text(name=studentname_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="67108864" color="0" alignment="2" border="6" x="530" y="8" height="60" width="782" text="Student Name" html.valueishtml="0" )
+text(name=mobileselected_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="67108864" color="0" alignment="2" border="6" x="1321" y="8" height="60" width="82" text="" html.valueishtml="0" )
+text(name=mobile_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="2" border="6" x="1413" y="8" height="60" width="526" text="Student Mobile  No." html.valueishtml="0" )
+text(name=gender_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="2" border="6" x="1947" y="8" height="60" width="288" text="Gender" html.valueishtml="0" )
+text(name=fathername_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="67108864" color="0" alignment="2" border="6" x="2245" y="8" height="60" width="544" text="Father Name" html.valueishtml="0" )
+text(name=fmobileselected_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="67108864" color="0" alignment="2" border="6" x="2798" y="8" height="60" width="78" text="" html.valueishtml="0" )
+text(name=fmobile_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="67108864" color="0" alignment="2" border="6" x="2885" y="8" height="60" width="521" text="Father Mobile No." html.valueishtml="0" )
+text(name=mothername_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="67108864" color="0" alignment="2" border="6" x="3415" y="8" height="60" width="521" text="Mother Name" html.valueishtml="0" )
+text(name=mmobileselected_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="67108864" color="0" alignment="2" border="6" x="3945" y="8" height="60" width="82" text="" html.valueishtml="0" )
+text(name=mmobile_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="67108864" color="0" alignment="2" border="6" x="4037" y="8" height="60" width="494" text="Mother Mobile No." html.valueishtml="0" )
+text(name=birthdate_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="2" border="6" x="4539" y="8" height="60" width="297" text="Birth Date" html.valueishtml="0" )
+text(name=phone_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="2" border="6" x="4846" y="8" height="60" width="782" text="Phone" html.valueishtml="0" )
+text(name=status_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="2" border="6" x="5637" y="8" height="60" width="320" text="Status" html.valueishtml="0" )
+text(name=customer_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="2" border="6" x="5966" y="8" height="60" width="992" text="Customer" html.valueishtml="0" )
+text(name=class_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="67108864" color="0" alignment="2" border="6" x="6967" y="8" height="60" width="791" text="Class" html.valueishtml="0" )
+text(name=schoolbranch_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="67108864" color="0" alignment="2" border="6" x="7767" y="8" height="60" width="645" text="School Branch" html.valueishtml="0" )
+text(name=schoolfaculty_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="67108864" color="0" alignment="2" border="6" x="8421" y="8" height="60" width="704" text="School/Faculty" html.valueishtml="0" )
+column(name=gender visible="1" band=detail id=17 x="1947" y="4" height="64" width="288" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=1 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=birthdate visible="1" band=detail id=18 x="4539" y="4" height="64" width="297" color="33554432" border="0" alignment="0" format="dd/mm/yyyy" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=phone visible="1" band=detail id=19 x="4846" y="4" height="64" width="782" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=60 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=mobile visible="1" band=detail id=9 x="1413" y="4" height="64" width="526" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=60 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=status visible="1" band=detail id=20 x="5637" y="4" height="64" width="320" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" ddlb.allowedit=no ddlb.autohscroll=no ddlb.imemode=0 ddlb.limit=0 ddlb.showlist=no ddlb.sorted=no ddlb.useasborder=no ddlb.vscrollbar=no ddlb.nilisnull=no ddlb.required=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=studentcode visible="1" band=detail id=4 x="9" y="4" height="64" width="229" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=regno visible="1" band=detail id=5 x="247" y="4" height="64" width="274" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=studentname visible="1" band=detail id=7 x="530" y="4" height="64" width="782" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=fmobile visible="1" band=detail id=12 x="2885" y="4" height="64" width="521" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=mothername visible="1" band=detail id=13 x="3415" y="4" height="64" width="521" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=mmobile visible="1" band=detail id=15 x="4037" y="4" height="64" width="494" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=fathername visible="1" band=detail id=10 x="2245" y="4" height="64" width="544" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=mmobileselected visible="1" band=detail id=14 x="3945" y="4" height="64" width="82" color="32768" border="0" alignment="0" format="[general]" html.valueishtml="0" checkbox.lefttext=no checkbox.scale=no checkbox.threed=yes checkbox.text="" checkbox.on="Y" checkbox.off="N" criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="128" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=30 )
+column(name=fmobileselected visible="1" band=detail id=11 x="2798" y="4" height="64" width="78" color="32768" border="0" alignment="0" format="[general]" html.valueishtml="0" checkbox.lefttext=no checkbox.scale=no checkbox.threed=yes checkbox.text="" checkbox.on="Y" checkbox.off="N" criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="128" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=20 )
+column(name=mobileselected visible="1" band=detail id=8 x="1321" y="4" height="64" width="82" color="32768" border="0" alignment="0" format="[general]" html.valueishtml="0" checkbox.lefttext=no checkbox.scale=no checkbox.threed=yes checkbox.text="" checkbox.on="Y" checkbox.off="N" criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="128" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=10 )
+column(name=customer visible="1" band=detail id=16 x="5966" y="4" height="64" width="992" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=schoolbranch visible="1" band=detail id=1 x="7767" y="4" height="64" width="645" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=50 )
+column(name=schoolfaculty visible="1" band=detail id=2 x="8421" y="4" height="64" width="704" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=60 )
+column(name=class visible="1" band=detail id=3 x="6967" y="4" height="64" width="791" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=40 )
+htmltable(border="1" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" encodeSelfLinkArgs="1" generateJavaScript="1" netscapeLayers="0" pagingMethod=0 )
+xhtmlgen() cssgen(sessionSpecific="0" )
+xmlgen(inline="0" )
+xsltgen()
+jsgen()
+export.xml(headGroups="1" includewhitespace="0" metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 distill.customPostScript="0" xslfop.print="0" )
+export.xhtml()

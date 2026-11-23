@@ -1,0 +1,621 @@
+release 12.5;
+datawindow ( units=2 timer_interval=60000 processing=0 color=16777215 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.printername=""  print.documentname=""  print.orientation=0 print.margin.left=250 print.margin.right=250 print.margin.top=250 print.margin.bottom=250 print.paper.size=1 print.paper.source=0 print.canusedefaultprinter=yes selected.mouse=no hidegrayline=no showbackcoloronxp=no)
+header(height=0 )
+summary(height=0 color="536870912" )
+footer(height=0 color="536870912" )
+detail(height=183 color="536870912" )
+table(column=(type=long updatewhereclause=yes name=rowgroup dbname="RowGroup"  )
+column=(type=char(22) updatewhereclause=yes name=itemtype dbname="ItemType"  )
+column=(type=char(50) updatewhereclause=yes name=regno dbname="RegNo"  )
+column=(type=char(100) updatewhereclause=yes name=guest dbname="Guest"  )
+column=(type=long updatewhereclause=yes name=transcode dbname="TransCode"  )
+column=(type=char(31) updatewhereclause=yes name=transtype dbname="TransType"  )
+column=(type=datetime updatewhereclause=yes name=date dbname="Date"  )
+column=(type=char(100) updatewhereclause=yes name=details dbname="Details"  )
+column=(type=char(1) updatewhereclause=yes name=cash dbname="Cash"  )
+column=(type=char(20) updatewhereclause=yes name=checkno dbname="VirtualGl.CheckNo"  )
+column=(type=decimal(0) updatewhereclause=yes name=vrow dbname="Vrow"  )
+column=(type=decimal(2) updatewhereclause=yes name=qty dbname="Qty"  )
+column=(type=decimal(6) updatewhereclause=yes name=grossvalue dbname="ItemValue"  )
+column=(type=decimal(6) updatewhereclause=yes name=netamt dbname="NetAmt"  )
+column=(type=decimal(2) updatewhereclause=yes name=debit dbname="Debit"  )
+column=(type=decimal(2) updatewhereclause=yes name=credit dbname="Credit"  )
+column=(type=decimal(6) updatewhereclause=yes name=others dbname="Others"  )
+ retrieve="SELECT
+	RowGroup=0,
+	ItemType='GUEST CHECK-IN RECEIPT',
+	RegNo = G.RegNo,
+	Guest=G.Name, 
+	TransCode=V.DocumentCode, 
+	TransType = LTRIM(RTRIM(V.DocumentType)) + '-' + RTRIM(LTRIM(STR(V.DocumentCode, 10))), 
+	Date = V.Date, 
+	Details = V.Remarks,
+	Cash = 'N',
+	V.CheckNo,
+	Vrow=V.Vrow,
+	Qty=0,
+	ItemValue=0,
+	NetAmt=0,
+	Debit=V.Debit,
+	Credit=V.Credit,
+	Others= 0
+FROM
+	VirtualGL V,
+	Guest G
+WHERE   
+	G.GuestCode IN (:ai_GuestCode) AND
+	G.GuestCode = V.GuestCode AND
+	V.DocumentType = 'GC' AND
+	V.DocumentCode = G.GuestCode AND
+	V.Credit > 0 AND
+	V.Date BETWEEN :adt_startdate AND :adt_EndDate
+UNION ALL
+SELECT  
+	RowGroup=1,
+	ItemType='MEDICINE', 
+	RegNo = G.RegNo,
+	Guest=G.Name,
+	TransCode=S.SaleInvCode,
+	TransType='SV-' + RTRIM(LTRIM(CONVERT(CHAR(7), S.SaleInvCode))),
+	Date = S.Date, 
+	Details = I.Name,
+	Cash = CASE S.SaleCatCode WHEN 2 THEN 'N' ELSE 'Y' END,
+	CheckNo=NULL,
+	VRow=MAX(D.RowID),
+	Qty=SUM(D.LooseQty),
+	ItemValue=SUM(D.LooseQty * D.SalePrice) - 
+		SUM((D.looseqty*D.itemflatdisc) +
+				(D.looseqty * (D.saleprice - D.itemflatdisc) * (.01 * D.discperc)) +
+				(D.looseqty * (D.saleprice - D.itemflatdisc) * (1-(.01*D.discperc)) * 
+				(.01 * S.discperc))) + 
+		SUM( (D.looseqty + D.bonusqty) * D.unitsalestax) + 
+		SUM((D.looseqty * (D.saleprice - D.itemflatdisc)) *
+			(1 - (.01 * D.discperc)) * D.gstperc * .01),
+	NetAmt=T.NetAmt,
+	Debit = CASE MAX(D.RowID) WHEN (SELECT MAX(SD.ROWID) 
+		FROM SaleDetail SD 
+		WHERE SD.SaleInvCode=S.SaleInvCode) THEN T.NetAmt ELSE 0 END,
+	Credit= CASE MAX(D.RowID) WHEN (SELECT MAX(SD.ROWID) 
+		FROM SaleDetail SD 
+		WHERE SD.SaleInvCode=S.SaleInvCode) THEN CASE S.SaleCatCode WHEN 2 THEN 0 ELSE T.NetAmt END ELSE 0 END,
+	Others= CASE MAX(D.RowID) WHEN (SELECT MAX(SD.ROWID) 
+		FROM SaleDetail SD 
+		WHERE SD.SaleInvCode=S.SaleInvCode) THEN ISNULL(S.MiscCharges, 0) - ISNULL(S.FlatDisc, 0) + ISNULL(T.InvSaleTax, 0) + ISNULL(T.RoundingDiff, 0) ELSE 0 END
+FROM 
+	Guest G,
+	Item I,
+	SaleLedger S,	 
+	SaleDetail D,
+	(SELECT 
+		SS.SaleInvCode, 
+		RoundingDiff=
+		ROUND(
+		SUM( (DD.looseqty + DD.bonusqty) * DD.unitsalestax) + 
+			SUM(ROUND( (DD.looseqty * 
+				(DD.saleprice - DD.itemflatdisc)) *
+				(1 - (.01 * DD.discperc)) * DD.gstperc * .01, 2)) +
+			ROUND( (SUM((DD.looseqty * 
+				(DD.saleprice - DD.itemflatdisc)) *
+				(1 - (.01 * DD.discperc))) * (1- (.01 * SS.discperc)) -
+				SS.flatdisc) * (SS.invgstperc1 * .01), 2), 0) + 
+		Round(SUM((DD.looseqty*(DD.saleprice - DD.itemflatdisc)) *
+			(1 - (.01 * DD.discperc))) * (1- (.01 * SS.discperc)) + 
+			SS.misccharges + SS.salestax - SS.flatdisc, 0) -
+		(SUM( (DD.looseqty + DD.bonusqty) * DD.unitsalestax) + 
+			SUM((DD.looseqty * 
+				(DD.saleprice - DD.itemflatdisc)) *
+				(1 - (.01 * DD.discperc)) * DD.gstperc * .01) +
+			ROUND( (SUM((DD.looseqty * 
+				(DD.saleprice - DD.itemflatdisc)) *
+				(1 - (.01 * DD.discperc))) * (1- (.01 * SS.discperc)) -
+				SS.flatdisc) * (SS.invgstperc1 * .01), 2) + 
+		SUM((DD.looseqty*(DD.saleprice - DD.itemflatdisc)) *
+			(1 - (.01 * DD.discperc))) * (1- (.01 * SS.discperc)) + 
+			SS.misccharges + SS.salestax - SS.flatdisc),
+		InvSaleTax=	ROUND((SUM((DD.looseqty * 
+			(DD.saleprice - DD.itemflatdisc)) *
+			(1 - (.01 * DD.discperc))) * (1- (.01 * SS.discperc)) -
+			SS.flatdisc) * (SS.invgstperc1 * .01), 2),
+		NetAmt=ROUND(
+		SUM( (DD.looseqty + DD.bonusqty) * DD.unitsalestax) + 
+			SUM(ROUND( (DD.looseqty * 
+				(DD.saleprice - DD.itemflatdisc)) *
+				(1 - (.01 * DD.discperc)) * DD.gstperc * .01, 2)) +
+			ROUND( (SUM((DD.looseqty * 
+				(DD.saleprice - DD.itemflatdisc)) *
+				(1 - (.01 * DD.discperc))) * (1- (.01 * SS.discperc)) -
+				SS.flatdisc) * (SS.invgstperc1 * .01), 2), 0) + 
+		Round(SUM((DD.looseqty*(DD.saleprice - DD.itemflatdisc)) *
+			(1 - (.01 * DD.discperc))) * (1- (.01 * SS.discperc)) + 
+			SS.misccharges + SS.salestax - SS.flatdisc, 0)
+	FROM SaleLedger SS, SaleDetail DD 
+	WHERE 
+		SS.SaleInvCode = DD.SaleInvCode AND
+		SS.GuestCode IN (:ai_GuestCode) AND
+		SS.Date BETWEEN :adt_startdate AND :adt_EndDate
+	GROUP BY
+		SS.SaleInvCode,
+		SS.DiscPerc,
+		SS.FlatDisc,
+		SS.InvGSTPerc1,
+		SS.DiscPerc,
+		SS.MiscCharges,
+		SS.SalesTax) T
+WHERE
+	( G.GuestCode IN (:ai_GuestCode) ) AND
+	( S.GuestCode = G.GuestCode ) and  
+	( S.SaleInvCode = D.SaleInvCode ) and
+	( S.SaleInvCode = T.SaleInvCode ) and
+	( D.ICode = I.Icode ) AND
+	( S.Date BETWEEN :adt_startdate AND :adt_EndDate )
+GROUP  BY
+	G.RegNo,
+	G.Name,
+	S.SaleInvCode,
+	S.Date,
+	I.CustomICode,
+	I.Name,
+	S.SaleCatCode,
+	S.HeaderInvNo,
+	S.HeaderNo,
+	S.CustCode, 
+	S.Date,
+	S.DiscPerc,
+	S.MiscCharges,
+	S.SalesTax,
+	S.FlatDisc,
+	S.InvGstPerc1,
+	T.InvSaleTax,
+	T.NetAmt,
+	T.RoundingDiff
+UNION ALL
+SELECT  
+	RowGroup=2,
+	ItemType='MEDICINE',
+	RegNo = G.RegNo,
+	Guest=G.Name,
+	TransCode=S.SaleInvCode,
+	TransType='SV-' + RTRIM(LTRIM(CONVERT(CHAR(7), S.SaleInvCode))),
+	Date = CASE WHEN S.AmtDate IS NULL THEN S.Date ELSE S.AmtDate END, 
+	Details = 'Amt. Recvd. During Sale #:' + RTRIM(LTRIM(CONVERT(CHAR(7), S.SaleInvCode))),
+	Cash = CASE S.SaleCatCode WHEN 2 THEN 'N' ELSE 'Y' END,
+	CheckNo=S.AmtReference,
+	VRow=9999999,
+	Qty=0,
+	ItemValue=0,
+	NetAmt=0,
+	Debit = 0,
+	Credit= isnull(S.Amt, 0) + isnull(S.CashCharged, 0) + ISNULL((SELECT SUM(CW.Amount) FROM CashierWindow CW WHERE CW.SaleInvCode=S.SaleInvCode), 0),
+	Others= 0
+FROM
+	Guest G, SaleLedger S
+WHERE   
+	( G.GuestCode IN (:ai_GuestCode) ) AND
+	( S.GuestCode = G.GuestCode ) and  
+	( S.SaleCatcode = 2 ) AND
+	( S.Amt <> 0 OR S.CashCharged <> 0 OR S.SaleInvCode IN (SELECT DISTINCT CW.SaleInvCode FROM CashierWindow CW WHERE CW.SaleInvCode = S.SaleInvCode)) AND
+	( S.Date BETWEEN :adt_startdate AND :adt_EndDate )
+UNION ALL
+SELECT  
+	RowGroup=3,
+	ItemType='MEDICINE',
+	RegNo = G.RegNo,
+	Guest=G.Name,
+	TransCode=S.SRInvCode,
+	TransType='SR-' + RTRIM(LTRIM(CONVERT(CHAR(7), S.SRInvCode))),
+	Date = S.Date, 
+	Details = I.Name,
+	Cash = CASE S.SRCatCode WHEN 7 THEN 'N' ELSE 'Y' END,
+	CheckNo=NULL,
+	VRow=MAX(D.SRUTN),
+	Qty=-SUM(D.LooseQty),
+	ItemValue= -1 * (SUM(D.LooseQty * D.SRPrice) - 
+		SUM((D.looseqty * D.SRPrice * .01 * D.discperc) +
+				(D.looseqty * D.SRPrice * (1-(.01*D.discperc)) * (.01 * S.discperc))) + 
+		SUM( (D.looseqty + D.bonusqty) * D.unitsalestax) + 
+		SUM((D.looseqty * D.SRPrice * (1 - (.01 * D.discperc)) * D.gstperc * .01))),
+	NetAmt=T.NetAmt,
+	Debit = CASE MAX(D.SRUTN) WHEN (SELECT MAX(SD.SRUTN) FROM SRDetail SD 
+		WHERE SD.SRInvCode=S.SRInvCode) THEN CASE S.SRCatCode WHEN 7 THEN 0 ELSE T.NetAmt END ELSE 0 END,
+	Credit= CASE MAX(D.SRUTN) WHEN (SELECT MAX(SD.SRUTN) FROM SRDetail SD WHERE SD.SRInvCode=S.SRInvCode) THEN T.NetAmt ELSE 0 END,
+	Others= CASE MAX(D.SRUTN) WHEN (SELECT MAX(SD.SRUTN) 
+		FROM SRDetail SD 
+		WHERE SD.SRInvCode=S.SRInvCode) THEN ISNULL(S.MiscCharges, 0) - ISNULL(S.FlatDisc, 0) + ISNULL(T.InvSaleTax, 0) + ISNULL(T.RoundingDiff, 0) ELSE 0 END
+FROM
+	Guest G,
+	Item I,
+	SRLedger S,
+	SRDetail D,
+	(SELECT 
+		SS.SRInvCode, 
+		RoundingDiff=
+		ROUND(
+		SUM( (DD.looseqty + DD.bonusqty) * DD.unitsalestax) + 
+			SUM(ROUND( (DD.looseqty * DD.SRPrice) *
+				(1 - (.01 * DD.discperc)) * DD.gstperc * .01, 2)) +
+			ROUND( (SUM((DD.looseqty * DD.SRPrice) *
+				(1 - (.01 * DD.discperc))) * (1- (.01 * SS.discperc)) -
+				SS.flatdisc) * (SS.invgstperc1 * .01), 2), 0) + 
+		Round(SUM((DD.looseqty * DD.SRPrice) *
+			(1 - (.01 * DD.discperc))) * (1- (.01 * SS.discperc)) + 
+			SS.misccharges + SS.salestax - SS.flatdisc, 0) -
+		(SUM( (DD.looseqty + DD.bonusqty) * DD.unitsalestax) + 
+			SUM((DD.looseqty * DD.SRPrice) *
+
+				(1 - (.01 * DD.discperc)) * DD.gstperc * .01) +
+			ROUND( (SUM((DD.looseqty * DD.SRPrice) *
+				(1 - (.01 * DD.discperc))) * (1- (.01 * SS.discperc)) -
+				SS.flatdisc) * (SS.invgstperc1 * .01), 2) + 
+		SUM((DD.looseqty * DD.SRPrice *
+			(1 - (.01 * DD.discperc))) * (1- (.01 * SS.discperc)) + 
+			SS.misccharges + SS.salestax - SS.flatdisc)),
+		InvSaleTax=	ROUND((SUM((DD.looseqty * DD.SRPrice) *
+			(1 - (.01 * DD.discperc))) * (1- (.01 * SS.discperc)) -
+			SS.flatdisc) * (SS.invgstperc1 * .01), 2),
+		NetAmt=ROUND(
+		SUM( (DD.looseqty + DD.bonusqty) * DD.unitsalestax) + 
+			SUM(ROUND( (DD.looseqty * DD.SRPrice) *
+				(1 - (.01 * DD.discperc)) * DD.gstperc * .01, 2)) +
+			ROUND( (SUM((DD.looseqty * DD.SRPrice) *
+				(1 - (.01 * DD.discperc))) * (1- (.01 * SS.discperc)) -
+				SS.flatdisc) * (SS.invgstperc1 * .01), 2), 0) + 
+		Round(SUM((DD.looseqty * DD.SRPrice) *
+			(1 - (.01 * DD.discperc))) * (1- (.01 * SS.discperc)) + 
+			SS.misccharges + SS.salestax - SS.flatdisc, 0)
+	FROM SRLedger SS, SRDetail DD 
+	WHERE 
+		SS.GuestCode IN (:ai_GuestCode) AND
+		SS.SRInvCode = DD.SRInvCode AND
+		SS.Date BETWEEN :adt_startdate AND :adt_EndDate
+	GROUP BY
+		SS.SRInvCode,
+		SS.DiscPerc,
+		SS.FlatDisc,
+		SS.InvGSTPerc1,
+		SS.DiscPerc,
+		SS.MiscCharges,
+		SS.SalesTax) T
+WHERE   
+	( G.GuestCode IN (:ai_GuestCode) ) AND
+	( S.GuestCode = G.GuestCode ) and  
+	( S.SRInvCode = D.SRInvCode ) and
+	( S.SRInvCode = T.SRInvCode ) and
+	( D.ICode = I.Icode ) AND
+	( S.Date BETWEEN :adt_startdate AND :adt_EndDate )
+GROUP BY 
+	G.RegNo,
+	G.Name,
+	S.GuestCode,
+	S.SRInvCode,
+	S.Date,
+	I.CustomICode,
+	I.Name,
+	S.SRCatCode,
+	S.HeaderInvNo,
+	S.HeaderNo,
+	S.CustCode, 
+	S.Date,
+	S.DiscPerc,
+	S.MiscCharges,
+	S.SalesTax,
+	S.FlatDisc,
+	S.InvGstPerc1,
+	T.InvSaleTax,
+	T.NetAmt,
+	T.RoundingDiff
+UNION ALL
+SELECT  
+	RowGroup=4,
+	ItemType='MEDICINE',
+	RegNo = G.RegNo,
+	Guest=G.Name,
+	TransCode=S.SRInvCode,
+	TransType='SR-' + RTRIM(LTRIM(CONVERT(CHAR(7), S.SRInvCode))),
+	Date = CASE WHEN S.AmtDate IS NULL THEN S.Date ELSE S.AmtDate END, 
+	Details = 'Cash Paid During S/Return #:' + RTRIM(LTRIM(CONVERT(CHAR(7), S.SRInvCode))),
+	Cash = CASE S.SRCatCode WHEN 7 THEN 'N' ELSE 'Y' END,
+	CheckNo=S.AmtReference,
+	VRow=9999999,
+	Qty=0,
+	ItemValue=0,
+	NetAmt=0,
+	Debit = ISNULL(S.Amt, 0) + isnull(S.CashCharged, 0) + ISNULL((SELECT SUM(CW.Amount) FROM MasterCashWin CW WHERE CW.DocumentType = 'SR' AND CW.DocumentCode=S.SRInvCode), 0),
+	Credit= 0,
+	Others= 0
+FROM
+	Guest G, SRLedger S
+WHERE   
+	( G.GuestCode IN (:ai_GuestCode) ) AND
+	( S.GuestCode = G.GuestCode ) and  
+	( S.SRCatCode = 7 ) AND
+	( S.Amt <> 0 OR S.CashCharged <> 0 OR S.SRInvCode IN (SELECT DISTINCT CW.DocumentCode FROM MasterCashWin CW WHERE CW.DocumentType = 'SR' AND CW.DocumentCode = S.SRInvCode)) AND
+	( S.Date BETWEEN :adt_startdate AND :adt_EndDate )
+UNION ALL
+SELECT 
+	RowGroup=5,
+	ItemType='SERVICES',
+	RegNo = G.RegNo,
+	Guest=G.Name,
+	TransCode=S.ServiceInvCode,
+	TransType='RS-' + RTRIM(LTRIM(CONVERT(CHAR(7), S.ServiceInvCode))),
+	Date=S.Date,
+	Details=SV.Name,
+	Cash = CASE S.ServiceCatCode WHEN 11 THEN 'N' ELSE 'Y' END,
+	CheckNo=NULL,
+	VRow=MAX(D.SrvRowID),
+	Qty=SUM(D.Qty),
+	ItemValue=SUM(D.Qty * (D.Price - D.ServiceFlatDisc) * (1-(.01*D.discperc)) * (1-(.01*S.discperc))),
+	NetAmt=T.NetAmt,
+	Debit = CASE MAX(D.SrvROWID) WHEN (SELECT MAX(SD.SrvROWID) 
+		FROM ServiceDetail SD 
+		WHERE SD.ServiceInvCode=S.ServiceInvCode) THEN T.NetAmt ELSE 0 END,
+	Credit= CASE MAX(D.SrvRowID) WHEN (SELECT MAX(SD.SrvROWID) 
+		FROM ServiceDetail SD 
+		WHERE SD.ServiceInvCode=S.ServiceInvCode) THEN CASE S.ServiceCatCode WHEN 11 THEN 0 ELSE T.NetAmt END ELSE 0 END,
+	Others= CASE MAX(D.SrvRowID) WHEN (SELECT MAX(SD.SrvROWID) 
+		FROM ServiceDetail SD 
+		WHERE SD.ServiceInvCode=S.ServiceInvCode) THEN ISNULL(S.MiscCharges, 0) - ISNULL(S.FlatDisc, 0) + ISNULL(T.InvSaleTax, 0) + ISNULL(T.RoundingDiff, 0) ELSE 0 END
+FROM 
+	Guest G,
+	Servicedetail D,
+	ServiceHeader S,
+	Service SV,
+	(SELECT 
+		SS.ServiceInvCode, 
+		RoundingDiff=
+		ROUND(SUM(DD.qty * (DD.Price - DD.ServiceFlatDisc)  * (1 - (.01 * DD.discperc))) * (1- (.01 * SS.discperc)) + 
+			SS.misccharges - SS.flatdisc, 0) -
+		(SUM((DD.qty * (DD.Price - DD.ServiceFlatDisc) ) *
+			(1 - (.01 * DD.discperc))) * (1- (.01 * SS.discperc)) + 
+			SS.misccharges - SS.flatdisc),
+		InvSaleTax=	0,
+		NetAmt=ROUND(SUM(DD.qty * (DD.Price - DD.ServiceFlatDisc)  * (1 - (.01 * DD.discperc))) * (1- (.01 * SS.discperc)) + 
+			SS.misccharges - SS.flatdisc, 0)
+	FROM ServiceHeader SS, ServiceDetail DD 
+	WHERE 
+		SS.ServiceInvCode = DD.ServiceInvCode AND
+		SS.GuestCode IN (:ai_GuestCode) AND
+		SS.Date BETWEEN :adt_startdate AND :adt_EndDate
+	GROUP BY
+		SS.ServiceInvCode,
+		SS.DiscPerc,
+		SS.FlatDisc,
+		SS.DiscPerc,
+		SS.MiscCharges) T
+WHERE
+	( G.GuestCode IN (:ai_GuestCode) ) AND
+	( S.GuestCode = G.GuestCode ) and  
+	( S.ServiceInvCode = D.ServiceInvCode ) and
+	( S.ServiceInvCode = T.ServiceInvCode ) AND
+	( D.ServiceCode = SV.Servicecode ) AND
+	( S.Date BETWEEN :adt_startdate AND :adt_EndDate )
+GROUP  BY
+	G.RegNo,
+	G.Name,
+	S.GuestCode,
+	S.ServiceInvCode,
+	S.Date,
+	SV.Name,
+	S.ServiceCatCode,
+	S.HeaderNo,
+	S.CustCode, 
+	S.Date,
+	S.DiscPerc,
+	S.MiscCharges,
+	S.FlatDisc,
+	T.InvSaleTax,
+	T.NetAmt,
+	T.RoundingDiff
+UNION ALL
+SELECT  
+	RowGroup=5,
+	ItemType='SERVICES',
+	RegNo = G.RegNo,
+	Guest=G.Name,
+	TransCode=S.ServiceInvCode,
+	TransType='RS-' + RTRIM(LTRIM(CONVERT(CHAR(7), S.ServiceInvCode))),
+	Date = S.Date, 
+	Details = 'Amt. Recvd. During Service Inv. #:' + RTRIM(LTRIM(CONVERT(CHAR(7), S.ServiceInvCode))),
+	Cash = CASE S.ServiceCatCode WHEN 11 THEN 'N' ELSE 'Y' END,
+	CheckNo=NULL,
+	VRow=9999999,
+	Qty=0,
+	ItemValue=0,
+	NetAmt=0,
+	Debit = 0,
+	Credit= isnull(S.CashCharged, 0) + ISNULL((SELECT SUM(CW.Amount) FROM MasterCashWin CW WHERE CW.DocumentType = 'RS' AND CW.DocumentCode=S.ServiceInvCode), 0),
+	Others= 0
+FROM
+	Guest G,
+	ServiceHeader S
+WHERE   
+	( G.GuestCode IN (:ai_GuestCode) ) AND
+	( S.GuestCode = G.GuestCode ) and  
+	( S.ServiceCatcode = 11 ) AND
+	( S.CashCharged <> 0 OR S.ServiceInvCode IN (SELECT DISTINCT CW.DocumentCode FROM MasterCashWin CW WHERE CW.DocumentType = 'RS' AND CW.DocumentCode = S.ServiceInvCode)) AND
+	( S.Date BETWEEN :adt_startdate AND :adt_EndDate )
+UNION ALL
+SELECT 
+	RowGroup=6,
+	ItemType='SERVICES',
+	RegNo = G.RegNo,
+	Guest=G.Name,
+	TransCode=S.ServiceRInvCode,
+	TransType='RR-' + RTRIM(LTRIM(CONVERT(CHAR(7), S.ServiceRInvCode))),
+	Date=S.Date,
+	Details=SV.Name,
+	Cash = CASE S.ServiceRCatCode WHEN 14 THEN 'N' ELSE 'Y' END,
+	CheckNo=NULL,
+	VRow=MAX(D.SrvRRowID),
+	Qty= - SUM(D.Qty),
+	ItemValue=-1 * SUM(D.Qty * (D.ServicePrice - D.ServiceFlatDisc)  * (1-(.01*D.discperc)) * (1-(.01*S.discperc))),
+	NetAmt= T.NetAmt,
+	Debit = CASE MAX(D.SrvRRowID) WHEN (SELECT MAX(SD.SrvRRowID) 
+		FROM ServiceRDetail SD 
+		WHERE SD.ServiceRInvCode=S.ServiceRInvCode) THEN CASE S.ServiceRCatCode WHEN 14 THEN 0 ELSE T.NetAmt END ELSE 0 END,
+	Credit= CASE MAX(D.SrvRRowID) WHEN (SELECT MAX(SD.SrvRRowID) 
+		FROM ServiceRDetail SD 
+		WHERE SD.ServiceRInvCode=S.ServiceRInvCode) THEN T.NetAmt ELSE 0 END,
+	Others= CASE MAX(D.SrvRRowID) WHEN (SELECT MAX(SD.SrvRROWID) 
+		FROM ServiceRDetail SD 
+		WHERE SD.ServiceRInvCode=S.ServiceRInvCode) THEN ISNULL(S.MiscCharges, 0) - ISNULL(S.FlatDisc, 0) + ISNULL(T.InvSaleTax, 0) + ISNULL(T.RoundingDiff, 0) ELSE 0 END
+FROM 
+	Guest G,
+	ServiceRdetail D,
+	ServiceRHeader S,
+	Service SV,
+	(SELECT 
+		SS.ServiceRInvCode, 
+		RoundingDiff=
+		ROUND(SUM(DD.qty * (DD.ServicePrice - DD.ServiceFlatDisc) * (1 - (.01 * DD.discperc))) * (1- (.01 * SS.discperc)) + 
+			SS.misccharges - SS.flatdisc, 0) -
+		(SUM((DD.qty * (DD.ServicePrice - DD.ServiceFlatDisc)) *
+			(1 - (.01 * DD.discperc))) * (1- (.01 * SS.discperc)) + 
+			SS.misccharges - SS.flatdisc),
+		InvSaleTax=	0,
+		NetAmt=ROUND(SUM(DD.qty * (DD.ServicePrice - DD.ServiceFlatDisc) * (1 - (.01 * DD.discperc))) * (1- (.01 * SS.discperc)) + 
+			SS.misccharges - SS.flatdisc, 0)
+	FROM ServiceRHeader SS, ServiceRDetail DD 
+	WHERE 
+		SS.ServiceRInvCode = DD.ServiceRInvCode AND
+		SS.GuestCode IN (:ai_GuestCode) AND
+		SS.Date BETWEEN :adt_startdate AND :adt_EndDate
+	GROUP BY
+		SS.ServiceRInvCode,
+		SS.DiscPerc,
+		SS.FlatDisc,
+		SS.DiscPerc,
+		SS.MiscCharges) T
+WHERE
+	( G.GuestCode IN (:ai_GuestCode) ) AND
+	( S.GuestCode = G.GuestCode ) and  
+	( S.ServiceRInvCode = D.ServiceRInvCode ) and
+	( S.ServiceRInvCode = T.ServiceRInvCode ) AND
+	( D.ServiceCode = SV.Servicecode ) AND
+	( S.Date BETWEEN :adt_startdate AND :adt_EndDate )
+GROUP  BY
+	G.RegNo,
+	G.Name,
+	S.GuestCode,
+	S.ServiceRInvCode,
+	S.Date,
+	SV.Name,
+	S.ServiceRCatCode,
+	S.HeaderNo,
+	S.CustCode, 
+	S.Date,
+	S.DiscPerc,
+	S.MiscCharges,
+	S.FlatDisc,
+	T.InvSaleTax,
+	T.NetAmt,
+	T.RoundingDiff
+UNION ALL
+SELECT  
+	RowGroup=6,
+	ItemType='SERVICES',
+	RegNo = G.RegNo,
+	Guest=G.Name,
+	TransCode=S.ServiceRInvCode,
+	TransType='RR-' + RTRIM(LTRIM(CONVERT(CHAR(7), S.ServiceRInvCode))),
+	Date = S.Date, 
+	Details = 'Amt. Paid During Service Ret. Inv. #:' + RTRIM(LTRIM(CONVERT(CHAR(7), S.ServiceRInvCode))),
+	Cash = CASE S.ServiceRCatCode WHEN 14 THEN 'N' ELSE 'Y' END,
+	CheckNo=NULL,
+	VRow=9999999,
+	Qty=0,
+	ItemValue=0,
+	NetAmt=0,
+	Debit = isnull(S.CashCharged, 0) + ISNULL((SELECT SUM(CW.Amount) FROM MasterCashWin CW WHERE CW.DocumentType = 'RR' AND CW.DocumentCode=S.ServiceRInvCode), 0),
+	Credit= 0,
+	Others= 0
+FROM
+	Guest G,
+	ServiceRHeader S
+WHERE   
+	( G.GuestCode IN (:ai_GuestCode) ) AND
+	( S.GuestCode = G.GuestCode ) and  
+	( S.ServiceRCatcode = 14 ) AND
+	( S.CashCharged <> 0 OR S.ServiceRInvCode IN (SELECT DISTINCT CW.DocumentCode FROM MasterCashWin CW WHERE CW.DocumentType = 'RR' AND CW.DocumentCode = S.ServiceRInvCode)) AND
+	( S.Date BETWEEN :adt_startdate AND :adt_EndDate )
+UNION ALL
+SELECT
+	RowGroup=9,
+	ItemType='PAYMENT/RECEIPT',
+	RegNo = G.RegNo,
+	Guest=G.Name,
+	TransCode=GL.GLVochCode, 
+	TransType = RTRIM(LTRIM(VC.ShortName)) + '-' + RTRIM(LTRIM(CONVERT(CHAR(7), GL.GLVochCode))), 
+	Date = GL.Date, 
+	Details = GD.Remarks,
+	Cash = 'N',
+	GD.ChkNo,
+	Vrow=GD.GLROWID,
+	Qty=0,
+	ItemValue=0,
+	NetAmt=0,
+	Debit=GD.Debit,
+	Credit=GD.Credit,
+	Others= 0
+FROM
+	VocherCategory VC,
+	GLHeader GL,
+	GLDetail GD,
+	Guest G
+WHERE   
+	G.GuestCode IN (:ai_GuestCode) AND
+	GL.Posted = 'Y' AND
+	GL.GlVochCode = GD.GLVochCode AND
+	GL.VochCatCode = VC.VochCatCode AND
+	GD.GuestCode = G.GuestCode AND
+	GD.AccCode IN (SELECT AccCode FROM Accounts WHERE SubCode=3) AND
+	GL.Date BETWEEN :adt_startdate AND :adt_EndDate"
+  arguments=(("ai_guestcode", numberlist), ("adt_startdate", datetime), ("adt_enddate", datetime))
+ sort="regno A, guest A, date A, transtype A, vrow A"
+)
+group(level=1 header.height=1625 trailer.height=250 by=("regno" "guest"  ) header.color="536870912" trailer.color="536870912" newpage=yes resetpagecount=yes )
+column(name=transtype visible="1" band=detail id=6 x="100" y="8" height="166" width="941" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=28 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=details visible="1" band=detail id=8 x="2075" y="8" height="166" width="2666" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=100 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=qty visible="1	if(qty=0,0,1)" band=detail id=12 x="4783" y="8" height="166" width="466" color="0" border="0" alignment="1" format="	f_SetColumnFormat('Qty')" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=grossvalue visible="1	if(grossvalue=0,0,1)" band=detail id=13 x="5300" y="8" height="166" width="650" color="0" border="0" alignment="1" format="#####0.00" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=others visible="1	if(others=0,0,1)" band=detail id=17 x="6000" y="8" height="166" width="591" color="0" border="0" alignment="1" format="#####0.00" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+compute(name=c_amount visible="1	if(debit - credit=0,0,1)" band=detail font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="6641" y="8" height="166" width="850" format="###,###,###0.00" expression="debit - credit" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+column(name=date visible="1" band=detail id=7 x="1100" y="8" height="166" width="908" color="0" border="0" alignment="0" format="dd/mm/yyyy hh:mm" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+text(name=t_8 visible="1" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="91" y="783" height="150" width="591" text="Phone(s) :" html.valueishtml="0" )
+compute(name=c_phone visible="1" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="725" y="783" height="150" width="3433" format="[general]" expression="f_ReportHeaderInfo('phone')" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=c_fax visible="1" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="4216" y="783" height="150" width="3275" format="[general]" expression="'Fax : '+f_ReportHeaderInfo('fax')" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=transtype_t visible="1" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="100" y="1408" height="166" width="941" text="Trans Code/Type" html.valueishtml="0" )
+text(name=date_t visible="1" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="2" border="0" x="1100" y="1408" height="166" width="908" text="Date" html.valueishtml="0" )
+text(name=details_t visible="1" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="2" border="0" x="2075" y="1408" height="166" width="2666" text="Details" html.valueishtml="0" )
+text(name=qty_t visible="1" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="2" border="0" x="4800" y="1408" height="166" width="441" text="Qty" html.valueishtml="0" )
+text(name=itemvalue_t visible="1" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="1" border="0" x="5300" y="1408" height="166" width="650" text="Gross Value" html.valueishtml="0" )
+text(name=others_t visible="1" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="1" border="0" x="6000" y="1408" height="166" width="591" text="Others" html.valueishtml="0" )
+text(name=t_1 visible="1" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="1" border="0" x="6641" y="1408" height="166" width="850" text="Amount" html.valueishtml="0" )
+text(name=t_regno visible="1" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="100" y="966" height="166" width="516" text="Reg. No.:" html.valueishtml="0" )
+text(name=t_guest visible="1" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="100" y="1166" height="166" width="516" text="Guest:" html.valueishtml="0" )
+column(name=regno visible="1" band=header.1 id=3 x="641" y="966" height="166" width="983" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=50 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=guest visible="1" band=header.1 id=4 x="641" y="1166" height="166" width="4816" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+text(name=t_6 visible="1" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" background.mode="2" background.color="16777215" color="0" alignment="2" border="0" x="91" y="25" height="158" width="7400" text="Guest Bill" html.valueishtml="0" )
+compute(name=compute_6 visible="1" band=header.1 font.charset="0" font.face="Arial Narrow" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="6183" y="33" height="150" width="1308" format="[general]" expression="'Page ' + page() + ' of ' + pageCount()" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=c_address1 visible="1" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="91" y="408" height="150" width="7400" format="[general]" expression="f_ReportHeaderInfo('address1')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=c_address2 visible="1" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="91" y="591" height="158" width="7400" format="[general]" expression="f_ReportHeaderInfo('address2')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_5 visible="1" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="475" y="33" height="150" width="1708" format="dd/mm/yyyy hh:mm" expression="today()" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_7 visible="1" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="91" y="33" height="150" width="341" text="Date: " html.valueishtml="0" )
+compute(name=c_companyname visible="1" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" x="91" y="216" height="158" width="7400" format="[general]" expression="f_ReportHeaderInfo('clientname')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+line(name=l_1 visible="1" band=header.1 background.mode="2" background.color="16777215" pen.style="2" pen.width="8" pen.color="0" x1="91" y1="1366" x2="7491" y2="1366" )
+line(name=l_2 visible="1" band=header.1 background.mode="2" background.color="16777215" pen.style="2" pen.width="8" pen.color="0" x1="91" y1="1600" x2="7491" y2="1600" )
+line(name=l_3 visible="1" band=trailer.1 background.mode="2" background.color="16777215" pen.style="2" pen.width="8" pen.color="0" x1="91" y1="0" x2="7491" y2="0" )
+line(name=l_4 visible="1" band=trailer.1 background.mode="2" background.color="16777215" pen.style="2" pen.width="8" pen.color="0" x1="91" y1="225" x2="7491" y2="225" )
+compute(name=c_grandtotal visible="1" band=trailer.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" x="6183" y="42" height="166" width="1308" format="###,###,###0.00" expression="sum(debit - credit for group 1)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_4 visible="1" band=trailer.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="5350" y="42" height="166" width="791" text="Bill Total:" html.valueishtml="0" )
+sparse(names="transtype	date")
+htmltable(border="1" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" encodeSelfLinkArgs="1" generateJavaScript="1" netscapeLayers="0" pagingMethod=0 )
+xhtmlgen() cssgen(sessionSpecific="0" )
+xmlgen(inline="0" )
+xsltgen()
+jsgen()
+export.xml(headGroups="1" includewhitespace="0" metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 distill.customPostScript="0" xslfop.print="0" )
+export.xhtml()

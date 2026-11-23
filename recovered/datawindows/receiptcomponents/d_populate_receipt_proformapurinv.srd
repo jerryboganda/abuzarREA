@@ -1,0 +1,87 @@
+release 12.5;
+datawindow ( units=0 timer_interval=0 processing=1 color=80269524 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.printername=""  print.documentname=""  print.orientation=0 print.margin.left=110 print.margin.right=110 print.margin.top=96 print.margin.bottom=96 print.paper.size=0 print.paper.source=0 print.canusedefaultprinter=yes grid.lines=0 selected.mouse=yes hidegrayline=no showbackcoloronxp=no)
+header(height=72 color="536870912" )
+summary(height=0 color="536870912" )
+footer(height=72 color="536870912" )
+detail(height=72 color="536870912" )
+table(column=(type=long key=yes updatewhereclause=yes name=receiptinvcode dbname="ReceiptHeader.ReceiptInvCode"  )
+column=(type=datetime updatewhereclause=yes name=date dbname="ReceiptHeader.Date"  )
+column=(type=long updatewhereclause=yes name=recipienttypecode dbname="RecipientTypeCode" 
+ values=""  )
+column=(type=long updatewhereclause=yes name=recipientcode dbname="RecipientCode"  )
+column=(type=char(60) updatewhereclause=yes name=recipientname dbname="RecipientName"  )
+column=(type=long updatewhereclause=yes name=headerno dbname="ReceiptHeader.HeaderNo"  )
+column=(type=long updatewhereclause=yes name=headerinvno dbname="ReceiptHeader.HeaderInvNo"  )
+column=(type=char(60) update=yes updatewhereclause=yes name=username dbname="UserName"  )
+column=(type=char(100) updatewhereclause=yes name=remarks dbname="ReceiptHeader.Remarks"  )
+column=(type=char(1) updatewhereclause=yes name=selected dbname="SELECTED" 
+ values="	Y/	N"  )
+column=(type=char(9) update=yes updatewhereclause=yes name=status dbname="Status" 
+ values="Yes	Y/No	N/"  )
+column=(type=char(1) updatewhereclause=yes name=posted dbname="Posted" 
+ values="No	N/Yes	Y/"  )
+ retrieve="SELECT 
+	RH.ReceiptInvCode,
+	RH.Date, 
+	RecipientTypeCode = RH.RecipientCode,
+	RecipientCode = 
+		CASE RH.RecipientCode 
+			WHEN 1 THEN RH.DeptCode 
+			WHEN 4 THEN RH.RecipientSalesMan 
+			ELSE RH.AccCode 
+		END,
+	RecipientName = 
+		CASE RH.RecipientCode 
+		WHEN 1 THEN 
+			(SELECT D.Name FROM Department D WHERE D.DeptCode = RH.DeptCode) 
+			WHEN 4 THEN (SELECT S.Name FROM SalesMan S WHERE S.SalesManCode = RH.RecipientSalesMan)  
+			ELSE (SELECT A.Name FROM Accounts A WHERE A.AccCode = RH.AccCode)  END,
+	RH.HeaderNo, 
+	RH.HeaderInvNo, 
+	UserName=(SELECT users.username FROM users where users.usercode = RH.SalesManCode),
+	RH.Remarks,
+	SELECTED='N',
+	Status=CASE WHEN (SELECT SUM(rd.qty - CASE WHEN d.packqty = 0 THEN (d.looseqty + d.bonusqty) ELSE ((d.packqty + d.bonusqty) * d.packunits) END) FROM proformapurdetail d, Receiptdetail rd WHERE rd.Receiptinvcode = RH.ReceiptInvcode AND rd.receiptutn = d.Receiptrowid) <= 0 THEN 'Populated' ELSE 'Pending' END,
+	Posted=RH.Posted
+FROM
+	ReceiptHeader RH
+WHERE 
+	RH.Posted = 'Y' AND 
+	RH.RecipientCode = :ai_recipienttypecode AND
+	RH.AccCode = :ai_recipientcode
+ORDER BY
+	RH.ReceiptInvCode"
+  update="ReceiptHeader" updatewhere=1 updatekeyinplace=no
+  arguments=(("ai_recipienttypecode", number), ("ai_recipientcode", number))
+ sort="date A"
+)
+text(name=t_1 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80269524" color="0" alignment="2" border="6" x="9" y="8" height="60" width="174" text="Select" html.valueishtml="0" )
+text(name=receiptinvcode_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80269524" color="0" alignment="2" border="6" x="192" y="8" height="60" width="361" text="Receipt Inv. #" html.valueishtml="0" )
+text(name=date_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80269524" color="0" alignment="2" border="6" x="562" y="8" height="60" width="443" text="Date" html.valueishtml="0" )
+text(name=status_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80269524" color="0" alignment="2" border="6" x="1015" y="8" height="60" width="297" text="Status" html.valueishtml="0" )
+text(name=username_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80269524" color="0" alignment="2" border="6" x="1321" y="8" height="60" width="407" text="User Name" html.valueishtml="0" )
+text(name=recipienttypecode_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80269524" color="0" alignment="2" border="6" x="1737" y="8" height="60" width="389" text="Recipient Type" html.valueishtml="0" )
+text(name=recipientname_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80269524" color="0" alignment="2" border="6" x="2135" y="8" height="60" width="1371" text="Recipientname" html.valueishtml="0" )
+text(name=headerno_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80269524" color="0" alignment="2" border="6" x="3515" y="8" height="60" width="411" text="Headerno" html.valueishtml="0" )
+text(name=headerinvno_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80269524" color="0" alignment="2" border="6" x="3936" y="8" height="60" width="338" text="Headerinvno" html.valueishtml="0" )
+text(name=remarks_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80269524" color="0" alignment="2" border="6" x="4283" y="8" height="60" width="809" text="Remarks" html.valueishtml="0" )
+column(name=selected visible="1" band=detail id=10 x="9" y="4" height="64" width="174" color="0" border="0" alignment="2" format="[general]" html.valueishtml="0" checkbox.lefttext=no checkbox.scale=no checkbox.threed=yes checkbox.text="" checkbox.on="Y" checkbox.off="N" criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=10 )
+column(name=status visible="1" band=detail id=11 x="1015" y="4" height="64" width="297" color="0" border="0" alignment="2" format="[general]" html.valueishtml="0" ddlb.allowedit=no ddlb.autohscroll=no ddlb.imemode=0 ddlb.limit=0 ddlb.showlist=no ddlb.sorted=no ddlb.useasborder=no ddlb.vscrollbar=no ddlb.nilisnull=no ddlb.required=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=username visible="1" band=detail id=8 x="1321" y="4" height="64" width="407" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=60 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=receiptinvcode visible="1" band=detail id=1 x="192" y="4" height="64" width="361" color="0" border="0" alignment="2" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="80269524" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=date visible="1" band=detail id=2 x="562" y="4" height="64" width="443" color="0" border="0" alignment="0" format="dd/mm/yyyy hh:mm" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="80269524" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=headerno visible="1" band=detail id=6 x="3515" y="4" height="64" width="411" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="80269524" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=headerinvno visible="1" band=detail id=7 x="3936" y="4" height="64" width="338" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="80269524" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=remarks visible="1" band=detail id=9 x="4283" y="4" height="64" width="809" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="80269524" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=recipienttypecode visible="1" band=detail id=3 x="1737" y="4" height="64" width="389" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" dddw.allowedit=no dddw.autohscroll=no dddw.autoretrieve=yes dddw.useasborder=no dddw.datacolumn=recipientcode dddw.displaycolumn=name dddw.hscrollbar=no dddw.hsplitscroll=no dddw.imemode=0 dddw.limit=0 dddw.name=ddd_recipients dddw.nilisnull=no dddw.percentwidth=0 dddw.required=no dddw.showlist=no dddw.vscrollbar=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="80269524" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=recipientname visible="1" band=detail id=5 x="2135" y="4" height="64" width="1371" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+htmltable(border="1" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" encodeSelfLinkArgs="1" generateJavaScript="1" netscapeLayers="0" pagingMethod=0 )
+xhtmlgen() cssgen(sessionSpecific="0" )
+xmlgen(inline="0" )
+xsltgen()
+jsgen()
+export.xml(headGroups="1" includewhitespace="0" metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 distill.customPostScript="0" xslfop.print="0" )
+export.xhtml()

@@ -1,0 +1,485 @@
+release 12.5;
+datawindow ( units=2 timer_interval=60000 processing=0 color=16777215 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.file=""  picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.printername=""  print.documentname=""  print.orientation=0 print.margin.left=0 print.margin.right=0 print.margin.top=0 print.margin.bottom=0 print.paper.size=1 print.paper.source=0 print.canusedefaultprinter=yes selected.mouse=no hidegrayline=no showbackcoloronxp=no)
+header(height=1333 color="536870912" transparency="0" gradient.color="8421504" gradient.transparency="0" gradient.angle="0" brushmode="0" gradient.repetition.mode="0" gradient.repetition.length="100" gradient.repetition.count="0" gradient.focus="0" gradient.scale="100" gradient.spread="100" )
+summary(height=2750 color="536870912" transparency="0" gradient.color="8421504" gradient.transparency="0" gradient.angle="0" brushmode="0" gradient.repetition.mode="0" gradient.repetition.length="100" gradient.repetition.count="0" gradient.focus="0" gradient.scale="100" gradient.spread="100" )
+footer(height=0 color="536870912" transparency="0" gradient.color="8421504" gradient.transparency="0" gradient.angle="0" brushmode="0" gradient.repetition.mode="0" gradient.repetition.length="100" gradient.repetition.count="0" gradient.focus="0" gradient.scale="100" gradient.spread="100" )
+detail(height=200 color="536870912" transparency="0" gradient.color="8421504" gradient.transparency="0" gradient.angle="0" brushmode="0" gradient.repetition.mode="0" gradient.repetition.length="100" gradient.repetition.count="0" gradient.focus="0" gradient.scale="100" gradient.spread="100" )
+table(column=(type=long updatewhereclause=yes name=groupcode dbname="GroupCode"  )
+column=(type=char(60) updatewhereclause=yes name=groupname dbname="GroupName"  )
+column=(type=decimal(6) updatewhereclause=yes name=itemsalestax dbname="itemsalestax"  )
+column=(type=decimal(9) updatewhereclause=yes name=purchase dbname="purchase"  )
+column=(type=decimal(9) updatewhereclause=yes name=preturn dbname="preturn"  )
+column=(type=decimal(6) updatewhereclause=yes name=netpurchase dbname="NetPurchase"  )
+column=(type=decimal(6) updatewhereclause=yes name=purchaseatsale dbname="purchaseatsale"  )
+column=(type=decimal(6) updatewhereclause=yes name=preturnatsale dbname="preturnatsale"  )
+column=(type=decimal(6) updatewhereclause=yes name=netpurchaseatsale dbname="netpurchaseatsale"  )
+column=(type=decimal(2) updatewhereclause=yes name=totaldisc dbname="totaldisc"  )
+column=(type=decimal(2) updatewhereclause=yes name=misccharg dbname="misccharg"  )
+column=(type=decimal(6) updatewhereclause=yes name=totalinvdiscperc dbname="totalinvdiscperc"  )
+column=(type=decimal(6) updatewhereclause=yes name=diff dbname="diff"  )
+column=(type=decimal(6) updatewhereclause=yes name=salestax dbname="SalesTax"  )
+ retrieve="SELECT
+	GroupCode = A.GroupCode, 
+	GroupName = A.GroupName,
+	itemsalestax = (SELECT ISNULL( ROUND(SUM((PD.looseqty + PD.packqty + PD.bonusqty) * PD.unitsalestax) +
+						SUM(ROUND((PD.looseqty + PD.packqty) * PD.purprice * (1 - (.01 * PD.discperc)) * 
+						PD.gstperc * .01, 2)), 0) , 0)
+		 FROM 
+			purdetail PD, 
+			purledger PL,
+			(SELECT ICode, GroupCode = CASE :as_group WHEN 'M' THEN ManfCode WHEN 'C' THEN ICatCode WHEN 'L' THEN ICCode WHEN 'P' THEN PackCode END
+			FROM Item) I
+			WHERE 	PL.date between :ar_startdate and :ar_enddate and
+					PL.purcatcode IN (:ar_purcatcode) AND
+					PL.SalesManCode IN (:ar_usercode) AND
+					PL.posted IN (:as_status) and
+			       	PL.purinvcode=PD.purinvcode and
+		 			PD.icode=I.icode AND
+					A.GroupCode = I.GroupCode),
+	purchase=ROUND((SELECT ISNULL( SUM(((PD.looseqty + PD.packqty ) * PD.purprice ) * 
+			(1 - (.01 *  PD.discperc))), 0)
+		 FROM 
+			purdetail PD, 
+			purledger PL, 
+			(SELECT ICode, GroupCode = CASE :as_group WHEN 'M' THEN ManfCode WHEN 'C' THEN ICatCode WHEN 'L' THEN ICCode WHEN 'P' THEN PackCode END
+			FROM Item) I
+		 WHERE 	PL.date between :ar_startdate and :ar_enddate and
+					PL.purcatcode IN (:ar_purcatcode) AND
+			PL.SalesManCode IN (:ar_usercode) AND
+			PL.posted IN (:as_status) and
+       	PL.purinvcode=PD.purinvcode and
+		 	PD.icode=I.icode AND
+			A.GroupCode = I.GroupCode), 2),
+	preturn =ROUND((SELECT ISNULL( SUM(((PRD.looseqty + PRD.packqty ) * PRD.prprice ) * 
+			(1 - (.01 *  PRD.discperc))), 0)
+		 FROM prdetail PRD, prledger PRL,
+			(SELECT ICode, GroupCode = CASE :as_group WHEN 'M' THEN ManfCode WHEN 'C' THEN ICatCode WHEN 'L' THEN ICCode WHEN 'P' THEN PackCode END
+			FROM Item) I
+		 WHERE PRL.date between :ar_startdate and :ar_enddate and
+			PRL.SalesManCode IN (:ar_usercode) AND
+			PRL.posted IN (:as_status) and
+  			PRL.prinvcode=PRD.prinvcode and
+		 	PRD.icode=I.icode AND
+			A.GroupCode = I.GroupCode), 2),
+	NetPurchase=ROUND((SELECT ISNULL( SUM(((PD.looseqty + PD.packqty ) * PD.purprice ) * 
+			(1 - (.01 *  PD.discperc))), 0) + 
+			ISNULL( ROUND(SUM((PD.looseqty + PD.packqty + PD.bonusqty) * PD.unitsalestax) +
+				SUM(ROUND((PD.looseqty + PD.packqty) * PD.purprice * (1 - (.01 * PD.discperc)) * 	PD.gstperc * .01, 2)) 
+				/* + ROUND(SUM( ( ((PD.looseqty + PD.packqty) * PD.purprice) * (1 - (.01 * PD.discperc)) * (1 - (.01 * PL.discperc)) ) * 	(PL.invgstperc1 * .01) ) , 2) */ , 0) , 0)
+		 FROM 
+			purdetail PD, 
+			purledger PL, 
+			(SELECT ICode, GroupCode = CASE :as_group WHEN 'M' THEN ManfCode WHEN 'C' THEN ICatCode WHEN 'L' THEN ICCode WHEN 'P' THEN PackCode END
+			FROM Item) I
+		 WHERE 	PL.date between :ar_startdate and :ar_enddate and
+			PL.purcatcode IN (:ar_purcatcode) AND
+			PL.SalesManCode IN (:ar_usercode) AND
+			PL.posted IN (:as_status) and
+	       	PL.purinvcode=PD.purinvcode and
+		 	PD.icode=I.icode AND
+			A.GroupCode = I.GroupCode), 2)  -
+		 ROUND((SELECT ISNULL( SUM(((PRD.looseqty + PRD.packqty ) * PRD.prprice ) * 
+			(1 - (.01 *  PRD.discperc))), 0)
+		 FROM 
+			prdetail PRD, 
+			prledger PRL, 
+			(SELECT ICode, GroupCode = CASE :as_group WHEN 'M' THEN ManfCode WHEN 'C' THEN ICatCode WHEN 'L' THEN ICCode WHEN 'P' THEN PackCode END
+			FROM Item) I
+		 WHERE PRL.date between :ar_startdate and :ar_enddate and
+			PRL.SalesManCode IN (:ar_usercode) AND
+			PRL.posted IN (:as_status) and
+	       	PRL.prinvcode=PRD.prinvcode and
+		 	PRD.icode=I.icode AND
+			A.GroupCode = I.GroupCode), 2),
+	purchaseatsale=ROUND((SELECT ISNULL( SUM((( CASE WHEN PD.PACKQTY > 0 THEN ((PD.packqty + PD.BonusQty) * PD.packunits) ELSE (PD.looseqty + PD.BonusQty) END ) *
+			(PD.saleprice / 
+				CASE PD.packunits WHEN 0 THEN 1 ELSE PD.packunits END))), 0)
+		 FROM 
+			purdetail PD, 
+			purledger PL, 
+			(SELECT ICode, GroupCode = CASE :as_group WHEN 'M' THEN ManfCode WHEN 'C' THEN ICatCode WHEN 'L' THEN ICCode WHEN 'P' THEN PackCode END
+			FROM Item) I
+		 WHERE 	PL.date between :ar_startdate and :ar_enddate and
+			PL.purcatcode IN (:ar_purcatcode) AND
+			PL.SalesManCode IN (:ar_usercode) AND
+			PL.posted IN (:as_status) and
+	   		PL.purinvcode=PD.purinvcode and
+		 	PD.icode=I.icode AND
+			A.GroupCode = I.GroupCode), 2),
+	preturnatsale =ROUND((SELECT ISNULL( SUM((( CASE WHEN PRD.PACKQTY > 0 THEN ((PRD.packqty + PRD.BonusQty) * PRD.packunits) ELSE (PRD.looseqty + PRD.BonusQty) END ) * 
+			(PRD.packsaleprice / 
+				CASE PRD.packunits WHEN 0 THEN 1 ELSE PRD.packunits END))), 0)
+		 FROM 
+			prdetail PRD, 
+			prledger PRL, 
+			(SELECT ICode, GroupCode = CASE :as_group WHEN 'M' THEN ManfCode WHEN 'C' THEN ICatCode WHEN 'L' THEN ICCode WHEN 'P' THEN PackCode END
+			FROM Item) I
+		 WHERE 
+			PRL.date between :ar_startdate and :ar_enddate and
+			PRL.SalesManCode IN (:ar_usercode) AND
+			PRL.posted IN (:as_status) and
+       			PRL.prinvcode=PRD.prinvcode and
+		 	PRD.icode=I.icode AND
+			A.GroupCode = I.GroupCode), 2),
+	netpurchaseatsale=ROUND((SELECT ISNULL( SUM((( CASE WHEN PD.PACKQTY > 0 THEN ((PD.packqty + PD.BonusQty) * PD.packunits) ELSE (PD.looseqty + PD.BonusQty) END ) *
+			(PD.saleprice / 
+				CASE PD.packunits WHEN 0 THEN 1 ELSE PD.packunits END))), 0)
+		 FROM 
+			purdetail PD, 
+			purledger PL, 
+			(SELECT ICode, GroupCode = CASE :as_group WHEN 'M' THEN ManfCode WHEN 'C' THEN ICatCode WHEN 'L' THEN ICCode WHEN 'P' THEN PackCode END
+			FROM Item) I
+		 WHERE
+		 	PL.date between :ar_startdate and :ar_enddate and
+			PL.purcatcode IN (:ar_purcatcode) AND
+			PL.SalesManCode IN (:ar_usercode) AND
+			PL.posted IN (:as_status) and
+	       	PL.purinvcode=PD.purinvcode and
+		 	PD.icode=I.icode AND
+			A.GroupCode = I.GroupCode), 2) -
+		 ROUND((SELECT ISNULL( SUM((( CASE WHEN PRD.PACKQTY > 0 THEN ((PRD.packqty + PRD.BonusQty) * PRD.packunits) ELSE (PRD.looseqty + PRD.BonusQty) END ) * 
+			(PRD.packsaleprice / 
+				CASE PRD.packunits WHEN 0 THEN 1 ELSE PRD.packunits END))), 0)
+		 FROM prdetail PRD, prledger PRL, 
+			(SELECT ICode, GroupCode = CASE :as_group WHEN 'M' THEN ManfCode WHEN 'C' THEN ICatCode WHEN 'L' THEN ICCode WHEN 'P' THEN PackCode END
+			FROM Item) I
+		 WHERE 
+			PRL.date between :ar_startdate and :ar_enddate and
+			PRL.SalesManCode IN (:ar_usercode) AND
+			PRL.posted IN (:as_status) and
+   			PRL.prinvcode=PRD.prinvcode and
+		 	PRD.icode=I.icode AND
+			A.GroupCode = I.GroupCode), 2),
+	totaldisc = (SELECT SUM(flatdisc) FROM purledger p
+				    WHERE  p.date between :ar_startdate and :ar_enddate and
+						P.purcatcode IN (:ar_purcatcode) AND 
+						P.SalesManCode IN (:ar_usercode) AND
+						p.posted IN (:as_status)),
+	misccharg= (SELECT SUM(misccharges) FROM  purledger p
+				   WHERE p.date between :ar_startdate and :ar_enddate and 
+							P.purcatcode IN (:ar_purcatcode) AND
+							P.SalesManCode IN (:ar_usercode) AND
+							p.posted IN (:as_status)),
+	totalinvdiscperc= (SELECT SUM(ISNULL(B.invdiscperc,0))
+		     	   FROM
+				  (SELECT invdiscperc = IsNull(SUM(Round(((d.looseqty + d.packqty ) * 
+							d.purprice) * (1 - (.01 * d.discperc)),2)) * 0.01 * p.discperc, 0)
+		 		  FROM     purledger p, purdetail d
+		   	  WHERE	 (p.date between :ar_startdate and :ar_enddate) AND
+							  P.purcatcode IN (:ar_purcatcode) AND
+							  P.SalesManCode IN (:ar_usercode) AND
+							  p.posted IN (:as_status) and p.purinvcode = d.purinvcode
+				  GROUP BY p.purinvcode, p.discperc) AS  B),
+	diff=(select Round(sum ( ISNULL(A.diff,0)), 2)
+	      from
+		(SELECT p.purinvcode, Diff=ROUND(SUM((d.looseqty + d.packqty) * d.purprice * 
+				(1 - (.01 * d.discperc))) * (1- (.01 * p.discperc)) + 
+				p.misccharges + p.salestax - p.flatdisc, ISNULL((SELECT A=dbo.Fn_Get_Int_Preference('roundpurinvon')), 0)) - 
+				(SUM((d.looseqty + d.packqty) * d.purprice * 
+				(1 - (.01 * d.discperc))) * (1- (.01 * p.discperc)) + 
+				p.misccharges + p.salestax - p.flatdisc)
+		FROM purledger p, purdetail d
+		WHERE	(p.purinvcode = d.purinvcode) and p.posted IN (:as_status) and 
+			P.purcatcode IN (:ar_purcatcode) AND
+			P.SalesManCode IN (:ar_usercode) AND
+			(p.date between :ar_startdate and :ar_enddate)
+		GROUP BY p.purinvcode, p.suppcode, p.purcatcode, p.postdate, p.discperc,
+			 p.misccharges, p.salestax, p.flatdisc, p.InvGSTPerc1) as A),
+	SalesTax = 
+		(SELECT ISNULL(Sum (ISNull(S.SaleTax,0)),0)
+		FROM  (SELECT	
+			SaleTax=ROUND(SUM((d.looseqty + d.packqty + d.bonusqty) * d.unitsalestax) +
+			SUM(ROUND((d.looseqty + d.packqty) * d.purprice * (1 - (.01 * d.discperc)) * 
+				d.gstperc * .01, 2)) +
+			ROUND((SUM(((d.looseqty + d.packqty) * d.purprice) * 
+				(1 - (.01 * d.discperc))) * (1 - (.01 * p.discperc)) - p.flatdisc) * 
+				(p.invgstperc1 * .01), 2), ISNULL((SELECT A=dbo.Fn_Get_Int_Preference('roundpurinvon')), 0))
+		FROM dbo.Purledger P, dbo.Purdetail D
+		WHERE  (P.date between :ar_startdate and :ar_enddate)  And
+			P.purcatcode IN (:ar_purcatcode) AND
+			P.SalesManCode IN (:ar_usercode) AND
+			P.posted IN (:as_status) and P.purinvcode = D.purinvcode
+		GROUP BY P.purinvcode, 
+			 P.invgstperc1, 
+			 P.misccharges,   
+			 P.flatdisc,
+			 P.discperc) AS S)	
+
+FROM
+	(SELECT GroupCode = NULL, GroupName = 'NONE'
+	WHERE :as_group = 'P' 
+	UNION ALL
+	SELECT GroupCode = ManfCode, GroupName = Name
+	FROM Manufacturer
+	WHERE :as_group = 'M' 
+	UNION ALL
+	SELECT GroupCode = ICatCode, GroupName = Name
+	FROM ItemCategory
+	WHERE :as_group = 'C' 
+	UNION ALL
+	SELECT GroupCode = ICCode, GroupName = Name
+	FROM ItemClass
+	WHERE :as_group = 'L' 
+	UNION ALL
+	SELECT GroupCode = PackCode, GroupName = Name
+	FROM ItemPacking
+	WHERE :as_group = 'P' ) A
+
+
+
+/*
+
+SELECT	A.icatcode,
+	catname =(SELECT name FROM itemcategory WHERE icatcode=A.icatcode),
+	itemsalestax=(SELECT ISNULL( ROUND(SUM((PD.looseqty + PD.packqty + PD.bonusqty) * PD.unitsalestax) +
+						SUM(ROUND((PD.looseqty + PD.packqty) * PD.purprice * (1 - (.01 * PD.discperc)) * 
+						PD.gstperc * .01, 2)) /* +
+						ROUND(SUM( ( ((PD.looseqty + PD.packqty) * PD.purprice) * 
+								(1 - (.01 * PD.discperc)) * (1 - (.01 * PL.discperc)) ) * 
+								(PL.invgstperc1 * .01) ) , 2) */ , 0) , 0)
+		 FROM purdetail PD, purledger PL, item I
+		 WHERE 	PL.date between :ar_startdate and :ar_enddate and
+					PL.purcatcode IN (:ar_purcatcode) AND
+					PL.SalesManCode IN (:ar_usercode) AND
+					PL.posted IN (:as_status) and
+		       	PL.purinvcode=PD.purinvcode and
+		 			PD.icode=I.icode AND
+		 			I.icatcode=A.icatcode),
+	purchase=ROUND((SELECT ISNULL( SUM(((PD.looseqty + PD.packqty ) * PD.purprice ) * 
+			(1 - (.01 *  PD.discperc))), 0)
+		 FROM purdetail PD, purledger PL, item I
+		 WHERE 	PL.date between :ar_startdate and :ar_enddate and
+					PL.purcatcode IN (:ar_purcatcode) AND
+			PL.SalesManCode IN (:ar_usercode) AND
+			PL.posted IN (:as_status) and
+       	PL.purinvcode=PD.purinvcode and
+		 	PD.icode=I.icode AND
+		 	I.icatcode=A.icatcode), 2),
+	preturn =ROUND((SELECT ISNULL( SUM(((PRD.looseqty + PRD.packqty ) * PRD.prprice ) * 
+			(1 - (.01 *  PRD.discperc))), 0)
+		 FROM prdetail PRD, prledger PRL, item I
+		 WHERE PRL.date between :ar_startdate and :ar_enddate and
+			PRL.SalesManCode IN (:ar_usercode) AND
+			PRL.posted IN (:as_status) and
+  			PRL.prinvcode=PRD.prinvcode and
+		 	PRD.icode=I.icode AND
+		 	I.icatcode=A.icatcode), 2),
+	NetPurchase=ROUND((SELECT ISNULL( SUM(((PD.looseqty + PD.packqty ) * PD.purprice ) * 
+			(1 - (.01 *  PD.discperc))), 0) + 
+			ISNULL( ROUND(SUM((PD.looseqty + PD.packqty + PD.bonusqty) * PD.unitsalestax) +
+				SUM(ROUND((PD.looseqty + PD.packqty) * PD.purprice * (1 - (.01 * PD.discperc)) * 	PD.gstperc * .01, 2)) 
+				/* + ROUND(SUM( ( ((PD.looseqty + PD.packqty) * PD.purprice) * (1 - (.01 * PD.discperc)) * (1 - (.01 * PL.discperc)) ) * 	(PL.invgstperc1 * .01) ) , 2) */ , 0) , 0)
+		 FROM purdetail PD, purledger PL, item I
+		 WHERE 	PL.date between :ar_startdate and :ar_enddate and
+			PL.purcatcode IN (:ar_purcatcode) AND
+			PL.SalesManCode IN (:ar_usercode) AND
+			PL.posted IN (:as_status) and
+       	PL.purinvcode=PD.purinvcode and
+		 	PD.icode=I.icode AND
+		 	I.icatcode=A.icatcode), 2)  -
+		 ROUND((SELECT ISNULL( SUM(((PRD.looseqty + PRD.packqty ) * PRD.prprice ) * 
+			(1 - (.01 *  PRD.discperc))), 0)
+		 FROM prdetail PRD, prledger PRL, item I
+		 WHERE PRL.date between :ar_startdate and :ar_enddate and
+			PRL.SalesManCode IN (:ar_usercode) AND
+			PRL.posted IN (:as_status) and
+       	PRL.prinvcode=PRD.prinvcode and
+		 	PRD.icode=I.icode AND
+		 	I.icatcode=A.icatcode), 2),
+	purchaseatsale=ROUND((SELECT ISNULL( SUM((( CASE WHEN PD.PACKQTY > 0 THEN ((PD.packqty + PD.BonusQty) * PD.packunits) ELSE (PD.looseqty + PD.BonusQty) END ) *
+			(PD.saleprice / 
+				CASE PD.packunits WHEN 0 THEN 1 ELSE PD.packunits END))), 0)
+		 FROM purdetail PD, purledger PL, item I
+		 WHERE 	PL.date between :ar_startdate and :ar_enddate and
+			PL.purcatcode IN (:ar_purcatcode) AND
+			PL.SalesManCode IN (:ar_usercode) AND
+			PL.posted IN (:as_status) and
+   		PL.purinvcode=PD.purinvcode and
+		 	PD.icode=I.icode AND
+		 	I.icatcode=A.icatcode), 2),
+	preturnatsale =ROUND((SELECT ISNULL( SUM((( CASE WHEN PRD.PACKQTY > 0 THEN ((PRD.packqty + PRD.BonusQty) * PRD.packunits) ELSE (PRD.looseqty + PRD.BonusQty) END ) * 
+			(PRD.packsaleprice / 
+				CASE PRD.packunits WHEN 0 THEN 1 ELSE PRD.packunits END))), 0)
+		 FROM prdetail PRD, prledger PRL, item I
+		 WHERE 
+			PRL.date between :ar_startdate and :ar_enddate and
+			PRL.SalesManCode IN (:ar_usercode) AND
+			PRL.posted IN (:as_status) and
+       			PRL.prinvcode=PRD.prinvcode and
+		 	PRD.icode=I.icode AND
+		 	I.icatcode=A.icatcode), 2),
+	netpurchaseatsale=ROUND((SELECT ISNULL( SUM((( CASE WHEN PD.PACKQTY > 0 THEN ((PD.packqty + PD.BonusQty) * PD.packunits) ELSE (PD.looseqty + PD.BonusQty) END ) *
+			(PD.saleprice / 
+				CASE PD.packunits WHEN 0 THEN 1 ELSE PD.packunits END))), 0)
+		 FROM purdetail PD, purledger PL, item I
+		 WHERE
+		 	PL.date between :ar_startdate and :ar_enddate and
+			PL.purcatcode IN (:ar_purcatcode) AND
+			PL.SalesManCode IN (:ar_usercode) AND
+			PL.posted IN (:as_status) and
+       	PL.purinvcode=PD.purinvcode and
+		 	PD.icode=I.icode AND
+		 	I.icatcode=A.icatcode), 2) -
+		 ROUND((SELECT ISNULL( SUM((( CASE WHEN PRD.PACKQTY > 0 THEN ((PRD.packqty + PRD.BonusQty) * PRD.packunits) ELSE (PRD.looseqty + PRD.BonusQty) END ) * 
+			(PRD.packsaleprice / 
+				CASE PRD.packunits WHEN 0 THEN 1 ELSE PRD.packunits END))), 0)
+		 FROM prdetail PRD, prledger PRL, item I
+		 WHERE 
+			PRL.date between :ar_startdate and :ar_enddate and
+			PRL.SalesManCode IN (:ar_usercode) AND
+			PRL.posted IN (:as_status) and
+       			PRL.prinvcode=PRD.prinvcode and
+		 	PRD.icode=I.icode AND
+		 	I.icatcode=A.icatcode), 2),
+	totaldisc = (SELECT SUM(flatdisc) FROM purledger p
+				    WHERE  p.date between :ar_startdate and :ar_enddate and
+						P.purcatcode IN (:ar_purcatcode) AND 
+						P.SalesManCode IN (:ar_usercode) AND
+						p.posted IN (:as_status)),
+	misccharg= (SELECT SUM(misccharges) FROM  purledger p
+				   WHERE p.date between :ar_startdate and :ar_enddate and 
+							P.purcatcode IN (:ar_purcatcode) AND
+							P.SalesManCode IN (:ar_usercode) AND
+							p.posted IN (:as_status)),
+	totalinvdiscperc= (SELECT SUM(ISNULL(B.invdiscperc,0))
+		     	   FROM
+				  (SELECT invdiscperc = IsNull(SUM(Round(((d.looseqty + d.packqty ) * 
+							d.purprice) * (1 - (.01 * d.discperc)),2)) * 0.01 * p.discperc, 0)
+		 		  FROM     purledger p, purdetail d
+		   	  WHERE	 (p.date between :ar_startdate and :ar_enddate) AND
+							  P.purcatcode IN (:ar_purcatcode) AND
+							  P.SalesManCode IN (:ar_usercode) AND
+							  p.posted IN (:as_status) and p.purinvcode = d.purinvcode
+				  GROUP BY p.purinvcode, p.discperc) AS  B),
+	diff=(select Round(sum ( ISNULL(A.diff,0)), 2)
+	      from
+		(SELECT p.purinvcode, Diff=ROUND(SUM((d.looseqty + d.packqty) * d.purprice * 
+				(1 - (.01 * d.discperc))) * (1- (.01 * p.discperc)) + 
+				p.misccharges + p.salestax - p.flatdisc, 0) - 
+				(SUM((d.looseqty + d.packqty) * d.purprice * 
+				(1 - (.01 * d.discperc))) * (1- (.01 * p.discperc)) + 
+				p.misccharges + p.salestax - p.flatdisc)
+		FROM purledger p, purdetail d
+		WHERE	(p.purinvcode = d.purinvcode) and p.posted IN (:as_status) and 
+			P.purcatcode IN (:ar_purcatcode) AND
+			P.SalesManCode IN (:ar_usercode) AND
+			(p.date between :ar_startdate and :ar_enddate)
+		GROUP BY p.purinvcode, p.suppcode, p.purcatcode, p.postdate, p.discperc,
+			 p.misccharges, p.salestax, p.flatdisc, p.InvGSTPerc1) as A),
+	SalesTax = 
+		(SELECT ISNULL(Sum (ISNull(S.SaleTax,0)),0)
+		FROM  (SELECT	
+			SaleTax=ROUND(SUM((d.looseqty + d.packqty + d.bonusqty) * d.unitsalestax) +
+			SUM(ROUND((d.looseqty + d.packqty) * d.purprice * (1 - (.01 * d.discperc)) * 
+				d.gstperc * .01, 2)) +
+			ROUND((SUM(((d.looseqty + d.packqty) * d.purprice) * 
+				(1 - (.01 * d.discperc))) * (1 - (.01 * p.discperc)) - p.flatdisc) * 
+				(p.invgstperc1 * .01), 2), 0)
+		FROM dbo.Purledger P, dbo.Purdetail D
+		WHERE  (P.date between :ar_startdate and :ar_enddate)  And
+			P.purcatcode IN (:ar_purcatcode) AND
+			P.SalesManCode IN (:ar_usercode) AND
+			P.posted IN (:as_status) and P.purinvcode = D.purinvcode
+		GROUP BY P.purinvcode, 
+			 P.invgstperc1, 
+			 P.misccharges,   
+			 P.flatdisc,
+			 P.discperc) AS S)	
+
+FROM 	(SELECT DISTINCT (item.icatcode) AS icatcode 
+	FROM purdetail, purledger, item 
+	WHERE purledger.date between :ar_startdate and :ar_enddate and
+		 purledger.purcatcode IN (:ar_purcatcode) AND
+		 purledger.SalesManCode IN (:ar_usercode) AND
+	    purledger.purinvcode=purdetail.purinvcode and
+	    purdetail.icode=item.icode   
+	UNION
+	SELECT DISTINCT (item.icatcode) as icatcode 
+	FROM prdetail,prledger,item 
+   WHERE 
+		prledger.date between :ar_startdate and :ar_enddate and
+		prledger.SalesManCode IN (:ar_usercode) AND
+	   prledger.prinvcode=prdetail.prinvcode and
+	   prdetail.icode=item.icode) as A
+
+*/"
+  arguments=(("as_group", string), ("ar_startdate", datetime), ("ar_enddate", datetime), ("ar_usercode", numberlist), ("ar_userlist", string), ("ar_purcatcode", numberlist), ("ar_categoryname", string), ("as_status", stringlist))
+)
+compute(name=compute_2 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" x="6283" y="41" height="133" width="1400" format="[general]" expression="'Page ' + page() + ' of ' + pageCount()" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_1 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" x="466" y="41" height="133" width="1233" format="dd/mm/yyyy" expression="today()" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_2 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="700" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" alignment="0" border="0" x="1858" y="791" height="133" width="225" text="To: " html.valueishtml="0" )
+compute(name=c_startdate visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="700" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" x="733" y="791" height="133" width="1016" format="dd/mm/yyyy" expression=" ar_StartDate " alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=c_enddate visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="700" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" x="2108" y="791" height="133" width="1016" format="dd/mm/yyyy" expression=" ar_EndDate " alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_6 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" alignment="0" border="0" x="91" y="41" height="133" width="300" text="Date: " html.valueishtml="0" )
+text(name=t_1 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="700" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" alignment="0" border="0" x="91" y="791" height="133" width="608" text="From Date: " html.valueishtml="0" )
+compute(name=c_companyname visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" x="91" y="208" height="191" width="7841" format="[general]" expression="f_ReportHeaderInfo('clientname')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_3 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="700" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="2" background.color="16777215" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" alignment="2" border="0" x="91" y="41" height="133" width="7841" text="	if( as_group ='M', 'Manufacturer', if(  as_group ='C', 'Item Category', if( as_group ='L', 'Item Class',  if( as_group ='P', 'Item Packing', 'Group')))) + ' Wise Purchase Summary'" html.valueishtml="0" )
+compute(name=c_address1 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" x="91" y="425" height="158" width="7841" format="[general]" expression="f_ReportHeaderInfo('address1')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=c_address2 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" x="91" y="608" height="150" width="7841" format="[general]" expression="f_ReportHeaderInfo('address2')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+line(name=l_1 visible="1" band=header background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="0" pen.width="8" pen.color="0" x1="91" y1="958" x2="7933" y2="958" )
+line(name=l_2 visible="1" band=header background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="0" pen.width="8" pen.color="0" x1="91" y1="1300" x2="7933" y2="1300" )
+text(name=t_code visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" alignment="0" border="0" x="100" y="1008" height="133" width="258" text="Code" html.valueishtml="0" )
+text(name=t_category visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" alignment="2" border="0" x="400" y="1008" height="133" width="1725" text="Name" html.valueishtml="0" )
+text(name=t_purchase visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" alignment="1" border="0" x="2291" y="1008" height="266" width="800" text="Purchase
+Value" html.valueishtml="0" )
+text(name=t_itemsalestax visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" alignment="1" border="0" x="3233" y="1000" height="266" width="358" text="Sales
+Tax" html.valueishtml="0" )
+text(name=t_preturn visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" alignment="1" border="0" x="3641" y="1000" height="266" width="583" text="Return
+Value" html.valueishtml="0" )
+text(name=t_netpurchase visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" alignment="1" border="0" x="4258" y="1000" height="266" width="775" text="Net Purchase
+Value" html.valueishtml="0" )
+text(name=t_purchaseatsale visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" alignment="1" border="0" x="5066" y="1000" height="266" width="766" text="Pur. Value
+(at Sale Price)" html.valueishtml="0" )
+text(name=t_preturnatsale visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" alignment="1" border="0" x="5866" y="1000" height="266" width="766" text="Return Value
+(at Sale Price)" html.valueishtml="0" )
+text(name=t_netpurchaseatsale visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" alignment="1" border="0" x="6675" y="1000" height="266" width="766" text="Net Purchase
+(at Sale Price)" html.valueishtml="0" )
+text(name=t_8 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" alignment="2" border="0" x="7475" y="1008" height="266" width="416" text="Margin
+%" html.valueishtml="0" )
+text(name=t_5 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="2" background.color="16777215" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" alignment="0" border="0" x="91" y="1183" height="150" width="333" text="Total:" html.valueishtml="0" )
+text(name=t_7 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" alignment="0" border="0" x="91" y="1392" height="133" width="2016" text="User(s) included in this report are:-" html.valueishtml="0" )
+compute(name=compute_9 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" x="1266" y="1183" height="175" width="1858" format="###,###,###.00" expression="Round(sum( purchase for all) - totaldisc  -  totalinvdiscperc + misccharg + salestax + diff , 0)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+line(name=l_3 visible="1" band=summary background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="0" pen.width="8" pen.color="0" x1="91" y1="8" x2="7933" y2="8" )
+line(name=l_4 visible="1" band=summary background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="0" pen.width="8" pen.color="0" x1="91" y1="1150" x2="7933" y2="1150" )
+compute(name=compute_11 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="2" background.color="16777215" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" x="91" y="1558" height="200" width="7841" format="[GENERAL]" expression=" ar_categoryname " alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_10 visible="1" height.autosize=yes band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" x="91" y="1783" height="941" width="7841" format="[GENERAL]" expression=" ar_userlist " alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=c_totalitemsalestax visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="700" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" x="3125" y="233" height="150" width="466" format="##########0" expression="Sum (  itemsalestax  for all ) " alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_4 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" alignment="0" border="0" x="91" y="50" height="150" width="1725" text="Report Total:" html.valueishtml="0" )
+text(name=t_totaldisc visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" alignment="0" border="0" x="91" y="233" height="150" width="1725" text="Total Flat Discount: (-)" html.valueishtml="0" )
+text(name=t_totalinvdiscperc visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" alignment="0" border="0" x="91" y="417" height="150" width="1725" text="Total Overall Inv. Discount: (-)" html.valueishtml="0" )
+text(name=t_misccharg visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" alignment="0" border="0" x="91" y="600" height="150" width="1725" text="Total Misc. Charges: (+)" html.valueishtml="0" )
+text(name=t_salestax visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" alignment="0" border="0" x="91" y="783" height="150" width="1725" text="Total Sales Tax:  (+)" html.valueishtml="0" )
+text(name=t_diff visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" alignment="0" border="0" x="91" y="967" height="150" width="1725" text="Rounding Difference:  (+)" html.valueishtml="0" )
+compute(name=compute_3 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="700" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" x="1850" y="50" height="150" width="1241" format="###,###,###.00" expression="sum(purchase for all)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+column(name=totaldisc visible="1" band=summary id=10 x="1850" y="233" height="150" width="1241" color="0" border="0" alignment="1" format="###,###,###.00" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" transparency="0" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" tabsequence=0 )
+column(name=totalinvdiscperc visible="1" band=summary id=12 x="1850" y="417" height="150" width="1241" color="0" border="0" alignment="1" format="###,###,###.00" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" transparency="0" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" tabsequence=0 )
+column(name=misccharg visible="1" band=summary id=11 x="1850" y="600" height="150" width="1241" color="0" border="0" alignment="1" format="###,###,###.00" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" transparency="0" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" tabsequence=0 )
+column(name=salestax visible="1" band=summary id=14 x="1850" y="783" height="150" width="1241" color="0" border="0" alignment="1" format="###,###,###.00" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" transparency="0" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" tabsequence=0 )
+column(name=diff visible="1" band=summary id=13 x="1850" y="967" height="150" width="1241" color="0" border="0" alignment="1" format="###,###,###.00" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" transparency="0" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" tabsequence=0 )
+compute(name=compute_4 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="700" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" x="3133" y="50" height="150" width="1091" format="###,###,###.00" expression="sum(preturn for all)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_5 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="700" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" x="3641" y="233" height="150" width="1391" format="###,###,###.00" expression="sum(netpurchase for all)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_6 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="700" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" x="4225" y="50" height="150" width="1608" format="###,###,###.00" expression="sum(purchaseatsale for all)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_7 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="700" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" x="5141" y="233" height="150" width="1491" format="###,###,###.00" expression="sum(preturnatsale for all)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_8 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="700" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" x="5841" y="50" height="150" width="1600" format="###,###,###.00" expression="sum(netpurchaseatsale for all)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_13 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="700" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" x="7475" y="50" height="133" width="416" format="###0.00" expression="(sum(netpurchaseatsale for all) - sum(netpurchase for all)) / if( sum(netpurchaseatsale for all) = 0, 1, sum(netpurchaseatsale for all)) * 100" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no enabled="0" )
+line(name=l_5 visible="1" band=detail background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" pen.style="0" pen.width="8" pen.color="0" x1="91" y1="183" x2="7933" y2="183" )
+column(name=groupcode visible="1" band=detail id=1 x="75" y="8" height="141" width="283" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" transparency="0" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=groupname visible="1" band=detail id=2 x="400" y="8" height="141" width="1791" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" transparency="0" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=purchase visible="1" band=detail id=4 x="2225" y="8" height="141" width="866" color="0" border="0" alignment="1" format="###,###,###.00" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" transparency="0" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=itemsalestax visible="1" band=detail id=3 x="3116" y="8" height="141" width="475" color="0" border="0" alignment="1" format="##########0" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" transparency="0" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=preturn visible="1" band=detail id=5 x="3641" y="8" height="141" width="583" color="0" border="0" alignment="1" format="###,###,###.00" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" transparency="0" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=netpurchase visible="1" band=detail id=6 x="4258" y="8" height="141" width="775" color="0" border="0" alignment="1" format="###,###,###.00" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" transparency="0" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=purchaseatsale visible="1" band=detail id=7 x="5066" y="8" height="141" width="766" color="0" border="0" alignment="1" format="###,###,###.00" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" transparency="0" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=preturnatsale visible="1" band=detail id=8 x="5866" y="8" height="141" width="766" color="0" border="0" alignment="1" format="###,###,###.00" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" transparency="0" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=netpurchaseatsale visible="1" band=detail id=9 x="6675" y="8" height="141" width="766" color="0" border="0" alignment="1" format="###,###,###.00" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" transparency="0" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="400" tabsequence=0 )
+compute(name=compute_12 visible="1" band=detail font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" x="7475" y="17" height="133" width="416" format="###0.00" expression="(( netpurchaseatsale - netpurchase ) / if( netpurchaseatsale =0,1, netpurchaseatsale )) * 100" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+htmltable(border="1" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" encodeSelfLinkArgs="1" generateDDDWFrames="1" generateJavaScript="1" netscapeLayers="0" pagingMethod=0 )
+xhtmlgen() cssgen(sessionSpecific="0" )
+xmlgen(inline="0" )
+xsltgen()
+jsgen()
+export.xml(headGroups="1" includewhitespace="0" metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 distill.customPostScript="0" xslfop.print="0" )
+export.xhtml()

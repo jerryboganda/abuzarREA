@@ -1,0 +1,461 @@
+release 12.5;
+datawindow ( units=2 timer_interval=60000 processing=0 color=1073741824 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.printername=""  print.documentname=""  print.orientation=1 print.margin.left=250 print.margin.right=250 print.margin.top=250 print.margin.bottom=250 print.paper.size=1 print.paper.source=0 print.canusedefaultprinter=yes selected.mouse=no hidegrayline=no showbackcoloronxp=no)
+header(height=1510 color="536870912" )
+summary(height=0 color="536870912" )
+footer(height=0 color="536870912" )
+detail(height=197 color="536870912"  height.autosize=yes)
+table(column=(type=long updatewhereclause=yes name=groupcode dbname="GroupCode"  )
+column=(type=char(20) updatewhereclause=yes name=groupname dbname="GroupName"  )
+column=(type=char(10) updatewhereclause=yes name=type dbname="Type"  )
+column=(type=datetime updatewhereclause=yes name=date dbname="Date"  )
+column=(type=datetime updatewhereclause=yes name=postdate dbname="PostDate"  )
+column=(type=char(75) updatewhereclause=yes name=aliasname dbname="AliasName"  )
+column=(type=char(60) updatewhereclause=yes name=itemname dbname="ItemName"  )
+column=(type=char(60) updatewhereclause=yes name=username dbname="UserName"  )
+column=(type=char(12) updatewhereclause=yes name=titlealias dbname="TitleAlias"  )
+column=(type=char(82) updatewhereclause=yes name=title dbname="Title"  )
+column=(type=char(60) updatewhereclause=yes name=godown dbname="Godown"  )
+column=(type=decimal(4) updatewhereclause=yes name=qtyinactual dbname="QtyInActual"  )
+column=(type=decimal(4) updatewhereclause=yes name=qtyinbonus dbname="QtyInBonus"  )
+column=(type=decimal(4) updatewhereclause=yes name=qtyoutactual dbname="QtyOutActual"  )
+column=(type=decimal(4) updatewhereclause=yes name=qtyoutbonus dbname="QtyOutBonus"  )
+column=(type=decimal(15) updatewhereclause=yes name=netrate dbname="NetRate"  )
+column=(type=decimal(5) updatewhereclause=yes name=avgprice dbname="AvgPrice"  )
+column=(type=char(100) updatewhereclause=yes name=batch dbname="Batch"  )
+column=(type=datetime updatewhereclause=yes name=expiry dbname="Expiry"  )
+column=(type=char(1) updatewhereclause=yes name=due dbname="Due"  )
+column=(type=decimal(0) updatewhereclause=yes name=utn dbname="UTN"  )
+ retrieve=" SELECT 
+	GroupCode=CASE :as_grouptype WHEN 'M' THEN I.MANFCODE WHEN 'C' THEN I.ICatCode WHEN 'L' THEN I.ICCode ELSE I.PACKCODE END, 
+	GroupName=CASE :as_grouptype WHEN 'M' THEN (SELECT M.NAME FROM MANUFACTURER M WHERE M.MANFCODE  = I.ManfCode) WHEN 'C' THEN (SELECT C.NAME FROM ITEMCATEGORY C WHERE C.ICATCODE  = I.ICatCode) WHEN 'L' THEN (SELECT C.NAME FROM ITEMCLASS C WHERE C.ICCODE  = I.ICCode) 	ELSE (SELECT P.NAME FROM ITEMPACKING P WHERE P.PACKCODE  = I.PACKCODE) END,
+	Type = 'PV-' + RTRIM(LTRIM(CONVERT(CHAR(7), pl.purinvcode))),
+	Date = pl.postdate,
+	PostDate = pl.postdate,
+	AliasName= i.customicode,
+	ItemName= i.name,
+	UserName = u.username,
+	TitleAlias = a.AliasName,
+	Title = CASE WHEN purcatcode = 3 THEN 'Opening Purchase' ELSE a.name END,
+	Godown = (SELECT g.name FROM godown g WHERE g.gcode = pd.gcode),
+	QtyInActual = CASE WHEN pl.purcatcode IN (3,7,8) THEN pd.looseqty ELSE pd.looseqty + (pd.packqty * pd.packunits) END,
+	QtyInBonus = CASE When pl.purcatcode IN (3,7,8) THEN pd.bonusqty Else (pd.bonusqty * pd.packunits) END,
+	QtyOutActual=0.0000,
+	QtyOutBonus=0.0000,
+	NetRate = (CASE WHEN purcatcode = 3 or purcatcode = 7 or purcatcode = 8 THEN pd.purprice ELSE pd.purprice / pd.packunits END) * (1 - pd.discperc * 0.01) * (1 - pl.discperc * 0.01),
+	AvgPrice=pd.newavgprice,
+	Batch = pd.batch,
+	Expiry=pd.expiry,
+	Due = null,
+	UTN=ISNULL(pd.purutn, 0)
+FROM
+	purledger pl, 
+	purdetail pd, 
+	users u, 
+	item i, 
+	accounts a
+WHERE 
+	pl.postdate between :ad_startdate and :ad_enddate 	and
+	pl.purinvcode = pd.purinvcode and	
+	pl.Posted = 'Y' and 
+	pl.suppcode = a.acccode and
+	pd.icode = i.icode and 
+	CASE :as_grouptype WHEN 'M' THEN I.MANFCODE WHEN 'C' THEN I.ICatCode WHEN 'L' THEN I.ICCode ELSE I.PACKCODE END in (:ai_groupcode) and 	
+	pl.salesmancode = u.usercode
+UNION ALL
+SELECT
+	GroupCode=CASE :as_grouptype WHEN 'M' THEN I.MANFCODE WHEN 'C' THEN I.ICatCode WHEN 'L' THEN I.ICCode ELSE I.PACKCODE END, 
+	GroupName=CASE :as_grouptype WHEN 'M' THEN (SELECT M.NAME FROM MANUFACTURER M WHERE M.MANFCODE  = I.ManfCode) WHEN 'C' THEN (SELECT C.NAME FROM ITEMCATEGORY C WHERE C.ICATCODE  = I.ICatCode) WHEN 'L' THEN (SELECT C.NAME FROM ITEMCLASS C WHERE C.ICCODE  = I.ICCode) 	ELSE (SELECT P.NAME FROM ITEMPACKING P WHERE P.PACKCODE  = I.PACKCODE) END,
+	Type = 'IS-' + RTRIM(LTRIM(CONVERT(CHAR(7), ih.issueinvcode))),
+	Date = ih.date,
+	Postdate = ih.postdate,
+	AliasName= i.customicode,
+	ItemName= i.name,
+	UserName = u.username,
+	TitleAlias = LTRIM(RTRIM(STR(d.deptcode))),
+	Title = d.name,
+	Godown = (SELECT g.name FROM godown g WHERE g.gcode = isd.gcode),
+	QtyInActual = 0,
+	QtyInBonus = 0,
+	QtyOutActual=qty,
+	QtyOutBonus=0,
+	NetRate = isd.purchaseprice,
+	AvgPrice= isd.avgprice,
+	Batch = isd.batch,
+	Expiry= isd.expiry,
+	Due = null,
+	UTN=ISNULL(isd.issueutn, 0)
+FROM
+	Issueheader ih, 
+	issuedetail isd, 
+	users u, 
+	Department d,
+	item i
+WHERE 
+	ih.date between :ad_startdate and :ad_enddate 	and
+	ih.issueinvcode = isd.issueinvcode and
+	ih.deptcode = d.deptcode and
+	ih.Posted = 'Y' and
+ 	isd.icode = i.icode and
+	CASE :as_grouptype WHEN 'M' THEN I.MANFCODE WHEN 'C' THEN I.ICatCode WHEN 'L' THEN I.ICCode ELSE I.PACKCODE END in (:ai_groupcode) and 	
+	ih.salesmancode = u.usercode
+UNION ALL
+SELECT
+	GroupCode=CASE :as_grouptype WHEN 'M' THEN I.MANFCODE WHEN 'C' THEN I.ICatCode WHEN 'L' THEN I.ICCode ELSE I.PACKCODE END, 
+	GroupName=CASE :as_grouptype WHEN 'M' THEN (SELECT M.NAME FROM MANUFACTURER M WHERE M.MANFCODE  = I.ManfCode) WHEN 'C' THEN (SELECT C.NAME FROM ITEMCATEGORY C WHERE C.ICATCODE  = I.ICatCode) WHEN 'L' THEN (SELECT C.NAME FROM ITEMCLASS C WHERE C.ICCODE  = I.ICCode) 	ELSE (SELECT P.NAME FROM ITEMPACKING P WHERE P.PACKCODE  = I.PACKCODE) END,
+	Type = 'PR-' + RTRIM(LTRIM(CONVERT(CHAR(7), pl.prinvcode))),
+	Date = pl.date,
+	PostDate = pl.postdate,
+	AliasName= i.customicode,
+	ItemName= i.name,
+	UserName = u.username,
+	TitleAlias = a.AliasName,
+	Title = CASE WHEN prcatcode = 4 or prcatcode = 5 THEN a.name ELSE 'Opening Purchase Return' END,
+	Godown = (SELECT g.name FROM godown g WHERE g.gcode = pd.gcode),
+	QtyInActual = 0,
+	QtyInBonus = 0,
+	QtyOutActual= pd.looseqty ,
+	QtyOutBonus= pd.bonusqty,
+	NetRate = pd.prprice * (1 - pd.discperc * 0.01) * (1 - pl.discperc * 0.01),
+	AvgPrice= pd.avgprice,
+	Batch = pd.batch,
+	Expiry= pd.expiry,
+	Due = null,
+	UTN=ISNULL(pd.prutn, 0)
+FROM 	
+	prledger pl, 
+	prdetail pd, 
+	users u, 
+	item i, 
+	accounts a
+WHERE
+	pl.date between :ad_startdate and :ad_enddate 	and
+	pl.posted = 'Y' and
+	pl.suppcode = a.acccode and
+	pl.prinvcode = pd.prinvcode and	
+	pd.icode = i.icode and 	
+	CASE :as_grouptype WHEN 'M' THEN I.MANFCODE WHEN 'C' THEN I.ICatCode WHEN 'L' THEN I.ICCode ELSE I.PACKCODE END in (:ai_groupcode) and 	
+	pl.salesmancode = u.usercode
+UNION ALL
+SELECT 
+	GroupCode=CASE :as_grouptype WHEN 'M' THEN I.MANFCODE WHEN 'C' THEN I.ICatCode WHEN 'L' THEN I.ICCode ELSE I.PACKCODE END, 
+	GroupName=CASE :as_grouptype WHEN 'M' THEN (SELECT M.NAME FROM MANUFACTURER M WHERE M.MANFCODE  = I.ManfCode) WHEN 'C' THEN (SELECT C.NAME FROM ITEMCATEGORY C WHERE C.ICATCODE  = I.ICatCode) WHEN 'L' THEN (SELECT C.NAME FROM ITEMCLASS C WHERE C.ICCODE  = I.ICCode) 	ELSE (SELECT P.NAME FROM ITEMPACKING P WHERE P.PACKCODE  = I.PACKCODE) END,
+	Type = CASE sl.salecatcode WHEN 3 THEN 'CS-' ELSE 'CR-' END + RTRIM(LTRIM(CONVERT(CHAR(6), sl.saleinvcode))),
+	Date = sl.date,
+	PostDate = sl.postdate,
+	AliasName= i.customicode,
+	ItemName= i.name,
+	UserName = u.username,
+	TitleAlias = a.AliasName,
+	Title = LTRIM(RTRIM(CASE WHEN sl.salecatcode <= 2 Then LTRIM(RTRIM(a.name)) Else 'Cash Sale' End)) + ' - ' + 
+		CASE sd.Due WHEN 'D' THEN 'Due Items' WHEN 'X' THEN 'Due Items Deleted'
+		WHEN 'S' THEN 'Due Items Satisfied' END,
+	Godown = (SELECT g.name FROM godown g WHERE g.gcode = sd.gcode),
+	QtyInActual = 0,
+	QtyInBonus = 0,
+	QtyOutActual= sd.looseqty,
+	QtyOutBonus= sd.bonusqty,
+	NetRate = (sd.saleprice - sd.itemflatdisc) * (1 - sd.discperc * 0.01) * (1 - sl.discperc * 0.01),
+	AvgPrice= sd.avgprice,
+	Batch = sd.batch,
+	Expiry= sd.expiry,
+	Due = sd.due,
+	UTN=ISNULL(sd.saleutn, 0)
+FROM
+	saleledger sl, 
+	saledetail sd, 
+	users u,
+	item i,
+	accounts a
+WHERE 
+	sl.date Between  :ad_startdate and :ad_enddate and
+	sl.saleinvcode = sd.saleinvcode and	
+	sl.posted = 'Y' and
+	sl.custcode = a.acccode and
+	sd.icode = i.icode and 	
+	CASE :as_grouptype WHEN 'M' THEN I.MANFCODE WHEN 'C' THEN I.ICatCode WHEN 'L' THEN I.ICCode ELSE I.PACKCODE END in (:ai_groupcode) and 	
+	sl.salesmancode = u.usercode
+UNION
+SELECT 
+	GroupCode=CASE :as_grouptype WHEN 'M' THEN I.MANFCODE WHEN 'C' THEN I.ICatCode WHEN 'L' THEN I.ICCode ELSE I.PACKCODE END, 
+	GroupName=CASE :as_grouptype WHEN 'M' THEN (SELECT M.NAME FROM MANUFACTURER M WHERE M.MANFCODE  = I.ManfCode) WHEN 'C' THEN (SELECT C.NAME FROM ITEMCATEGORY C WHERE C.ICATCODE  = I.ICatCode) WHEN 'L' THEN (SELECT C.NAME FROM ITEMCLASS C WHERE C.ICCODE  = I.ICCode) 	ELSE (SELECT P.NAME FROM ITEMPACKING P WHERE P.PACKCODE  = I.PACKCODE) END,
+	Type = CASE sl.srcatcode WHEN 8 THEN 'CSR-' ELSE 'CRR-' END + RTRIM(LTRIM(CONVERT(CHAR(6), sl.srinvcode))),
+	Date = sl.postdate,
+	PostDate = sl.postdate,
+	AliasName= i.customicode,
+	ItemName= i.name,
+	UserName = u.username,
+	TitleAlias = a.AliasName,
+	Title = CASE WHEN srcatcode = 6 or srcatcode = 7 THEN a.name ELSE 'Cash Sale Return' END,
+	Godown = (SELECT g.name FROM godown g WHERE g.gcode = sd.gcode),
+	QtyInActual = sd.looseqty,
+	QtyInBonus = sd.bonusqty,
+	QtyOutActual=0,
+	QtyOutBonus=0,
+	NetRate = sd.srprice * (1 - sd.discperc * 0.01) * (1 - sl.discperc * 0.01),
+	AvgPrice= sd.avgprice,
+	Batch = sd.batch,
+	Expiry= sd.expiry,
+	Due = NULL,
+	UTN=isnull(sd.srutn, 0)
+FROM
+	srledger sl,
+	srdetail sd, 
+	users u,
+	item i,
+	accounts a
+WHERE
+	sl.postdate between :ad_startdate and :ad_enddate and
+	sl.srinvcode = sd.srinvcode and	
+	sl.posted = 'Y' and
+	sl.custcode = a.acccode and
+	sd.icode = i.icode and 	
+	CASE :as_grouptype WHEN 'M' THEN I.MANFCODE WHEN 'C' THEN I.ICatCode WHEN 'L' THEN I.ICCode ELSE I.PACKCODE END in (:ai_groupcode) and 	
+	sl.salesmancode = u.usercode
+UNION ALL
+SELECT
+	GroupCode=CASE :as_grouptype WHEN 'M' THEN I.MANFCODE WHEN 'C' THEN I.ICatCode WHEN 'L' THEN I.ICCode ELSE I.PACKCODE END, 
+	GroupName=CASE :as_grouptype WHEN 'M' THEN (SELECT M.NAME FROM MANUFACTURER M WHERE M.MANFCODE  = I.ManfCode) WHEN 'C' THEN (SELECT C.NAME FROM ITEMCATEGORY C WHERE C.ICATCODE  = I.ICatCode) WHEN 'L' THEN (SELECT C.NAME FROM ITEMCLASS C WHERE C.ICCODE  = I.ICCode) 	ELSE (SELECT P.NAME FROM ITEMPACKING P WHERE P.PACKCODE  = I.PACKCODE) END,
+	Type = 'DS-' + RTRIM(LTRIM(CONVERT(CHAR(7), dh.saleinvcode))),
+	date = dh.DueSatisfyDate,
+	Postdate = Null,
+	AliasName= i.customicode,
+	ItemName= i.name,
+	UserName = u.username,
+	TitleAlias = (SELECT accounts.aliasname FROM accounts, saleledger 
+			WHERE Saleledger.saleinvcode = dh.saleinvcode and accounts.acccode = saleledger.custcode),
+	Title = (SELECT accounts.name FROM accounts, saleledger 
+			WHERE Saleledger.saleinvcode = dh.saleinvcode and accounts.acccode = saleledger.custcode),
+	Godown = (SELECT g.name FROM godown g WHERE g.gcode = sd.gcode),
+	QtyInActual=0,
+	QtyInBonus=0,
+	QtyOutActual= sd.DueSatisfyqty,
+	QtyOutBonus=0,
+	NetRate = (select saleprice from saledetail sdd
+		where sdd.saleinvcode = dh.saleinvcode and sdd.icode = sd.icode
+		group by sdd.icode, sdd.saleprice),
+	AvgPrice= sd.avgprice,
+	Batch = sd.batch,
+	Expiry= sd.expiry,
+	Due = 'A',
+	UTN=isnull(sd.duesatisfyutn, 0)
+FROM
+	DueSatisfyHeader dh, 
+	DueSatisfydetail sd, 
+	users u, 
+	item i
+WHERE
+	dh.DueSatisfydate between :ad_startdate and :ad_enddate and
+	dh.DueSatisfyCode = sd.DueSatisfyCode and	
+	sd.icode = i.icode and 
+	CASE :as_grouptype WHEN 'M' THEN I.MANFCODE WHEN 'C' THEN I.ICatCode WHEN 'L' THEN I.ICCode ELSE I.PACKCODE END in (:ai_groupcode) and 	
+	dh.usercode = u.usercode
+UNION ALL
+SELECT
+	GroupCode=CASE :as_grouptype WHEN 'M' THEN I.MANFCODE WHEN 'C' THEN I.ICatCode WHEN 'L' THEN I.ICCode ELSE I.PACKCODE END, 
+	GroupName=CASE :as_grouptype WHEN 'M' THEN (SELECT M.NAME FROM MANUFACTURER M WHERE M.MANFCODE  = I.ManfCode) WHEN 'C' THEN (SELECT C.NAME FROM ITEMCATEGORY C WHERE C.ICATCODE  = I.ICatCode) WHEN 'L' THEN (SELECT C.NAME FROM ITEMCLASS C WHERE C.ICCODE  = I.ICCode) 	ELSE (SELECT P.NAME FROM ITEMPACKING P WHERE P.PACKCODE  = I.PACKCODE) END,
+	Type = 'DD-' + RTRIM(LTRIM(CONVERT(CHAR(7), dh.saleinvcode))),
+	Date = dh.DueSatisfyDate,
+	Postdate = Null,
+	AliasName= i.customicode,
+	ItemName= i.name,
+	UserName = u.username,
+	TitleAlias = (SELECT accounts.aliasname FROM accounts, saleledger 
+			WHERE Saleledger.saleinvcode = dh.saleinvcode and accounts.acccode = saleledger.custcode),
+	Title = (SELECT accounts.name FROM accounts, saleledger 
+			WHERE Saleledger.saleinvcode = dh.saleinvcode and accounts.acccode = saleledger.custcode),
+	Godown = '',
+	QtyInActual=0,
+	QtyInBonus=0,
+	QtyOutActual=sd.deletedqty,
+	QtyOutBonus=0,
+	NetRate = (select saleprice from saledetail sdd
+		where sdd.saleinvcode = dh.saleinvcode and sdd.icode = sd.icode
+		group by sdd.icode, sdd.saleprice),
+	AvgPrice= 0,
+	Batch = '',
+	Expiry= NULL,
+	Due = 'B',
+	UTN=0
+FROM
+	DueSatisfyHeader dh, DueDeletedetail sd, users u, item i
+WHERE
+	dh.DueSatisfydate between :ad_startdate and :ad_enddate and
+	dh.DueSatisfyCode = sd.DueSatisfyCode and	
+	sd.icode = i.icode and 	
+	CASE :as_grouptype WHEN 'M' THEN I.MANFCODE WHEN 'C' THEN I.ICatCode WHEN 'L' THEN I.ICCode ELSE I.PACKCODE END in (:ai_groupcode) and 	
+	dh.usercode = u.usercode
+UNION ALL
+SELECT
+	GroupCode=CASE :as_grouptype WHEN 'M' THEN I.MANFCODE WHEN 'C' THEN I.ICatCode WHEN 'L' THEN I.ICCode ELSE I.PACKCODE END, 
+	GroupName=CASE :as_grouptype WHEN 'M' THEN (SELECT M.NAME FROM MANUFACTURER M WHERE M.MANFCODE  = I.ManfCode) WHEN 'C' THEN (SELECT C.NAME FROM ITEMCATEGORY C WHERE C.ICATCODE  = I.ICatCode) WHEN 'L' THEN (SELECT C.NAME FROM ITEMCLASS C WHERE C.ICCODE  = I.ICCode) 	ELSE (SELECT P.NAME FROM ITEMPACKING P WHERE P.PACKCODE  = I.PACKCODE) END,
+	Type = CASE ah.adjcatcode WHEN 1 THEN 'AI-' ELSE 'AD-' END + RTRIM(LTRIM(CONVERT(CHAR(7), ah.adjcode))),
+	Date = ah.posteddate,
+	PostDate = ah.posteddate,
+	AliasName= i.customicode,
+	ItemName= i.name,
+	UserName = u.username,
+	TitleAlias = (Select LTRIM(RTRIM(STR(adjcategory.adjcatcode))) from adjcategory where adjcategory.adjcatcode = ah.adjcatcode),
+	Title = (Select adjcategory.name from adjcategory where adjcategory.adjcatcode = ah.adjcatcode),
+	Godown = (select g.name from godown g where g.gcode = ad.gcode),
+	QtyInActual = Case  ah.adjcatcode When 1 THEN ad.looseqty ELSE 0 END,
+	QtyInBonus = 0,
+	QtyOutActual = Case ah.adjcatcode When 2 THEN ad.looseqty ELSE 0 END,
+	QtyOutBonus = 0,
+	NetRate = ad.price,
+	Avgprice = ad.avgprice,
+	Batch = ad.batch,
+	expiry = ad.expiry,
+	Due=null,
+	UTN=ad.adjutn
+FROM
+	adjheader ah, 
+	adjdetail ad, 
+	users u, 
+	item i
+WHERE 	
+	ah.posteddate between :ad_startdate and :ad_enddate and
+	ah.posted = 'Y' and
+	ah.adjcode = ad.adjcode and
+	ad.icode = i.icode and
+	CASE :as_grouptype WHEN 'M' THEN I.MANFCODE WHEN 'C' THEN I.ICatCode WHEN 'L' THEN I.ICCode ELSE I.PACKCODE END in (:ai_groupcode) and 	
+	ah.usercode = u.usercode
+UNION ALL
+SELECT 
+	GroupCode=CASE :as_grouptype WHEN 'M' THEN I.MANFCODE WHEN 'C' THEN I.ICatCode WHEN 'L' THEN I.ICCode ELSE I.PACKCODE END, 
+	GroupName=CASE :as_grouptype WHEN 'M' THEN (SELECT M.NAME FROM MANUFACTURER M WHERE M.MANFCODE  = I.ManfCode) WHEN 'C' THEN (SELECT C.NAME FROM ITEMCATEGORY C WHERE C.ICATCODE  = I.ICatCode) WHEN 'L' THEN (SELECT C.NAME FROM ITEMCLASS C WHERE C.ICCODE  = I.ICCode) 	ELSE (SELECT P.NAME FROM ITEMPACKING P WHERE P.PACKCODE  = I.PACKCODE) END,
+	Type = 'RC' + RTRIM(LTRIM(CONVERT(CHAR(7), rh.ReceiptInvCode))),
+	Date = rh.postdate,
+	PostDate = rh.postdate,
+	AliasName= i.customicode,
+	ItemName= i.name,
+	UserName = u.username,
+	TitleAlias = LTRIM(RTRIM(STR(d.deptcode))),
+	Title = d.name,
+	Godown = (SELECT g.name FROM godown g WHERE g.gcode = rd.gcode),
+	QtyInActual = rd.qty,
+	QtyInBonus=0,
+	QtyOutActual=0,
+	QtyOutBonus=0,
+	NetRate=RD.saleprice,
+	Avgprice=RD.avgprice,
+	batch = RD.batch,
+	expiry=RD.expiry,
+	Due=null,
+	UTN=rd.receiptutn
+FROM
+	ReceiptHeader rh, 
+	ReceiptDetail rd, 
+	users u, 
+	item i,
+	department d
+WHERE
+	rh.postdate between :ad_startdate and :ad_enddate and
+	rh.ReceiptInvCode = rd.ReceiptInvCode and
+	rh.posted = 'Y' and
+	rh.deptcode = d.deptcode and
+	rd.icode = i.icode and 	
+	CASE :as_grouptype WHEN 'M' THEN I.MANFCODE WHEN 'C' THEN I.ICatCode WHEN 'L' THEN I.ICCode ELSE I.PACKCODE END in (:ai_groupcode) and 	
+	rh.salesmancode = u.usercode
+UNION ALL
+SELECT 
+	GroupCode=CASE :as_grouptype WHEN 'M' THEN I.MANFCODE WHEN 'C' THEN I.ICatCode WHEN 'L' THEN I.ICCode ELSE I.PACKCODE END, 
+	GroupName=CASE :as_grouptype WHEN 'M' THEN (SELECT M.NAME FROM MANUFACTURER M WHERE M.MANFCODE  = I.ManfCode) WHEN 'C' THEN (SELECT C.NAME FROM ITEMCATEGORY C WHERE C.ICATCODE  = I.ICatCode) WHEN 'L' THEN (SELECT C.NAME FROM ITEMCLASS C WHERE C.ICCODE  = I.ICCode) 	ELSE (SELECT P.NAME FROM ITEMPACKING P WHERE P.PACKCODE  = I.PACKCODE) END,
+	Type = 'AV-' + RTRIM(LTRIM(CONVERT(CHAR(7), h.documentcode))),
+	Date = h.postdate,
+	PostDate = h.postdate,
+	AliasName= i.customicode,
+	ItemName= i.name,
+	UserName = u.username,
+	TitleAlias = NULL,
+	Title = 'Item Price Adjustment',
+	Godown = NULL,
+	QtyInActual = 0,
+	QtyInBonus = 0,
+	QtyOutActual=0,
+	QtyOutBonus=0,
+	NetRate=d.newpurprice,
+	avgprice=d.newavgprice,
+	batch = '',
+	expiry=NULL,
+	Due = null,
+	UTN=isnull(d.utn, 0)
+FROM
+	avgpriceadjheader h, 
+	avgpriceadjdetail d, 
+	users u, 
+	item i
+WHERE
+	h.postdate between :ad_startdate and :ad_enddate and
+	h.documentcode = d.documentcode and
+	h.posted='Y' and
+ 	d.icode = i.icode and 
+	CASE :as_grouptype WHEN 'M' THEN I.MANFCODE WHEN 'C' THEN I.ICatCode WHEN 'L' THEN I.ICCode ELSE I.PACKCODE END in (:ai_groupcode) and 	
+	h.usercode = u.usercode
+ORDER BY
+	GroupName, 
+	GroupCode, 
+	ItemName, 
+	Utn, 
+	Date, 
+	Batch, 
+	Expiry"
+  arguments=(("as_grouptype", string), ("ai_groupcode", numberlist), ("ad_startdate", datetime), ("ad_enddate", datetime))
+ sort="groupname A, groupcode A, itemname A, aliasname A"
+)
+group(level=1 header.height=208 trailer.height=0 by=("groupname" "groupcode"  ) header.color="536870912" trailer.color="536870912" )
+group(level=2 header.height=197 trailer.height=197 by=("itemname" "aliasname"  ) header.color="536870912" trailer.color="536870912" )
+text(name=t_9 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="2" background.color="16777215" color="0" alignment="2" border="0" x="93" y="52" height="166" width="10260" text="Daily Stock IN/OUT Detail" html.valueishtml="0" )
+compute(name=c_companyname visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" x="93" y="260" height="177" width="10260" format="[general]" expression="f_ReportHeaderInfo('clientname')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=c_address1 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="93" y="447" height="177" width="10260" format="[general]" expression="f_ReportHeaderInfo('address1')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=c_address2 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="93" y="635" height="177" width="10260" format="[general]" expression="f_ReportHeaderInfo('address2')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_2 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="8572" y="52" height="177" width="1781" format="[general]" expression="'Page ' + page() + ' of ' + pageCount()" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_1 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="8718" y="843" height="177" width="1635" format="dd/mm/yyyy hh:mm" expression="today()" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_12 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="8354" y="843" height="177" width="322" text="Date: " html.valueishtml="0" )
+text(name=t_8 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="1" border="0" x="2114" y="843" height="177" width="218" text="To: " html.valueishtml="0" )
+line(name=l_1 visible="1" band=header background.mode="2" background.color="16777215" pen.style="2" pen.width="10" pen.color="0" x1="93" y1="1041" x2="10354" y2="1041" )
+text(name=t_1 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="104" y="843" height="166" width="354" text="From: " html.valueishtml="0" )
+compute(name=compute_3 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="489" y="843" height="166" width="1583" format="dd/mm/yyyy hh:mm:ss" expression=" ad_startdate " alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_4 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="2364" y="843" height="166" width="1583" format="dd/mm/yyyy hh:mm:ss" expression=" ad_enddate " alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_date visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="2" border="0" x="93" y="1083" height="166" width="895" text="Date" html.valueishtml="0" )
+line(name=l_2 visible="1" band=header background.mode="2" background.color="16777215" pen.style="2" pen.width="10" pen.color="0" x1="93" y1="1479" x2="10354" y2="1479" )
+text(name=t_stockout visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="2" border="0" x="8729" y="1083" height="166" width="1000" text="Stock OUT" html.valueishtml="0" )
+text(name=t_qtyoutactual visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="1" border="0" x="8729" y="1281" height="166" width="531" text="Qty" html.valueishtml="0" )
+text(name=t_qtyoutbonus visible="1	if( sum(qtyoutbonus for all) = 0 , 0, 1)" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="1" border="0" x="9312" y="1281" height="166" width="406" text="Bonus" html.valueishtml="0" )
+text(name=t_type visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="2" border="0" x="1343" y="1083" height="166" width="708" text="Type" html.valueishtml="0" )
+text(name=t_titlealias visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="2" border="0" x="2395" y="1083" height="166" width="739" text="Title Alias" html.valueishtml="0" )
+text(name=t_title visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="2" border="0" x="3822" y="1083" height="166" width="2218" text="Title" html.valueishtml="0" )
+text(name=t_qtyinbonus visible="1	if( sum(qtyinbonus for all) = 0 , 0, 1)" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="1" border="0" x="7843" y="1281" height="166" width="406" text="Bonus" html.valueishtml="0" )
+text(name=t_stockin visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="2" border="0" x="7281" y="1083" height="166" width="968" text="Stock IN" html.valueishtml="0" )
+text(name=t_qtyinactual visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="1" border="0" x="7281" y="1281" height="166" width="531" text="Qty" html.valueishtml="0" )
+column(name=date visible="1" band=detail id=4 x="93" y="10" height="166" width="895" color="33554432" border="0" alignment="0" format="dd/mm/yyyy hh:mm" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=qtyoutbonus visible="1	if( qtyoutbonus = 0 , 0, 1)" band=detail id=15 x="9312" y="10" height="166" width="406" color="33554432" border="0" alignment="1" format="	f_SetColumnFormat('Qty')" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=qtyoutactual visible="1	if( qtyoutactual = 0 , 0, 1)" band=detail id=14 x="8729" y="10" height="166" width="531" color="33554432" border="0" alignment="1" format="	f_SetColumnFormat('Qty')" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=type visible="1" band=detail id=3 x="1343" y="10" height="166" width="708" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=10 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=titlealias visible="1" band=detail id=9 x="2395" y="10" height="166" width="1114" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=12 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial Narrow" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=title visible="1" height.autosize=yes band=detail id=10 x="3822" y="10" height="166" width="2916" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=82 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial Narrow" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=qtyinbonus visible="1	if( qtyinbonus = 0 , 0, 1)" band=detail id=13 x="7843" y="10" height="166" width="406" color="33554432" border="0" alignment="1" format="	f_SetColumnFormat('Qty')" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=qtyinactual visible="1	if( qtyinactual = 0 , 0, 1)" band=detail id=12 x="7281" y="10" height="166" width="531" color="33554432" border="0" alignment="1" format="	f_SetColumnFormat('Qty')" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+text(name=t_groupcode visible="1" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" alignment="0" border="0" x="93" y="21" height="166" width="427" text="Code:" html.valueishtml="0" )
+column(name=groupcode visible="1" band=header.1 id=1 x="552" y="21" height="166" width="750" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+text(name=t_groupname visible="1" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" alignment="0" border="0" x="2260" y="21" height="166" width="677" text="Name:" html.valueishtml="0" )
+column(name=groupname visible="1" band=header.1 id=2 x="2979" y="21" height="166" width="3812" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=60 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+text(name=t_aliasname visible="1" band=header.2 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" alignment="0" border="0" x="93" y="10" height="166" width="750" text="Alias Name:" html.valueishtml="0" )
+column(name=aliasname visible="1" band=header.2 id=6 x="875" y="10" height="166" width="1218" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=75 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+text(name=t_itemname visible="1" band=header.2 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" alignment="2" border="0" x="2260" y="10" height="166" width="677" text="Item Name:" html.valueishtml="0" )
+column(name=itemname visible="1" band=header.2 id=7 x="2979" y="10" height="166" width="3812" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=60 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+compute(name=compute_5 visible="1	if(sum(qtyoutbonus for group 2)=0,0,1)" band=trailer.2 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" x="9312" y="11" height="166" width="406" format="	f_SetColumnFormat('Qty')" expression="sum(qtyoutbonus for group 2)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_7 visible="1	if(sum(qtyoutactual for group 2)=0,0,1)" band=trailer.2 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" x="8729" y="11" height="166" width="531" format="	f_SetColumnFormat('Qty')" expression="sum(qtyoutactual for group 2)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_6 visible="1	if(sum(qtyinbonus for group 2)=0,0,1)" band=trailer.2 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" x="7843" y="11" height="166" width="406" format="	f_SetColumnFormat('Qty')" expression="sum(qtyinbonus for group 2)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_8 visible="1	if(sum(qtyinactual for group 2)=0,0,1)" band=trailer.2 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" x="7239" y="11" height="166" width="572" format="	f_SetColumnFormat('Qty')" expression="sum(qtyinactual for group 2)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_2 visible="1" band=trailer.2 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" alignment="0" border="0" x="6479" y="11" height="166" width="697" text="Item Total:" html.valueishtml="0" )
+sparse(names="groupname	itemname	title	titlealias")
+htmltable(border="1" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" encodeSelfLinkArgs="1" generateJavaScript="1" netscapeLayers="0" pagingMethod=0 )
+xhtmlgen() cssgen(sessionSpecific="0" )
+xmlgen(inline="0" )
+xsltgen()
+jsgen()
+export.xml(headGroups="1" includewhitespace="0" metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 distill.customPostScript="0" xslfop.print="0" )
+export.xhtml()

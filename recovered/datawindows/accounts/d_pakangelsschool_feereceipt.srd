@@ -1,0 +1,155 @@
+release 12.5;
+datawindow ( units=2 timer_interval=0 processing=0 color=16777215 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.printername=""  print.documentname=""  print.orientation=1 print.margin.left=197 print.margin.right=197 print.margin.top=197 print.margin.bottom=197 print.paper.size=0 print.paper.source=0 print.canusedefaultprinter=yes selected.mouse=no hidegrayline=no showbackcoloronxp=no)
+header(height=0 )
+summary(height=0 color="536870912" )
+footer(height=0 color="536870912" )
+detail(height=187 color="536870912"  height.autosize=yes)
+table(column=(type=char(60) updatewhereclause=yes name=accounts_name dbname="Accounts.Name"  )
+column=(type=char(12) updatewhereclause=yes name=aliasname dbname="Accounts.AliasName"  )
+column=(type=long updatewhereclause=yes name=glheader_vochcatcode dbname="Glheader.vochcatcode"  )
+column=(type=decimal(2) updatewhereclause=yes name=gldetail_debit dbname="GLDetail.Debit"  )
+column=(type=decimal(2) updatewhereclause=yes name=gldetail_credit dbname="GLDetail.Credit"  )
+column=(type=char(20) updatewhereclause=yes name=gldetail_chkno dbname="GLDetail.ChkNo"  )
+column=(type=char(100) updatewhereclause=yes name=remarks dbname="remarks"  )
+column=(type=char(1) updatewhereclause=yes name=glheader_posted dbname="Glheader.Posted"  )
+column=(type=datetime updatewhereclause=yes name=glheader_date dbname="Glheader.Date"  )
+column=(type=char(100) updatewhereclause=yes name=glheader_remarks dbname="Glheader.Remarks"  )
+column=(type=char(30) updatewhereclause=yes name=vochercategory_name dbname="VocherCategory.Name"  )
+column=(type=char(60) updatewhereclause=yes name=users_username dbname="Users.UserName"  )
+column=(type=long updatewhereclause=yes name=glheader_glvochcode dbname="Glheader.GLVochCode"  )
+column=(type=long updatewhereclause=yes name=vouchercode dbname="Glheader.VoucherCode"  )
+column=(type=char(1) updatewhereclause=yes name=creditordebit dbname="CreditorDebit"  )
+column=(type=long identity=yes updatewhereclause=yes name=gldetail_glrowid dbname="GLDetail.glrowid"  )
+column=(type=long updatewhereclause=yes name=invoicecode dbname="InvoiceCode"  )
+column=(type=decimal(2) updatewhereclause=yes name=outstandingamt dbname="Outstandingamt"  )
+column=(type=long updatewhereclause=yes name=invoicebased dbname="InvoiceBased"  )
+column=(type=long updatewhereclause=yes name=studentcode dbname="StudentCode"  )
+column=(type=char(60) updatewhereclause=yes name=studentregno dbname="StudentRegNo"  )
+column=(type=char(100) updatewhereclause=yes name=studentname dbname="StudentName"  )
+column=(type=char(100) updatewhereclause=yes name=studentfname dbname="StudentFName"  )
+column=(type=char(100) updatewhereclause=yes name=grade dbname="Grade"  )
+column=(type=char(100) updatewhereclause=yes name=class dbname="Class"  )
+column=(type=char(100) updatewhereclause=yes name=section dbname="Section"  )
+column=(type=char(100) updatewhereclause=yes name=classmedium dbname="ClassMedium"  )
+column=(type=long updatewhereclause=yes name=rollno dbname="RollNo"  )
+column=(type=char(100) updatewhereclause=yes name=school dbname="School"  )
+ retrieve="SELECT 
+	Accounts.Name,
+	Accounts.AliasName,
+	Glheader.vochcatcode,   
+	GLDetail.Debit,   
+	GLDetail.Credit,   
+	GLDetail.ChkNo,   
+	remarks=GLDetail.Remarks,   
+	Glheader.Posted,
+	Glheader.Date,   
+	Glheader.Remarks,   
+	VocherCategory.Name,   
+	Users.UserName,   
+	Glheader.GLVochCode,
+	Glheader.VoucherCode,
+	CreditorDebit = Case GLDetail.Debit When 0 Then 'C' Else 'D' End,
+	gldetail.glrowid,
+	InvoiceCode=GLDetail.InvoiceCode,
+	Outstandingamt = GLDetail.Outstandingamt,
+	InvoiceBased=VocherCategory.InvoiceBased,
+	StudentCode=GLDetail.StudentCode,
+	StudentRegNo = (SELECT S.Regno FROM Student S WHERE S.Studentcode = GLDetail.StudentCode),
+	StudentName = (SELECT S.Name FROM Student S WHERE S.Studentcode = GLDetail.StudentCode),
+	StudentFName = (SELECT S.FName FROM Student S WHERE S.Studentcode = GLDetail.StudentCode),
+	Grade = (SELECT G.Name 
+		FROM Student S, Class C, StudentClass SC, Grade G
+		WHERE S.Studentcode = GLDetail.StudentCode AND 
+			S.CurrentClass=C.ClassCode AND
+			C.GradeCode = G.GradeCode AND
+			C.ClassCode = SC.ClassCode AND
+			S.Studentcode = SC.Studentcode),
+	Class = (SELECT C.Name 
+		FROM Student S, Class C, StudentClass SC, Grade G
+		WHERE S.Studentcode = GLDetail.StudentCode AND 
+			S.CurrentClass=C.ClassCode AND
+			C.GradeCode = G.GradeCode AND
+			C.ClassCode = SC.ClassCode AND
+			S.Studentcode = SC.Studentcode),
+	Section = (SELECT LTRIM(RTRIM(SUBSTRING(C.Name, CHARINDEX(',', C.Name, 1)+1, CHARINDEX(',', SUBSTRING(C.Name, CHARINDEX(',', C.Name, 1)-1, LEN(C.Name)),1))))
+		FROM Student S, Class C, StudentClass SC
+		WHERE S.Studentcode = GLDetail.StudentCode AND 
+			S.CurrentClass=C.ClassCode AND
+			C.ClassCode = SC.ClassCode AND
+			S.Studentcode = SC.Studentcode),
+	ClassMedium = (SELECT CM.Name 
+		FROM Student S, Class C, StudentClass SC, ClassMedium CM
+		WHERE S.Studentcode = GLDetail.StudentCode AND 
+			S.CurrentClass=C.ClassCode AND
+			C.ClassMediumCode = CM.ClassMediumCode AND
+			C.ClassCode = SC.ClassCode AND
+			S.Studentcode = SC.Studentcode),
+	RollNo = (SELECT SC.RollNo 
+		FROM Student S, Class C, StudentClass SC
+		WHERE S.Studentcode = GLDetail.StudentCode AND 
+			S.CurrentClass=C.ClassCode AND
+			C.ClassCode = SC.ClassCode AND
+			S.Studentcode = SC.Studentcode),
+	School = (SELECT School.Name 
+		FROM Student S, Class C, StudentClass SC, School 
+		WHERE S.Studentcode = GLDetail.StudentCode AND 
+			S.CurrentClass=C.ClassCode AND
+			C.SchoolCode = School.SchoolCode AND
+			C.ClassCode = SC.ClassCode AND
+			S.Studentcode = SC.Studentcode)
+FROM 
+	GLDetail,   
+	Glheader,   
+	Accounts,   
+	VocherCategory,   
+	Users  
+WHERE 
+	( Glheader.GLVochCode = GLDetail.GLVochCode ) and  
+	( Accounts.AccCode = GLDetail.AccCode ) and  
+	( VocherCategory.VochCatCode = Glheader.VochCatCode ) and  
+	( Users.UserCode = Glheader.salesmancode ) and  
+	( Glheader.GLVochCode = :ar_code ) AND
+	( Glheader.AccCode <> GLDetail.AccCode ) AND
+	( GLDetail.Credit > 0 )"
+  arguments=(("ar_code", number))
+ sort="glheader_glvochcode A, studentregno A, studentname A, aliasname A, accounts_name A"
+)
+group(level=1 header.height=1375 trailer.height=447 by=("glheader_glvochcode" "studentregno" "studentname" "aliasname" "accounts_name"  ) header.color="536870912" trailer.color="536870912" resetpagecount=yes )
+line(name=l_2 visible="1" band=header background.mode="2" background.color="16777215" pen.style="2" pen.width="10" pen.color="0" x1="0" y1="0" x2="0" y2="0" )
+compute(name=compute_3 visible="1" band=detail font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="1687" y="10" height="166" width="812" format="###,###,##0.00" expression="if( gldetail_debit > 0, gldetail_debit, gldetail_credit)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+column(name=remarks visible="1" height.autosize=yes band=detail id=7 x="62" y="10" height="166" width="1583" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=100 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=glheader_date visible="1" band=header.1 id=9 x="520" y="364" height="166" width="1979" color="0" border="0" alignment="0" format="dd mmm, yyyy hh:mm am/pm" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=rollno visible="1" band=header.1 id=28 x="2052" y="562" height="166" width="447" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=studentname visible="1" band=header.1 id=22 x="520" y="760" height="166" width="1979" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+text(name=t_posted visible="1" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="0" border="0" x="31" y="10" height="145" width="1520" text="	Trim(vochercategory_name)" html.valueishtml="0" )
+text(name=t_3 visible="1" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="31" y="364" height="166" width="458" text="Date:" html.valueishtml="0" )
+text(name=t_7 visible="1" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="31" y="562" height="166" width="458" text="Code:" html.valueishtml="0" )
+text(name=t_8 visible="1" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="31" y="760" height="166" width="458" text="Name:" html.valueishtml="0" )
+text(name=t_15 visible="1" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="1614" y="562" height="166" width="406" text="Roll #:" html.valueishtml="0" )
+column(name=school visible="1" band=header.1 id=29 x="31" y="187" height="145" width="2468" color="0" border="0" alignment="2" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=studentcode visible="1" band=header.1 id=20 x="520" y="562" height="166" width="1031" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=users_username visible="1" band=header.1 id=12 x="1604" y="21" height="145" width="895" color="0" border="0" alignment="1" format="[general]" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=grade visible="1" band=header.1 id=24 x="520" y="958" height="145" width="1041" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+text(name=t_14 visible="1" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="31" y="958" height="145" width="458" text="Class:" html.valueishtml="0" )
+column(name=section visible="1" band=header.1 id=26 x="2052" y="958" height="145" width="447" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+text(name=t_1 visible="1" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="1614" y="958" height="145" width="406" text="Section:" html.valueishtml="0" )
+line(name=l_10 visible="1" band=header.1 background.mode="2" background.color="16777215" pen.style="2" pen.width="10" pen.color="0" x1="31" y1="1354" x2="2500" y2="1354" )
+line(name=l_1 visible="1" band=header.1 background.mode="2" background.color="16777215" pen.style="2" pen.width="10" pen.color="0" x1="31" y1="1125" x2="2500" y2="1125" )
+text(name=t_9 visible="1" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="1" border="0" x="1687" y="1156" height="166" width="812" text="Amount" html.valueishtml="0" )
+text(name=t_6 visible="1" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="31" y="1156" height="166" width="635" text="Description" html.valueishtml="0" )
+column(name=vouchercode visible="1" band=trailer.1 id=14 x="72" y="41" height="156" width="833" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="400" tabsequence=0 )
+compute(name=compute_4 visible="1" band=trailer.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="1656" y="41" height="156" width="843" format="###,###,##0.00" expression="sum(if( gldetail_debit > 0, gldetail_debit, gldetail_credit) for group 1)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_5 visible="1" band=trailer.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="1270" y="41" height="156" width="354" text="Total:" html.valueishtml="0" )
+text(name=t_4 visible="1" band=trailer.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="0" border="0" x="62" y="271" height="166" width="270" text="." html.valueishtml="0" )
+line(name=l_5 visible="1" band=trailer.1 background.mode="2" background.color="16777215" pen.style="2" pen.width="10" pen.color="0" x1="31" y1="219" x2="2500" y2="219" )
+line(name=l_6 visible="1" band=trailer.1 background.mode="2" background.color="16777215" pen.style="2" pen.width="10" pen.color="0" x1="31" y1="10" x2="2500" y2="10" )
+htmltable(border="1" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" encodeSelfLinkArgs="1" generateJavaScript="1" netscapeLayers="0" pagingMethod=0 )
+xhtmlgen() cssgen(sessionSpecific="0" )
+xmlgen(inline="0" )
+xsltgen()
+jsgen()
+export.xml(headGroups="1" includewhitespace="0" metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 distill.customPostScript="0" xslfop.print="0" )
+export.xhtml()

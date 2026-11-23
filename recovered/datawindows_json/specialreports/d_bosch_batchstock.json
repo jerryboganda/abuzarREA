@@ -1,0 +1,215 @@
+{
+ "release": "12.5",
+ "datawindow": {
+  "units": "0",
+  "timer_interval": "0",
+  "processing": "0",
+  "color": "1073741824",
+  "brushmode": "0",
+  "transparency": "0",
+  "gradient.color": "8421504",
+  "gradient.transparency": "0",
+  "gradient.angle": "0",
+  "gradient.repetition.mode": "0",
+  "gradient.repetition.count": "0",
+  "gradient.repetition.length": "100",
+  "gradient.focus": "0",
+  "gradient.scale": "100",
+  "gradient.spread": "100",
+  "picture.mode": "0",
+  "picture.scale.x": "100",
+  "picture.scale.y": "100",
+  "picture.clip.left": "0",
+  "picture.clip.right": "0",
+  "picture.clip.top": "0",
+  "picture.clip.bottom": "0",
+  "picture.blur": "0",
+  "picture.transparency": "0",
+  "print.printername": "",
+  "print.documentname": "",
+  "print.orientation": "0",
+  "print.margin.left": "110",
+  "print.margin.right": "110",
+  "print.margin.top": "96",
+  "print.margin.bottom": "96",
+  "print.paper.size": "0",
+  "print.paper.source": "0",
+  "print.canusedefaultprinter": "yes",
+  "selected.mouse": "no",
+  "hidegrayline": "no",
+  "showbackcoloronxp": "no"
+ },
+ "bands": {
+  "header": {
+   "height": "0"
+  },
+  "summary": {
+   "height": "0",
+   "color": "536870912"
+  },
+  "footer": {
+   "height": "0",
+   "color": "536870912"
+  },
+  "detail": {
+   "height": "64",
+   "color": "536870912"
+  }
+ },
+ "table": {
+  "columns": [
+   {
+    "type": "char(312)",
+    "updatewhereclause": "yes",
+    "name": "string",
+    "dbname": "String"
+   }
+  ],
+  "retrieve": "SELECT\n\tString =\n\t/* ManfCode */ ISNULL(LTRIM(RTRIM(STR(I.ManfCode, 5))),'') + '~' +\n\t/* Date */ ISNULL(LTRIM(RTRIM(CONVERT(VARCHAR(12), :ad_enddate, 103))),'') + '~' +\n\t/* DistID */ ISNULL(LTRIM(RTRIM(:as_distcode + REPLICATE(' ', 10 - LEN(:as_distcode)))), '') + '~' +\n\t/* ICode */ ISNULL(LTRIM(RTRIM(STR(I.ICode, 10))), '') + '~' +\n\t/* IteMName */ ISNULL(LTRIM(RTRIM(I.Name)), '') + '~' +\n\t/* Packing */ ISNULL(LTRIM(RTRIM(ISNULL(I.PackingDesc, ''))), '') + '~' +\n\t/* BatchNo */ ISNULL(LTRIM(RTRIM(T.Batch)), '') + '~' +\n\t/* Trader Price */ ISNULL(LTRIM(RTRIM(ISNULL(STR(I.SalePrice, 10, 2), ''))), '') + '~' +\n\t/* Opening Qty */ ISNULL(LTRIM(RTRIM(STR(SUM(CASE T.Type WHEN 'OP' THEN T.Qty + T.Bonus ELSE 0 END), 10))), '0') + '~' +\n\t/* Opening Value */ ISNULL(LTRIM(RTRIM(STR(SUM(CASE T.Type WHEN 'OP' THEN (T.Qty + T.Bonus) * I.SalePrice ELSE 0 END), 12, 2))), '0') + '~' +\n\t/* Closing Qty */ ISNULL(LTRIM(RTRIM(STR(SUM(CASE T.Type WHEN 'CL' THEN T.Qty + T.Bonus ELSE 0 END), 10))), '0') + '~' +\n\t/* Closing Value */ ISNULL(LTRIM(RTRIM(STR(SUM(CASE T.Type WHEN 'CL' THEN (T.Qty + T.Bonus) * I.SalePrice ELSE 0 END), 12, 2))), '0')\nFROM\n\tItem I\n\tLEFT OUTER JOIN\n\t(SELECT type='OP', icode, batch, qty = sum(qty), bonus = sum(bonus)\n\tFROM\t \n\t\t(select pd.icode, pd.batch, \n\t\t\tqty = sum(isnull(\n\t\t\t\tcase pl.purcatcode \n\t\t\t\twhen 1 THEN (pd.packqty * pd.packunits)\n\t\t\t\twhen 2 THEN (pd.packqty * pd.packunits)\n\t\t\t\telse pd.looseqty end, 0)), \n\t\t\tbonus = sum(isnull(\n\t\t\t\tcase pl.purcatcode \n\t\t\t\twhen 1 THEN (pd.bonusqty * pd.packunits)\n\t\t\t\twhen 2 THEN (pd.bonusqty * pd.packunits)\n\t\t\t\telse pd.bonusqty end, 0))\n\t\tFROM \n\t\t\tpurledger pl, \n\t\t\tpurdetail pd, \n\t\t\t(SELECT ICode FROM Item IT WHERE IT.ManfCode IN (:ai_manfcode)) i\n\t\tWHERE pl.posted = 'Y' AND \n\t\t\tpl.purinvcode = pd.purinvcode AND\n\t\t\tpl.date < :ad_startdate AND\n\t\t\tpd.icode=i.icode\n\t\tGroup By pd.icode, pd.batch\n\t\tUNION ALL\n\t\tselect\tpd.icode, pd.batch,\n\t\t\tqty  = - sum(pd.looseqty),\n\t\t\tbonus = - sum(pd.bonusqty)\n\t\tFROM \n\t\t\tprledger pl, \n\t\t\tprdetail pd, \n\t\t\t(SELECT ICode FROM Item IT WHERE IT.ManfCode IN (:ai_manfcode)) i\n\t\tWHERE pl.posted = 'Y' AND pl.prinvcode = pd.prinvcode AND\n\t\t\tpl.date < :ad_startdate AND\n\t\t\tpd.icode=i.icode\n\t\tGroup By pd.icode, pd.batch\n\t\tUNION ALL\n\t\tselect\tsd.icode, sd.batch,\n\t\t\tqty  = -sum(sd.looseqty),\n\t\t\tbonus  = -sum(sd.bonusqty)\n\t\tFROM saleledger sl, saledetail sd, \n\t\t\t(SELECT ICode FROM Item IT WHERE IT.ManfCode IN (:ai_manfcode)) i\n\t\tWHERE sl.saleinvcode = sd.saleinvcode AND\n\t\t\tsl.posted = 'Y' AND \n\t\t  \tsl.date < :ad_startdate AND sd.Due IS NULL AND\n\t\t\tsd.icode=i.icode \n\t\tGroup By sd.icode, sd.batch\n\t\tUNION ALL\n\t\tselect\tsd.icode, sd.batch,\n\t\t\tqty  = sum(sd.looseqty),\n\t\t\tbonus = sum(sd.bonusqty)\n\t\tFROM srledger sl, srdetail sd, \n\t\t\t(SELECT ICode FROM Item IT WHERE IT.ManfCode IN (:ai_manfcode)) i\n\t\tWHERE \n\t\t\tsl.posted = 'Y' AND sl.srinvcode = sd.srinvcode AND\n\t\t\tsl.posted = 'Y' AND \n\t\t   \tsl.date < :ad_startdate AND\n\t\t\tsd.icode=i.icode\n\t\tGroup By sd.icode, sd.batch\n\t\tUNION ALL\n\t\tselect\tsd.icode, sd.batch, qty  = -sum(sd.qty), bonus = 0\n\t\tFROM issueheader sl, issuedetail sd, \n\t\t\t(SELECT ICode FROM Item IT WHERE IT.ManfCode IN (:ai_manfcode)) i\n\t\tWHERE sl.posted = 'Y' AND sl.issueinvcode = sd.issueinvcode AND\n\t\t\tsl.date < :ad_startdate AND\n\t\t\tsd.icode=i.icode \n\t\tGroup By sd.icode, sd.batch\n\t\tUNION ALL\n\t\tselect\tsd.icode, sd.batch, qty  = sum(sd.qty), bonus=0\n\t\tFROM receiptheader sl, receiptdetail sd, \n\t\t\t(SELECT ICode FROM Item IT WHERE IT.ManfCode IN (:ai_manfcode)) i\n\t\tWHERE sl.posted = 'Y' AND sl.receiptinvcode = sd.receiptinvcode AND\n\t\t\tsl.date < :ad_startdate AND sd.icode=i.icode\n\t\tGroup By sd.icode, sd.batch\n\t\tUNION ALL\n\t\tselect\tsd.icode, sd.batch, qty = sum(sd.looseqty), bonus=0\n\t\tFROM Adjheader sl, Adjdetail sd, \n\t\t\t(SELECT ICode FROM Item IT WHERE IT.ManfCode IN (:ai_manfcode)) i\n\t\tWHERE sl.posted = 'Y' AND sl.Adjcode = sd.Adjcode and sl.Adjcatcode = 1 AND\n\t\t      sl.date < :ad_startdate AND sd.icode=i.icode \n\t\tGroup By sd.icode, sd.batch\n\t\tUNION ALL\n\t\tselect\tsd.icode, sd.batch, qty = -sum(sd.looseqty), bonus=0\n\t\tFROM Adjheader sl, Adjdetail sd, \n\t\t\t(SELECT ICode FROM Item IT WHERE IT.ManfCode IN (:ai_manfcode)) i\n\t\tWHERE sl.posted = 'Y' AND sl.Adjcode = sd.Adjcode and sl.Adjcatcode = 2 AND\n\t\t\tsl.date < :ad_startdate AND sd.icode=i.icode\n\t\tGroup By sd.icode, sd.batch\n\t\tUNION ALL\n\t\tselect\td.icode, d.batch, qty = -sum(d.duesatisfyqty), bonus=0\n\t\tFROM duesatisfyheader h, duesatisfydetail d, \n\t\t\t(SELECT ICode FROM Item IT WHERE IT.ManfCode IN (:ai_manfcode)) i\n\t\tWHERE h.duesatisfycode=d.duesatisfycode AND\n\t\t\th.duesatisfydate < :ad_startdate AND\n\t\t\td.icode=i.icode \n\t\tGroup By d.icode, d.batch) A\n\tGROUP BY icode, batch\n\tUNION ALL\n\tSELECT type='CL', icode, batch, qty = sum(qty), bonus = sum(bonus)\n\tFROM\t\n\t\t(select pd.icode, pd.batch, \n\t\t\tqty = sum(isnull(\n\t\t\t\tcase pl.purcatcode \n\t\t\t\twhen 1 THEN (pd.packqty * pd.packunits)\n\t\t\t\twhen 2 THEN (pd.packqty * pd.packunits)\n\t\t\t\telse pd.looseqty end, 0)), \n\t\t\tbonus = sum(isnull(\n\t\t\t\tcase pl.purcatcode \n\t\t\t\twhen 1 THEN (pd.bonusqty * pd.packunits)\n\t\t\t\twhen 2 THEN (pd.bonusqty * pd.packunits)\n\t\t\t\telse pd.bonusqty end, 0))\n\t\tFROM \n\t\t\tpurledger pl, \n\t\t\tpurdetail pd, \n\t\t\t(SELECT ICode FROM Item IT WHERE IT.ManfCode IN (:ai_manfcode)) i\n\t\tWHERE pl.posted = 'Y' AND \n\t\t\tpl.purinvcode = pd.purinvcode AND\n\t\t\tpl.date <= :ad_enddate AND\n\t\t\tpd.icode=i.icode\n\t\tGroup By pd.icode, pd.batch\n\t\tUNION ALL\n\t\tselect\tpd.icode, pd.batch,\n\t\t\tqty  = - sum(pd.looseqty),\n\t\t\tbonus = - sum(pd.bonusqty)\n\t\tFROM \n\t\t\tprledger pl, \n\t\t\tprdetail pd, \n\t\t\t(SELECT ICode FROM Item IT WHERE IT.ManfCode IN (:ai_manfcode)) i\n\t\tWHERE pl.posted = 'Y' AND pl.prinvcode = pd.prinvcode AND\n\t\t\tpl.date <= :ad_enddate AND\n\t\t\tpd.icode=i.icode\n\t\tGroup By pd.icode, pd.batch\n\t\tUNION ALL\n\t\tselect\tsd.icode, sd.batch,\n\t\t\tqty  = -sum(sd.looseqty),\n\t\t\tbonus  = -sum(sd.bonusqty)\n\t\tFROM saleledger sl, saledetail sd, \n\t\t\t(SELECT ICode FROM Item IT WHERE IT.ManfCode IN (:ai_manfcode)) i\n\t\tWHERE sl.saleinvcode = sd.saleinvcode AND\n\t\t\tsl.posted = 'Y' AND \n\t\t  \tsl.date <= :ad_enddate AND sd.Due IS NULL AND\n\t\t\tsd.icode=i.icode \n\t\tGroup By sd.icode, sd.batch\n\t\tUNION ALL\n\t\tselect\tsd.icode, sd.batch,\n\t\t\tqty  = sum(sd.looseqty),\n\t\t\tbonus = sum(sd.bonusqty)\n\t\tFROM srledger sl, srdetail sd, \n\t\t\t(SELECT ICode FROM Item IT WHERE IT.ManfCode IN (:ai_manfcode)) i\n\t\tWHERE \n\t\t\tsl.posted = 'Y' AND sl.srinvcode = sd.srinvcode AND\n\t\t\tsl.posted = 'Y' AND \n\t\t   \tsl.date <= :ad_enddate AND\n\t\t\tsd.icode=i.icode\n\t\tGroup By sd.icode, sd.batch\n\t\tUNION ALL\n\t\tselect\tsd.icode, sd.batch, qty  = -sum(sd.qty), bonus = 0\n\t\tFROM issueheader sl, issuedetail sd, \n\t\t\t(SELECT ICode FROM Item IT WHERE IT.ManfCode IN (:ai_manfcode)) i\n\t\tWHERE sl.posted = 'Y' AND sl.issueinvcode = sd.issueinvcode AND\n\t\t\tsl.date <= :ad_enddate AND\n\t\t\tsd.icode=i.icode \n\t\tGroup By sd.icode, sd.batch\n\t\tUNION ALL\n\t\tselect\tsd.icode, sd.batch, qty  = sum(sd.qty), bonus=0\n\t\tFROM receiptheader sl, receiptdetail sd, \n\t\t\t(SELECT ICode FROM Item IT WHERE IT.ManfCode IN (:ai_manfcode)) i\n\t\tWHERE sl.posted = 'Y' AND sl.receiptinvcode = sd.receiptinvcode AND\n\t\t\tsl.date <= :ad_enddate AND sd.icode=i.icode\n\t\tGroup By sd.icode, sd.batch\n\t\tUNION ALL\n\t\tselect\tsd.icode, sd.batch, qty = sum(sd.looseqty), bonus=0\n\t\tFROM Adjheader sl, Adjdetail sd, \n\t\t\t(SELECT ICode FROM Item IT WHERE IT.ManfCode IN (:ai_manfcode)) i\n\t\tWHERE sl.posted = 'Y' AND sl.Adjcode = sd.Adjcode and sl.Adjcatcode = 1 AND\n\t\t      sl.date <= :ad_enddate AND sd.icode=i.icode \n\t\tGroup By sd.icode, sd.batch\n\t\tUNION ALL\n\t\tselect\tsd.icode, sd.batch, qty = -sum(sd.looseqty), bonus=0\n\t\tFROM Adjheader sl, Adjdetail sd, \n\t\t\t(SELECT ICode FROM Item IT WHERE IT.ManfCode IN (:ai_manfcode)) i\n\t\tWHERE sl.posted = 'Y' AND sl.Adjcode = sd.Adjcode and sl.Adjcatcode = 2 AND\n\t\t\tsl.date <= :ad_enddate AND sd.icode=i.icode\n\t\tGroup By sd.icode, sd.batch\n\t\tUNION ALL\n\t\tselect\td.icode, d.batch, qty = -sum(d.duesatisfyqty), bonus=0\n\t\tFROM duesatisfyheader h, duesatisfydetail d, \n\t\t\t(SELECT ICode FROM Item IT WHERE IT.ManfCode IN (:ai_manfcode)) i\n\t\tWHERE h.duesatisfycode=d.duesatisfycode AND\n\t\t\th.duesatisfydate <= :ad_enddate AND\n\t\t\td.icode=i.icode \n\t\tGroup By d.icode, d.batch) A\n\tGROUP BY icode, batch) T ON (I.ICode = T.ICode)\nWHERE\n\tI.ManfCode = :ai_manfcode\nGROUP BY\n\tI.ManfCode, \n\tI.ICode, \n\tI.Name,\n\tI.PackingDesc, \n\tT.Batch,\n\tI.SalePrice\n",
+  "arguments": {
+   "_items": [
+    {
+     "_items": [
+      "as_distcode",
+      "string"
+     ]
+    },
+    {
+     "_items": [
+      "ai_manfcode",
+      "number"
+     ]
+    },
+    {
+     "_items": [
+      "ad_startdate",
+      "datetime"
+     ]
+    },
+    {
+     "_items": [
+      "ad_enddate",
+      "datetime"
+     ]
+    }
+   ]
+  }
+ },
+ "objects": [
+  {
+   "name": "string",
+   "visible": "1",
+   "band": "detail",
+   "id": "1",
+   "x": "9",
+   "y": "4",
+   "height": "56",
+   "width": "5234",
+   "color": "0",
+   "border": "0",
+   "alignment": "0",
+   "format": "[general]",
+   "html.valueishtml": "0",
+   "edit.focusrectangle": "no",
+   "edit.autohscroll": "no",
+   "edit.autoselect": "no",
+   "edit.autovscroll": "no",
+   "edit.case": "any",
+   "edit.codetable": "no",
+   "edit.displayonly": "no",
+   "edit.hscrollbar": "no",
+   "edit.imemode": "0",
+   "edit.limit": "0",
+   "edit.password": "no",
+   "edit.vscrollbar": "no",
+   "edit.validatecode": "no",
+   "edit.nilisnull": "no",
+   "edit.required": "no",
+   "edit.useellipsis": "no",
+   "criteria.required": "no",
+   "criteria.override_edit": "no",
+   "crosstab.repeat": "no",
+   "background.mode": "2",
+   "background.color": "16777215",
+   "font.charset": "0",
+   "font.face": "Tahoma",
+   "font.family": "2",
+   "font.height": "-8",
+   "font.pitch": "2",
+   "font.weight": "400",
+   "tabsequence": "0",
+   "type": "column"
+  }
+ ],
+ "extras": [
+  {
+   "type": "htmltable",
+   "props": {
+    "border": "1"
+   }
+  },
+  {
+   "type": "htmlgen",
+   "props": {
+    "clientComputedFields": "1",
+    "clientEvents": "1",
+    "clientFormatting": "0",
+    "clientScriptable": "0",
+    "clientValidation": "1",
+    "encodeSelfLinkArgs": "1",
+    "generateJavaScript": "1",
+    "netscapeLayers": "0",
+    "pagingMethod": "0"
+   }
+  },
+  {
+   "type": "xhtmlgen",
+   "props": {}
+  },
+  {
+   "type": "cssgen",
+   "props": {
+    "sessionSpecific": "0"
+   }
+  },
+  {
+   "type": "xmlgen",
+   "props": {
+    "inline": "0"
+   }
+  },
+  {
+   "type": "xsltgen",
+   "props": {}
+  },
+  {
+   "type": "jsgen",
+   "props": {}
+  },
+  {
+   "type": "export.xml",
+   "props": {
+    "headGroups": "1",
+    "includewhitespace": "0",
+    "metadatatype": "0",
+    "savemetadata": "0"
+   }
+  },
+  {
+   "type": "import.xml",
+   "props": {}
+  },
+  {
+   "type": "export.pdf",
+   "props": {
+    "method": "0",
+    "distill.customPostScript": "0",
+    "xslfop.print": "0"
+   }
+  },
+  {
+   "type": "export.xhtml",
+   "props": {}
+  }
+ ]
+}

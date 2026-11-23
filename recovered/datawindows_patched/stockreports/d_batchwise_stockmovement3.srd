@@ -1,0 +1,457 @@
+release 12.5;
+datawindow ( units=2 timer_interval=60000 processing=0 color=1073741824 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.printername=""  print.documentname=""  print.orientation=1 print.margin.left=200 print.margin.right=200 print.margin.top=200 print.margin.bottom=200 print.paper.size=1 print.paper.source=0 print.canusedefaultprinter=yes selected.mouse=no hidegrayline=no showbackcoloronxp=no)
+header(height=1437 color="536870912" )
+summary(height=0 color="536870912" )
+footer(height=0 color="536870912" )
+detail(height=187 color="536870912" )
+table(column=(type=char(60) updatewhereclause=yes name=groupname dbname="Groupname"  )
+column=(type=char(75) updatewhereclause=yes name=aliasname dbname="AliasName"  )
+column=(type=char(60) updatewhereclause=yes name=itemname dbname="ItemName"  )
+column=(type=char(50) updatewhereclause=yes name=packingdesc dbname="PackingDesc"  )
+column=(type=char(25) updatewhereclause=yes name=lastpurinfo dbname="LastPurInfo"  )
+column=(type=decimal(16) updatewhereclause=yes name=rate dbname="Rate"  )
+column=(type=char(100) updatewhereclause=yes name=batch dbname="Batch"  )
+column=(type=decimal(4) updatewhereclause=yes name=openingunits dbname="OpeningUnits"  )
+column=(type=decimal(4) updatewhereclause=yes name=openingbonus dbname="OpeningBonus"  )
+column=(type=decimal(4) updatewhereclause=yes name=purchaseunits dbname="PurchaseUnits"  )
+column=(type=decimal(4) updatewhereclause=yes name=purchasebonus dbname="PurchaseBonus"  )
+column=(type=decimal(4) updatewhereclause=yes name=salesunits dbname="SalesUnits"  )
+column=(type=decimal(4) updatewhereclause=yes name=salesbonus dbname="SalesBonus"  )
+column=(type=long updatewhereclause=yes name=exports dbname="Exports"  )
+column=(type=decimal(4) updatewhereclause=yes name=damageexpiry dbname="DamageExpiry"  )
+column=(type=decimal(4) updatewhereclause=yes name=otherin dbname="OtherIn"  )
+column=(type=decimal(4) updatewhereclause=yes name=otherout dbname="OtherOut"  )
+column=(type=decimal(4) updatewhereclause=yes name=closingunits dbname="ClosingUnits"  )
+column=(type=decimal(4) updatewhereclause=yes name=closingbonus dbname="ClosingBonus"  )
+ retrieve=" SELECT	
+	Groupname = CASE :ar_grouping WHEN 'M' THEN ISNULL((SELECT Manufacturer.name FROM Manufacturer WHERE Manufacturer.ManfCode = i.manfcode), '')
+			WHEN 'C' THEN ISNULL((SELECT ItemCategory.name FROM ItemCategory WHERE ItemCategory.ICatCode = i.icatcode), '')
+			WHEN 'L' THEN ISNULL((SELECT ItemClass.name FROM ItemClass WHERE ItemClass.ICCode = i.iccode), '')
+			ELSE ISNULL((SELECT itempacking.name FROM itempacking WHERE itempacking.PackCode = i.packcode), '') END,
+	AliasName=I.CustomICode,
+	ItemName=I.Name, 
+	PackingDesc = I.PackingDesc,
+	LastPurInfo = (SELECT LTRIM(RTRIM(STR(MAX(PL.PurInvCode), 10))) + ' - ' + LTRIM(RTRIM(CONVERT(VARCHAR(12), MAX(PL.PostDate), 103))) FROM PurLedger PL, PurDetail PD WHERE PL.Posted='Y' AND PL.PurInvCode = PD.PurInvCode AND PD.ICode = I.ICode AND PD.Batch=st.Batch AND PL.PostDate <= :ar_enddate),
+	Rate = Round(CASE :ai_pricetype WHEN 1 THEN i.saleprice WHEN 2 THEN i.purprice ELSE i.avgprice END / CASE :ai_pricetype WHEN 3 THEN 1 ELSE CASE WHEN i.packunits > 0 THEN i.packunits ELSE 1 END END, 2),
+	Batch=st.Batch,
+	OpeningUnits = SUM(CASE WHEN type='OP' THEN st.qty ELSE 0 END),
+	OpeningBonus = SUM(CASE WHEN type='OP' THEN st.bonus ELSE 0 END),
+	PurchaseUnits = SUM(CASE TYPE WHEN 'PV' THEN st.qty ELSE 0 END),
+	PurchaseBonus = SUM(CASE TYPE WHEN 'PV' THEN st.Bonus ELSE 0 END), 
+	SalesUnits = SUM(CASE TYPE WHEN 'SV' THEN st.qty WHEN 'SR' THEN - (st.qty) ELSE 0 END), 
+	SalesBonus = SUM(CASE TYPE WHEN 'SV' THEN st.Bonus WHEN 'SR' THEN - (st.bonus) ELSE 0 END), 
+	Exports = 0, 
+	DamageExpiry = SUM(CASE TYPE WHEN 'PR' THEN st.qty + st.Bonus ELSE 0 END), 
+	OtherIn = SUM(CASE WHEN TYPE = 'RV' OR TYPE = 'AI' THEN st.qty + st.bonus ELSE 0 END), 
+	OtherOut = SUM(CASE WHEN TYPE = 'IV' OR TYPE = 'AD' OR TYPE = 'DS' THEN st.qty + st.bonus ELSE 0 END), 
+	ClosingUnits = SUM(
+		CASE WHEN TYPE = 'OP' OR TYPE = 'PV' OR TYPE = 'SR' OR TYPE = 'RV' OR TYPE = 'AI' THEN +1 
+		ELSE -1 END * st.qty), 
+	ClosingBonus = SUM(
+		CASE WHEN TYPE = 'OP' OR TYPE = 'PV' OR TYPE = 'SR' OR TYPE = 'RV' OR TYPE = 'AI' THEN +1 
+		ELSE -1 END * st.bonus )
+FROM
+	(SELECT type='OP', icode, batch, qty = sum(qty), bonus = sum(bonus)
+	FROM	
+		(select pd.icode, pd.batch, 
+			qty = sum(isnull(
+				case pl.purcatcode 
+				when 1 THEN (pd.packqty * pd.packunits)
+				when 2 THEN (pd.packqty * pd.packunits)
+				else pd.looseqty end, 0)), 
+			bonus = sum(isnull(
+				case pl.purcatcode 
+				when 1 THEN (pd.bonusqty * pd.packunits)
+				when 2 THEN (pd.bonusqty * pd.packunits)
+				else pd.bonusqty end, 0))
+		FROM 
+			purledger pl, 
+			purdetail pd, 
+			(SELECT ICode 
+			FROM Item IT 
+			WHERE 
+				CASE :ar_grouping WHEN 'M' THEN IT.ManfCode
+				WHEN 'C' THEN IT.ICatCode
+				WHEN 'L' THEN IT.ICCode
+				ELSE IT.PackCode END in (:ar_groupcode)) i
+		WHERE pl.posted = 'Y' AND 
+			pl.purinvcode = pd.purinvcode AND
+			pl.postdate < :ar_startdate AND
+			pd.icode=i.icode
+		Group By pd.icode, pd.batch
+		UNION ALL
+		select	pd.icode, pd.batch,
+			qty  = - sum(pd.looseqty),
+			bonus = - sum(pd.bonusqty)
+		FROM 
+			prledger pl, 
+			prdetail pd, 
+			(SELECT ICode 
+			FROM Item IT 
+			WHERE 
+				CASE :ar_grouping WHEN 'M' THEN IT.ManfCode
+				WHEN 'C' THEN IT.ICatCode
+				WHEN 'L' THEN IT.ICCode
+				ELSE IT.PackCode END in (:ar_groupcode)) i
+		WHERE pl.posted = 'Y' AND pl.prinvcode = pd.prinvcode AND
+			pl.date < :ar_startdate AND
+			pd.icode=i.icode
+		Group By pd.icode, pd.batch
+		UNION ALL
+		select	sd.icode, sd.batch,
+			qty  = -sum(sd.looseqty),
+			bonus  = -sum(sd.bonusqty)
+		FROM saleledger sl, saledetail sd, 
+			(SELECT ICode 
+			FROM Item IT 
+			WHERE 
+				CASE :ar_grouping WHEN 'M' THEN IT.ManfCode
+				WHEN 'C' THEN IT.ICatCode
+				WHEN 'L' THEN IT.ICCode
+				ELSE IT.PackCode END in (:ar_groupcode)) i
+		WHERE sl.saleinvcode = sd.saleinvcode AND
+			sl.posted = 'Y' AND 
+		  	sl.date < :ar_startdate AND sd.Due IS NULL AND
+			sd.icode=i.icode 
+		Group By sd.icode, sd.batch
+		UNION ALL
+		select	sd.icode, sd.batch,
+			qty  = sum(sd.looseqty),
+			bonus = sum(sd.bonusqty)
+		FROM srledger sl, srdetail sd, 
+			(SELECT ICode 
+			FROM Item IT 
+			WHERE 
+				CASE :ar_grouping WHEN 'M' THEN IT.ManfCode
+				WHEN 'C' THEN IT.ICatCode
+				WHEN 'L' THEN IT.ICCode
+				ELSE IT.PackCode END in (:ar_groupcode)) i
+		WHERE 
+			sl.posted = 'Y' AND sl.srinvcode = sd.srinvcode AND
+			sl.posted = 'Y' AND 
+		   	sl.postdate < :ar_startdate AND
+			sd.icode=i.icode
+		Group By sd.icode, sd.batch
+		UNION ALL
+		select	sd.icode, sd.batch, qty  = -sum(sd.qty), bonus = 0
+		FROM issueheader sl, issuedetail sd, 
+			(SELECT ICode 
+			FROM Item IT 
+			WHERE 
+				CASE :ar_grouping WHEN 'M' THEN IT.ManfCode
+				WHEN 'C' THEN IT.ICatCode
+				WHEN 'L' THEN IT.ICCode
+				ELSE IT.PackCode END in (:ar_groupcode)) i
+		WHERE sl.posted = 'Y' AND sl.issueinvcode = sd.issueinvcode AND
+			sl.date < :ar_startdate AND
+			sd.icode=i.icode 
+		Group By sd.icode, sd.batch
+		UNION ALL
+		select	sd.icode, sd.batch, qty  = sum(sd.qty), bonus=0
+		FROM receiptheader sl, receiptdetail sd, 
+			(SELECT ICode 
+			FROM Item IT 
+			WHERE 
+				CASE :ar_grouping WHEN 'M' THEN IT.ManfCode
+				WHEN 'C' THEN IT.ICatCode
+				WHEN 'L' THEN IT.ICCode
+				ELSE IT.PackCode END in (:ar_groupcode)) i
+		WHERE sl.posted = 'Y' AND sl.receiptinvcode = sd.receiptinvcode AND
+		      sl.postdate < :ar_startdate AND
+			sd.icode=i.icode 
+		Group By sd.icode, sd.batch
+		UNION ALL
+		select	sd.icode, sd.batch, qty = sum(sd.looseqty), bonus=0
+		FROM Adjheader sl, Adjdetail sd, 
+			(SELECT ICode 
+			FROM Item IT 
+			WHERE 
+				CASE :ar_grouping WHEN 'M' THEN IT.ManfCode
+				WHEN 'C' THEN IT.ICatCode
+				WHEN 'L' THEN IT.ICCode
+				ELSE IT.PackCode END in (:ar_groupcode)) i
+		WHERE sl.posted = 'Y' AND sl.Adjcode = sd.Adjcode and sl.Adjcatcode = 1 AND
+		      sl.posteddate < :ar_startdate AND
+			sd.icode=i.icode 
+		Group By sd.icode, sd.batch
+		UNION ALL
+		select	sd.icode, sd.batch, qty = -sum(sd.looseqty), bonus=0
+		FROM Adjheader sl, Adjdetail sd, 
+			(SELECT ICode 
+			FROM Item IT 
+			WHERE 
+				CASE :ar_grouping WHEN 'M' THEN IT.ManfCode
+				WHEN 'C' THEN IT.ICatCode
+				WHEN 'L' THEN IT.ICCode
+				ELSE IT.PackCode END in (:ar_groupcode)) i
+		WHERE sl.posted = 'Y' AND sl.Adjcode = sd.Adjcode and sl.Adjcatcode = 2 AND
+		      sl.posteddate < :ar_startdate AND
+			sd.icode=i.icode
+		Group By sd.icode, sd.batch
+		UNION ALL
+		select	d.icode, d.batch, qty = -sum(d.duesatisfyqty), bonus=0
+		FROM duesatisfyheader h, duesatisfydetail d, 
+			(SELECT ICode 
+			FROM Item IT 
+			WHERE 
+				CASE :ar_grouping WHEN 'M' THEN IT.ManfCode
+				WHEN 'C' THEN IT.ICatCode
+				WHEN 'L' THEN IT.ICCode
+				ELSE IT.PackCode END in (:ar_groupcode)) i
+		WHERE h.duesatisfycode=d.duesatisfycode AND
+		      h.duesatisfydate < :ar_startdate AND
+			d.icode=i.icode 
+		Group By d.icode, d.batch) A
+	GROUP BY icode, batch
+	UNION ALL
+	select	type='PV',
+		pd.icode, pd.batch,
+		qty = sum(pd.looseqty + pd.packqty * pd.packunits),
+		bonus = sum(isnull(case pl.purcatcode 
+			when 1 THEN pd.bonusqty * pd.packunits
+			when 2 THEN pd.bonusqty * pd.packunits
+			else pd.bonusqty
+			end, 0))
+	FROM purledger pl, purdetail pd, 
+			(SELECT ICode 
+			FROM Item IT 
+			WHERE 
+				CASE :ar_grouping WHEN 'M' THEN IT.ManfCode
+				WHEN 'C' THEN IT.ICatCode
+				WHEN 'L' THEN IT.ICCode
+				ELSE IT.PackCode END in (:ar_groupcode)) i
+	WHERE pl.posted = 'Y' AND pl.purinvcode = pd.purinvcode AND
+		pl.postdate BETWEEN :ar_startdate and :ar_enddate AND
+		pd.icode=i.icode 
+	Group By pd.icode, pd.batch
+	UNION ALL
+	select	type='PR',
+		pd.icode,
+		pd.batch,
+		qty = sum(pd.looseqty),
+		bonus = sum(pd.bonusqty)
+	FROM prledger pl, prdetail pd, 
+		(SELECT ICode 
+		FROM Item IT 
+		WHERE 
+			CASE :ar_grouping WHEN 'M' THEN IT.ManfCode
+			WHEN 'C' THEN IT.ICatCode
+			WHEN 'L' THEN IT.ICCode
+			ELSE IT.PackCode END in (:ar_groupcode)) i
+	WHERE pl.posted = 'Y' AND pl.prinvcode = pd.prinvcode AND
+	      pl.date BETWEEN :ar_startdate and :ar_enddate AND
+		pd.icode=i.icode
+	Group By pd.icode, pd.batch
+	UNION ALL
+	select	type='SV',
+		sd.icode, sd.batch,
+		qty = sum(sd.looseqty),
+		bonus = sum(sd.bonusqty)
+	FROM saleledger sl, saledetail sd, 
+		(SELECT ICode 
+		FROM Item IT 
+		WHERE 
+			CASE :ar_grouping WHEN 'M' THEN IT.ManfCode
+			WHEN 'C' THEN IT.ICatCode
+			WHEN 'L' THEN IT.ICCode
+			ELSE IT.PackCode END in (:ar_groupcode)) i
+	WHERE sl.posted = 'Y' AND sl.saleinvcode = sd.saleinvcode AND SD.Due IS NULL AND
+	   	sl.date BETWEEN :ar_startdate and :ar_enddate AND
+		sd.icode=i.icode
+	Group By sd.icode, sd.batch
+	UNION ALL
+	select	type='SR',
+		sd.icode, sd.batch,
+		qty = sum(sd.looseqty),
+		bonus = sum(sd.bonusqty)
+	FROM srledger sl, srdetail sd, 
+		(SELECT ICode 
+		FROM Item IT 
+		WHERE 
+			CASE :ar_grouping WHEN 'M' THEN IT.ManfCode
+			WHEN 'C' THEN IT.ICatCode
+			WHEN 'L' THEN IT.ICCode
+			ELSE IT.PackCode END in (:ar_groupcode)) i
+	WHERE sl.posted = 'Y' AND sl.srinvcode = sd.srinvcode AND
+	      sl.postdate BETWEEN :ar_startdate and :ar_enddate AND
+		sd.icode=i.icode
+	Group By sd.icode, sd.batch
+	UNION ALL
+	select	type='IV',
+		sd.icode, sd.batch,
+		qty = sum(sd.qty),
+		bonus = 0
+	FROM issueheader sl, issuedetail sd,
+		(SELECT ICode 
+		FROM Item IT 
+		WHERE 
+			CASE :ar_grouping WHEN 'M' THEN IT.ManfCode
+			WHEN 'C' THEN IT.ICatCode
+			WHEN 'L' THEN IT.ICCode
+			ELSE IT.PackCode END in (:ar_groupcode)) i
+	WHERE sl.posted = 'Y' AND sl.issueinvcode = sd.issueinvcode AND
+		sl.date BETWEEN :ar_startdate and :ar_enddate AND
+		sd.icode=i.icode 
+	Group By sd.icode, sd.batch
+	UNION ALL
+	select	type='DS',
+		d.icode, d.batch,
+		qty = sum(d.duesatisfyqty),
+		bonus = 0
+	FROM duesatisfyheader h, duesatisfydetail d, 
+		(SELECT ICode 
+		FROM Item IT 
+		WHERE 
+			CASE :ar_grouping WHEN 'M' THEN IT.ManfCode
+			WHEN 'C' THEN IT.ICatCode
+			WHEN 'L' THEN IT.ICCode
+			ELSE IT.PackCode END in (:ar_groupcode)) i
+	WHERE h.duesatisfycode = d.duesatisfycode AND
+		h.duesatisfydate BETWEEN :ar_startdate and :ar_enddate AND
+		d.icode=i.icode 
+	Group By d.icode, d.batch
+	UNION ALL
+	select	type='RV',
+		sd.icode, sd.batch,
+		qty = sum(sd.qty),
+		bonus = 0
+	FROM receiptheader sl, receiptdetail sd,
+		(SELECT ICode 
+		FROM Item IT 
+		WHERE 
+			CASE :ar_grouping WHEN 'M' THEN IT.ManfCode
+			WHEN 'C' THEN IT.ICatCode
+			WHEN 'L' THEN IT.ICCode
+			ELSE IT.PackCode END in (:ar_groupcode)) i
+	WHERE sl.posted = 'Y' AND sl.receiptinvcode = sd.receiptinvcode AND
+		sl.postdate BETWEEN :ar_startdate and :ar_enddate AND
+		sd.icode=i.icode
+	Group By sd.icode, sd.batch
+	UNION ALL
+	select	type='AI',
+		sd.icode, sd.batch,
+		qty = sum(sd.looseqty),
+		bonus = 0
+	FROM Adjheader sl, Adjdetail sd,
+		(SELECT ICode 
+		FROM Item IT 
+		WHERE 
+			CASE :ar_grouping WHEN 'M' THEN IT.ManfCode
+			WHEN 'C' THEN IT.ICatCode
+			WHEN 'L' THEN IT.ICCode
+			ELSE IT.PackCode END in (:ar_groupcode)) i
+	WHERE sl.posted = 'Y' AND sl.Adjcode = sd.Adjcode and sl.Adjcatcode = 1 AND
+		sl.posteddate BETWEEN :ar_startdate and :ar_enddate AND
+		sd.icode=i.icode
+	Group By sd.icode, sd.batch
+	UNION ALL
+	select	type='AD',
+		sd.icode, sd.batch,
+		qty = sum(sd.looseqty),
+		bonus = 0
+	FROM Adjheader sl, Adjdetail sd,
+		(SELECT ICode 
+		FROM Item IT 
+		WHERE 
+			CASE :ar_grouping WHEN 'M' THEN IT.ManfCode
+			WHEN 'C' THEN IT.ICatCode
+			WHEN 'L' THEN IT.ICCode
+			ELSE IT.PackCode END in (:ar_groupcode)) i
+	WHERE sl.posted = 'Y' AND sl.Adjcode = sd.Adjcode and sl.Adjcatcode = 2 AND
+	      sl.posteddate BETWEEN :ar_startdate and :ar_enddate AND
+		sd.icode=i.icode
+	Group By sd.icode, sd.batch) St, 
+	Item i
+WHERE st.icode = i.icode AND 
+	CASE :ar_grouping WHEN 'M' THEN I.ManfCode
+	WHEN 'C' THEN I.ICatCode
+	WHEN 'L' THEN I.ICCode
+	ELSE I.PackCode 
+	END in (:ar_groupcode) 
+GROUP BY 
+	i.ManfCode,
+	i.PackCode,
+	i.ICCode,
+	i.ICatCode,
+	i.icode, 
+	i.name, 
+	i.customicode, 
+	I.PackingDesc,
+	I.SalePrice,
+	I.PurPrice,
+	I.AvgPrice,
+	I.PackUnits,
+	st.batch
+"
+  arguments=(("ar_groupcode", numberlist), ("ar_grouping", string), ("ar_startdate", datetime), ("ar_enddate", datetime), ("ai_pricetype", number))
+ sort="groupname A, itemname A, aliasname A, batch A"
+ filter=" openingunits <> 0 OR  openingbonus <> 0 OR purchaseunits <> 0 OR purchasebonus <> 0 OR salesunits <> 0 OR salesbonus <> 0 OR exports <> 0  OR damageexpiry <> 0 OR otherin <> 0 OR otherout <> 0"
+ )
+group(level=1 header.height=187 trailer.height=0 by=("groupname"  ) header.color="536870912" trailer.color="536870912" )
+text(name=t_16 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="700" background.mode="2" background.color="16777215" color="0" alignment="2" border="0" x="52" y="52" height="156" width="10437" text="Batch Wise Stock Movement Report" html.valueishtml="0" )
+compute(name=compute_1 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="437" y="62" height="156" width="1739" format="dd/mm/yyyy hh:mm:ss" expression="today()" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_17 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="52" y="62" height="156" width="343" text="Date: " html.valueishtml="0" )
+compute(name=c_address2 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="52" y="625" height="156" width="10437" format="[general]" expression="f_ReportHeaderInfo('address2')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=c_address1 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="52" y="437" height="156" width="10437" format="[general]" expression="f_ReportHeaderInfo('address1')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=c_companyname visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" x="52" y="250" height="156" width="10437" format="[general]" expression="f_ReportHeaderInfo('clientname')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_2 visible="1" band=header font.charset="0" font.face="Arial Narrow" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="8697" y="52" height="166" width="1791" format="[general]" expression="'Page ' + page() + ' of ' + pageCount()" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_25 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="2770" y="812" height="166" width="1416" format="dd/mm/yy hh:mm" expression=" ar_enddate " alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_28 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="0" border="0" x="2187" y="812" height="166" width="541" text="End Date:" html.valueishtml="0" )
+compute(name=compute_24 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="666" y="812" height="166" width="1416" format="dd/mm/yy hh:mm" expression=" ar_startdate " alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_27 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="0" border="0" x="52" y="812" height="166" width="541" text="Start Date:" html.valueishtml="0" )
+line(name=l_2 visible="1" band=header background.mode="2" background.color="16777215" pen.style="2" pen.width="10" pen.color="0" x1="52" y1="1416" x2="10489" y2="1416" )
+line(name=l_1 visible="1" band=header background.mode="2" background.color="16777215" pen.style="2" pen.width="10" pen.color="0" x1="52" y1="1010" x2="10489" y2="1010" )
+text(name=t_closingbonus visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="1" border="0" x="9968" y="1052" height="333" width="500" text="Closing
+Bonus" html.valueishtml="0" )
+text(name=t_closingunits visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="1" border="0" x="9437" y="1052" height="333" width="500" text="Closing
+Units" html.valueishtml="0" )
+text(name=t_otherout visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="1" border="0" x="8906" y="1052" height="333" width="500" text="Others
+Out" html.valueishtml="0" )
+text(name=t_otherin visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="1" border="0" x="8375" y="1052" height="333" width="500" text="Others
+IN" html.valueishtml="0" )
+text(name=t_damageexpiry visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="2" border="0" x="7843" y="1052" height="333" width="500" text="Damage
+Expiry" html.valueishtml="0" )
+text(name=t_salesbonus visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="1" border="0" x="7291" y="1052" height="333" width="500" text="Sales
+Bonus" html.valueishtml="0" )
+text(name=t_salesunits visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="1" border="0" x="6760" y="1052" height="333" width="500" text="Sales
+Units" html.valueishtml="0" )
+text(name=t_purchasebonus visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="1" border="0" x="6218" y="1052" height="333" width="500" text="Pur.
+Bonus" html.valueishtml="0" )
+text(name=t_purchaseunits visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="1" border="0" x="5687" y="1052" height="333" width="500" text="Pur.
+Units" html.valueishtml="0" )
+text(name=t_openingbonus visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="1" border="0" x="5156" y="1052" height="333" width="500" text="Opening
+Bonus" html.valueishtml="0" )
+text(name=t_openingunits visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="1" border="0" x="4593" y="1052" height="333" width="500" text="Opening
+Units" html.valueishtml="0" )
+text(name=t_batch visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="0" border="0" x="3812" y="1052" height="166" width="750" text="Batch No." html.valueishtml="0" )
+text(name=t_aliasname visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="0" border="0" x="62" y="1052" height="333" width="500" text="Alias
+Name" html.valueishtml="0" )
+text(name=t_itemname visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="2" border="0" x="635" y="1052" height="166" width="1895" text="Item Name" html.valueishtml="0" )
+text(name=t_1 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="0" border="0" x="2572" y="1052" height="166" width="1187" text="Last Purchase Info." html.valueishtml="0" )
+column(name=closingbonus visible="1" band=detail id=19 x="9968" y="10" height="166" width="500" color="33554432" border="0" alignment="1" format="	f_SetColumnFormat('Qty')" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=closingunits visible="1" band=detail id=18 x="9437" y="10" height="166" width="500" color="33554432" border="0" alignment="1" format="	f_SetColumnFormat('Qty')" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=otherout visible="1" band=detail id=17 x="8906" y="10" height="166" width="500" color="33554432" border="0" alignment="1" format="	f_SetColumnFormat('Qty')" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=otherin visible="1" band=detail id=16 x="8375" y="10" height="166" width="500" color="33554432" border="0" alignment="1" format="	f_SetColumnFormat('Qty')" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=damageexpiry visible="1" band=detail id=15 x="7843" y="10" height="166" width="500" color="33554432" border="0" alignment="1" format="	f_SetColumnFormat('Qty')" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=salesbonus visible="1" band=detail id=13 x="7291" y="10" height="166" width="500" color="33554432" border="0" alignment="1" format="	f_SetColumnFormat('Qty')" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=salesunits visible="1" band=detail id=12 x="6760" y="10" height="166" width="500" color="33554432" border="0" alignment="1" format="	f_SetColumnFormat('Qty')" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=purchasebonus visible="1" band=detail id=11 x="6218" y="10" height="166" width="500" color="33554432" border="0" alignment="1" format="	f_SetColumnFormat('Qty')" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=purchaseunits visible="1" band=detail id=10 x="5687" y="10" height="166" width="500" color="33554432" border="0" alignment="1" format="	f_SetColumnFormat('Qty')" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=openingbonus visible="1" band=detail id=9 x="5156" y="10" height="166" width="500" color="33554432" border="0" alignment="1" format="	f_SetColumnFormat('Qty')" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=openingunits visible="1" band=detail id=8 x="4593" y="10" height="166" width="500" color="33554432" border="0" alignment="1" format="	f_SetColumnFormat('Qty')" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=batch visible="1" band=detail id=7 x="3812" y="10" height="166" width="750" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=10 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=aliasname visible="1" band=detail id=2 x="62" y="10" height="166" width="500" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=75 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=itemname visible="1" band=detail id=3 x="635" y="10" height="166" width="1895" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=lastpurinfo visible="1" band=detail id=5 x="2572" y="10" height="166" width="1187" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-8" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=groupname visible="1" band=header.1 id=1 x="62" y="11" height="166" width="4239" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="700" tabsequence=0 )
+sparse(names="groupname	itemname	aliasname")
+htmltable(border="1" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" encodeSelfLinkArgs="1" generateJavaScript="1" netscapeLayers="0" pagingMethod=0 )
+xhtmlgen() cssgen(sessionSpecific="0" )
+xmlgen(inline="0" )
+xsltgen()
+jsgen()
+export.xml(headGroups="1" includewhitespace="0" metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 distill.customPostScript="0" xslfop.print="0" )
+export.xhtml()

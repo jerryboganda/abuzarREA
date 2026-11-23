@@ -1,0 +1,4 @@
+SET NOCOUNT ON;
+SET STATISTICS IO ON;
+SET STATISTICS TIME ON;
+SELECT dbo.accounts.name, dbo.accounts.aliasname, dbo.supplier.suppcode, dbo.supplier.address1, dbo.supplier.phone, dbo.supplier.City, dbo.supplier.country, dbo.supplier.suppcatcode, balancetype=CASE WHEN V.Balance > 0 THEN 'DR.' ELSE 'CR.' END, balance= case accounts.restricted when 'Y' then 0 else V.balance end, SummaryAccount = CASE WHEN (SELECT Count(SD.AccCode) FROM SummaryAccountDetail SD WHERE SD.AccCode = dbo.Accounts.AccCode) = 0 THEN NULL ELSE (SELECT MAX(SA.Name) + ' (' + MAX(SA.AliasName) + ')' FROM SummaryAccount SA, SummaryAccountDetail SD WHERE SD.AccCode = dbo.Accounts.AccCode AND SD.SummaryAccCode = SA.SummaryAccCode) END FROM dbo.supplier, dbo.accounts LEFT OUTER JOIN (SELECT acccode, sum(debit - credit) as balance FROM virtualgl GROUP BY acccode) AS V ON (dbo.accounts.acccode = V.acccode) WHERE (dbo.supplier.suppcode = dbo.accounts.acccode);

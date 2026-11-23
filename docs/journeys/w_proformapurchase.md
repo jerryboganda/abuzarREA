@@ -1,0 +1,28 @@
+# w_proformapurchase
+
+- title: Proforma Purchase
+- library: proformapurchase (Purchase & stock)
+- ancestor: `w_multi_entry`
+- size: 3351 x 8264 PBU
+- reached from: (opened from code / other windows)
+- script size: 3733 lines; 25 events, 73 functions
+
+## Controls (3)
+
+- `tab_retrieve` (tab_retrieve)
+- `dw_purinvrep` (u_dwstandard) dataobject `d_proforma_purinvoice`
+- `dw_changeprice_foritemlog` (datawindow) dataobject `d_purdetail_changeprice_foritemlog`
+
+## Data
+
+- DataWindows: `d_SaleOrderdetail_retrieve`, `d_SaleOrderheader`, `d_groupallowedmoduleheader`, `d_po_purchase_disparity`, `d_populate_receiptdetail_proformapurinv`, `d_populateditems_active`, `d_populateditems_active_and`, `d_populatepurorder`, `d_proforma_purinvoice`, `d_purchase_pendingdueitems`, `d_purdetail_changeprice_foritemlog`
+- tables touched by embedded SQL: accounts, currency, godown, godowndetail, groupallowedgodown, item, itemcategory, itemclass, itemsgroupcategory, manufacturer, proformapurdetail, purledger, purorderheader, supplier, usergroups
+- stored procedures: create, getitemstockinallowedgodown, getitemstocktotal, updateactivitymonitor, virtualgl
+- global functions: f_datepreferences, f_drilldown_itemsearch, f_getgroupcode, f_groupallowedgodowncount, f_groupgodownstrategy, f_is_specialright_enabled, f_islicenseexpire, f_numberpreferences, f_searchitem_quicksearch, f_setcolumnstyle, f_stringpreferences, f_validatedw
+- windows opened: w_account_ledger, w_amountoninvoice, w_arg_item_populate3, w_arg_sdate_ldate, w_arg_sinvcode_linvcode, w_barcodelabels_popup, w_choose_suppliercategory, w_copypurinvoicefrom, w_editpostedinvoice, w_editsaleorder_in_purchase_form, w_iteminfo, w_itempurchasehistory, w_populate_receipt_in_proformapurinv, w_populate_sale_from_datacarrydb, w_preview_invoices, w_purinv_slip, w_salesmanpassword, w_setquantity, w_special_rights_password, w_summaccount_balance, w_supplierinfo, w_unittaxcalculator
+
+## Events and functions
+
+`w_proformapurchase.ue_populate_purchase_from_datacarrydb`, `w_proformapurchase.ue_populate_and_post_from_datacarrydb`, `w_proformapurchase.create`, `w_proformapurchase.destroy`, `w_proformapurchase.ue_save`, `w_proformapurchase.ue_newform`, `w_proformapurchase.ue_detail`, `w_proformapurchase.ue_newitem`, `w_proformapurchase.ue_deleteitem`, `w_proformapurchase.close`, `w_proformapurchase.ue_new`, `w_proformapurchase.ue_list`, `w_proformapurchase.ue_refreshddw`, `w_proformapurchase.ue_print`, `w_proformapurchase.ue_postopen`, `w_proformapurchase.open`, `w_proformapurchase.closequery`, `w_proformapurchase.ue_callback_popupwindow`, `w_proformapurchase.ue_settitle`, `dw_footer.itemchanged`, `dw_detail.itemchanged`, `dw_detail.ue_dwnkey`, `dw_itemsdetail.itemchanged`, `dw_itemsdetail.ue_focusqty`, `dw_itemsdetail.ue_dwnkey`, `w_proformapurchase.wf_assigndatawindowobjects`, `w_proformapurchase.wf_findsuppcode`, `w_proformapurchase.wf_genfullcode`, `w_proformapurchase.wf_getpomanfcode`, `w_proformapurchase.wf_initmodify`, `w_proformapurchase.wf_itempurchasehistory`, `w_proformapurchase.wf_locknormalpurinvoices`, `w_proformapurchase.wf_lockpurchaseinvoice`, `w_proformapurchase.wf_lockpurinvoices`, `w_proformapurchase.wf_releaselock`, `w_proformapurchase.wf_retrievelistall`, `w_proformapurchase.wf_setgodownoption`, `w_proformapurchase.wf_setpurchasetype`, `w_proformapurchase.wf_validatefullcode`, `w_proformapurchase.wf_iteminfo`, `w_proformapurchase.wf_setsuppinfo`, `w_proformapurchase.wf_setsuppname`, `w_proformapurchase.wf_setquantity`, `w_proformapurchase.wf_isinvoiceinuse`, `w_proformapurchase.wf_retrievelist`, `w_proformapurchase.wf_inititeminfo`, `w_proformapurchase.wf_fetchserverdate`, `w_proformapurchase.wf_findfullcode`, `w_proformapurchase.wf_setamountoninvoice`, `w_proformapurchase.wf_getitemsaleprice`, `w_proformapurchase.wf_setcurrency`, `w_proformapurchase.wf_applycurrency`, `w_proformapurchase.wf_validateitem`, `w_proformapurchase.wf_populatedetaildwfrompo`, `w_proformapurchase.wf_populatefiltereditems`, `w_proformapurchase.wf_populatepurorder`, `w_proformapurchase.wf_setpurorderinfo`, `w_proformapurchase.wf_showaccountledger`, `w_proformapurchase.wf_showsummaryaccountbalance`, `w_proformapurchase.wf_selectprintreport`, `w_proformapurchase.wf_purchaseslip`, `w_proformapurchase.wf_protectdw`, `w_proformapurchase.wf_saveandpost`, `w_proformapurchase.wf_post`, `w_proformapurchase.wf_grandtotal`, `w_proformapurchase.wf_allowpurchasemodification`, `w_proformapurchase.wf_post_purchase`, `w_proformapurchase.wf_printbarcode`, `w_proformapurchase.wf_grandtotal_with_update_netrate`, `w_proformapurchase.wf_searchitem_quicksearch`, `w_proformapurchase.wf_itemstockinfo`, `w_proformapurchase.wf_setiteminfo`, `w_proformapurchase.wf_set_itemtotal_formatmask`, `w_proformapurchase.wf_view_iteminfo`, `w_proformapurchase.wf_getsupplierinfo`, `w_proformapurchase.wf_show_po_pur_disparity`, `w_proformapurchase.wf_populate_saleorder`, `w_proformapurchase.wf_update_value_extax`, `w_proformapurchase.wf_editpostedinvoice`, `w_proformapurchase.wf_setnull`, `w_proformapurchase.wf_populate_pendingdueitems`, `w_proformapurchase.wf_validate_purcategory`, `w_proformapurchase.wf_inititeminfo_purcategory`, `w_proformapurchase.wf_separate_qty`, `w_proformapurchase.wf_populate_receipt`, `dw_footer.losefocus`, `dw_footer.itemfocuschanged`, `dw_footer.itemerror`, `dw_detail.itemerror`, `dw_detail.itemfocuschanged`, `dw_detail.editchanged`, `dw_itemsdetail.itemfocuschanged`, `dw_itemsdetail.rowfocuschanged`, `dw_itemsdetail.losefocus`, `dw_itemsdetail.editchanged`, `dw_itemsdetail.itemerror`, `dw_itemsdetail.getfocus`, `dw_itemsdetail.rowfocuschanging`
+
+Source: `recovered/scripts/proformapurchase/w_proformapurchase.pbs`

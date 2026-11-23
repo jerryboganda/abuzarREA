@@ -1,0 +1,6 @@
+SET SHOWPLAN_TEXT ON;
+GO
+SELECT COUNT(*) FROM VirtualGl WITH (INDEX(IDX_VirtualGL_DocumentType_DocumentCode)) WHERE DocumentType='SV';
+GO
+SET SHOWPLAN_TEXT OFF;
+GO

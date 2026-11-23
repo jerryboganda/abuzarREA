@@ -1,0 +1,205 @@
+release 12.5;
+datawindow ( units=2 timer_interval=60000 processing=0 color=16777215 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.printername=""  print.documentname=""  print.orientation=1 print.margin.left=250 print.margin.right=300 print.margin.top=300 print.margin.bottom=300 print.paper.size=1 print.paper.source=0 print.canusedefaultprinter=yes selected.mouse=no hidegrayline=no showbackcoloronxp=no)
+header(height=1447 color="536870912" )
+summary(height=1166 color="536870912" )
+footer(height=0 color="536870912" )
+detail(height=197 color="536870912" )
+table(column=(type=decimal(4) updatewhereclause=yes name=icode dbname="icode"  )
+column=(type=decimal(13) updatewhereclause=yes name=saleprice dbname="saleprice"  )
+column=(type=decimal(13) updatewhereclause=yes name=purprice dbname="purprice"  )
+column=(type=decimal(5) updatewhereclause=yes name=avgprice dbname="avgprice"  )
+column=(type=decimal(2) updatewhereclause=yes name=saleqty dbname="saleqty"  )
+column=(type=decimal(2) updatewhereclause=yes name=srqty dbname="srqty"  )
+column=(type=decimal(2) updatewhereclause=yes name=purqty dbname="purqty"  )
+column=(type=decimal(2) updatewhereclause=yes name=prqty dbname="prqty"  )
+column=(type=char(60) updatewhereclause=yes name=itemname dbname="itemname"  )
+column=(type=decimal(2) updatewhereclause=yes name=netadj dbname="netadj"  )
+column=(type=decimal(2) updatewhereclause=yes name=netissue dbname="netissue"  )
+column=(type=char(1) updatewhereclause=yes name=active dbname="active"  )
+column=(type=char(75) updatewhereclause=yes name=aliasname dbname="aliasname"  )
+column=(type=char(60) updatewhereclause=yes name=manufacturer dbname="Manufacturer"  )
+column=(type=char(60) updatewhereclause=yes name=category dbname="category"  )
+column=(type=decimal(4) updatewhereclause=yes name=itemopeningstock dbname="itemopeningstock"  )
+column=(type=decimal(4) updatewhereclause=yes name=currqty dbname="currqty"  )
+ retrieve="select  
+	icode=code1, 
+	saleprice=item.saleprice / CASE WHEN Item.PackUnits > 0 THEN Item.PackUnits ELSE 1 END,
+	purprice=item.purprice / CASE WHEN Item.PackUnits > 0 THEN Item.PackUnits ELSE 1 END,
+	avgprice=item.avgprice,
+	saleqty=value3,
+	srqty=value4,
+	purqty=value5,
+	prqty=value6,
+	itemname=item.name,
+	netadj=value7,
+	netissue=value8,
+	active=CASE item.active WHEN 1 THEN 'Y' ELSE 'N' END,
+	aliasname=item.customicode,
+	Manufacturer=(select name from manufacturer where manfcode=:ar_manfcode),
+	category=itemcategory.name,
+	itemopeningstock= (select isnull(sum(Case When purledger.purcatcode IN (3, 7, 8)  THEN
+												 purdetail.looseqty + purdetail.bonusqty
+												 Else (purdetail.packqty  + purdetail.bonusqty) * purdetail.packunits 
+												 END),0)
+						from purdetail,purledger 
+						where purledger.postdate < :ar_StartDate and 
+								purledger.posted='Y'and
+								purledger.purinvcode=purdetail.purinvcode and
+								purdetail.icode=reportdata.code1
+								 ) 
+					-
+					(select isnull(sum(saledetail.looseqty),0) from saledetail,saleledger 
+						where saleledger.date < :ar_StartDate and 
+								saleledger.saleinvcode=saledetail.saleinvcode and
+								saledetail.due IS NULL and
+								saledetail.icode=reportdata.code1)
+					-
+					(select isnull(sum(duesatisfydetail.duesatisfyqty),0) from duesatisfyheader,duesatisfydetail
+					 where duesatisfyheader.duesatisfydate<:ar_Startdate and
+							 duesatisfyheader.duesatisfycode=duesatisfydetail.duesatisfycode and
+							 duesatisfydetail.icode=reportdata.code1)
+					- 
+					(select isnull(sum(issuedetail.qty),0) from issuedetail , issueheader
+						where    issueheader.date < :ar_StartDate and 
+									issueheader.issueinvcode=issuedetail.issueinvcode and 
+									issuedetail.icode=reportdata.code1)
+					 +
+					(select isnull(sum(receiptdetail.qty),0) from receiptdetail , receiptheader
+						where    receiptheader.date < :ar_StartDate and 
+									receiptheader.posted='Y' and
+									receiptheader.receiptinvcode=receiptdetail.receiptinvcode and 
+									receiptdetail.icode=reportdata.code1)
+					 +
+					(select isnull(sum(Case when adjheader.adjcatcode=1 then
+										 adjdetail.looseqty 
+								ELSE 
+										(-1) * adjdetail.looseqty
+								END ),0)
+					from adjdetail,adjheader 
+					where adjheader.date <:ar_StartDate  and
+							adjheader.adjcode=adjdetail.adjcode and
+							adjdetail.icode=Reportdata.code1)
+					 +
+					(select isnull(sum(srdetail.looseqty),0) from srdetail,srledger 
+					 where srledger.date < :ar_StartDate and 
+							srledger.srinvcode=srdetail.srinvcode and 
+							srdetail.icode=reportdata.code1)
+					 -
+					(select isnull(sum(prdetail.looseqty + prdetail.bonusqty),0)
+						from prdetail,prledger 
+						where prledger.date < :ar_StartDate and
+								prledger.prinvcode=prdetail.prinvcode and
+								prdetail.icode=reportdata.code1),
+
+	currqty= ISNULL((select sum(currqty) from godowndetail where  icode = reportdata.code1),0)
+from 
+	reportdata, item, itemcategory
+where 
+	reportdata.code1=item.icode AND
+	item.icatcode=itemcategory.icatcode
+order by 
+	itemcategory.name, item.name
+"
+  arguments=(("ar_StartDate", datetime), ("ar_EndDate", datetime), ("ar_manfcode", number))
+)
+group(level=1 header.height=166 trailer.height=281 by=("category"  ) header.color="536870912" trailer.color="536870912" )
+text(name=t_4 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="700" background.mode="2" background.color="16777215" color="0" alignment="2" border="0" x="31" y="20" height="156" width="10239" text="Stock Movement Manufacturer Wise" html.valueishtml="0" )
+compute(name=c_address2 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="52" y="625" height="156" width="10218" format="[general]" expression="f_ReportHeaderInfo('address2')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=c_companyname visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" x="52" y="250" height="156" width="10218" format="[general]" expression="f_ReportHeaderInfo('clientname')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=c_address1 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="52" y="437" height="156" width="10218" format="[general]" expression="f_ReportHeaderInfo('address1')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_2 visible="1" band=header font.charset="0" font.face="Arial Narrow" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="6520" y="41" height="156" width="1302" format="[general]" expression="'Page ' + page() + ' of ' + pageCount()" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_1 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="437" y="62" height="156" width="697" format="dd/mm/yyyy" expression="today()" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_5 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="52" y="52" height="166" width="343" text="Date: " html.valueishtml="0" )
+text(name=t_2 visible="1" band=header font.charset="0" font.face="Arial Narrow" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="1489" y="822" height="166" width="197" text="To: " html.valueishtml="0" )
+text(name=t_1 visible="1" band=header font.charset="0" font.face="Arial Narrow" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="52" y="822" height="166" width="583" text="From Date: " html.valueishtml="0" )
+compute(name=c_enddate visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="1739" y="822" height="166" width="802" format="dd/mm/yyyy" expression=" ar_EndDate " alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=c_startdate visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="687" y="822" height="166" width="760" format="dd/mm/yyyy" expression=" ar_StartDate " alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_22 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="700" background.mode="2" background.color="16777215" color="0" alignment="0" border="0" x="2572" y="822" height="166" width="916" text="Manufacturer:" html.valueishtml="0" )
+column(name=manufacturer visible="1" band=header id=14 x="3541" y="822" height="166" width="3125" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="700" tabsequence=0 )
+text(name=t_7 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="0" border="0" x="9739" y="1104" height="291" width="572" text="Clos. Stock
+ Retail Val" html.valueishtml="0" )
+line(name=l_2 visible="1" band=header background.mode="1" background.color="553648127" pen.style="2" pen.width="10" pen.color="0" x1="62" y1="1427" x2="10302" y2="1427" )
+text(name=t_14 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="1" border="0" x="9239" y="1104" height="291" width="427" text="Closing
+Stock" html.valueishtml="0" )
+text(name=t_29 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="1" border="0" x="8583" y="1114" height="291" width="281" text="Net.
+Issue" html.valueishtml="0" )
+text(name=t_30 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="1" border="0" x="9000" y="1125" height="145" width="197" text="Adj." html.valueishtml="0" )
+text(name=t_13 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="1" border="0" x="7187" y="1104" height="291" width="385" text="Sale
+Ret.Qty" html.valueishtml="0" )
+text(name=t_16 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="1" border="0" x="5927" y="1104" height="291" width="302" text="P.Ret
+Qty" html.valueishtml="0" )
+text(name=t_21 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="1" border="0" x="6468" y="1104" height="291" width="322" text="P.Ret
+Val." html.valueishtml="0" )
+text(name=t_15 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="1" border="0" x="6895" y="1104" height="291" width="270" text="Sale
+Qty" html.valueishtml="0" )
+text(name=t_26 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="2" border="0" x="7604" y="1104" height="291" width="427" text="Net
+Sale Qty" html.valueishtml="0" )
+text(name=t_17 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="1" border="0" x="8104" y="1104" height="291" width="447" text="Net
+Sale Val" html.valueishtml="0" )
+text(name=t_10 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="1" border="0" x="4666" y="1104" height="291" width="302" text="Sale
+Price" html.valueishtml="0" )
+text(name=t_11 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="1" border="0" x="5072" y="1104" height="291" width="437" text="Opening
+Stock" html.valueishtml="0" )
+text(name=t_12 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="1" border="0" x="5604" y="1104" height="291" width="239" text="Pur
+Qty" html.valueishtml="0" )
+line(name=l_1 visible="1" band=header background.mode="1" background.color="553648127" pen.style="2" pen.width="10" pen.color="0" x1="52" y1="1052" x2="10302" y2="1052" )
+text(name=t_8 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="0" border="0" x="93" y="1104" height="145" width="635" text="Item" html.valueishtml="0" )
+text(name=t_27 visible="1" band=summary font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="700" background.mode="2" background.color="16777215" color="0" alignment="0" border="0" x="916" y="948" height="145" width="1125" text="Computer Operator" html.valueishtml="0" )
+text(name=t_28 visible="1" band=summary font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="700" background.mode="2" background.color="16777215" color="0" alignment="0" border="0" x="4093" y="948" height="145" width="677" text="Supervisor" html.valueishtml="0" )
+line(name=l_7 visible="1" band=summary background.mode="1" background.color="553648127" pen.style="0" pen.width="10" pen.color="0" x1="4093" y1="907" x2="6416" y2="907" )
+line(name=l_3 visible="1" band=summary background.mode="1" background.color="553648127" pen.style="0" pen.width="10" pen.color="0" x1="916" y1="907" x2="3239" y2="907" )
+text(name=t_19 visible="1" band=summary font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="700" background.mode="2" background.color="16777215" color="0" alignment="0" border="0" x="62" y="52" height="156" width="781" text="Grand Totals:" html.valueishtml="0" )
+compute(name=compute_32 visible="1" band=summary font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" x="9729" y="42" height="156" width="500" format="#####0" expression="sum(( itemopeningstock  +  purqty  +  srqty  -  prqty  -  saleqty ) * saleprice  for all)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+line(name=l_4 visible="1" band=summary background.mode="1" background.color="553648127" pen.style="2" pen.width="10" pen.color="0" x1="72" y1="250" x2="10197" y2="250" )
+compute(name=compute_3 visible="1" band=summary font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" x="9260" y="42" height="156" width="427" format="	f_SetColumnFormat('Qty')" expression="sum( c_closingstk  for all)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_35 visible="1" band=summary font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" x="8927" y="42" height="145" width="302" format="	f_SetColumnFormat('Qty')" expression="sum(netadj for all)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_14 visible="1" band=summary font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" x="5916" y="42" height="156" width="312" format="	f_SetColumnFormat('Qty')" expression="sum(prqty for all)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_15 visible="1" band=summary font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" x="6260" y="42" height="156" width="541" format="###0" expression="sum( prqty  *  purprice  for all)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_7 visible="1" band=summary font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" x="6833" y="42" height="156" width="375" format="	f_SetColumnFormat('Qty')" expression="sum(saleqty for all)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_8 visible="1" band=summary font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" x="7250" y="42" height="156" width="333" format="	f_SetColumnFormat('Qty')" expression="sum(srqty for all)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_9 visible="1" band=summary font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" x="7614" y="42" height="156" width="312" format="	f_SetColumnFormat('Qty')" expression="sum( saleqty  -  srqty  for all)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_11 visible="1" band=summary font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" x="7958" y="42" height="156" width="531" format="###0" expression="sum( saleprice * (  saleqty  -  srqty )  for all)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_10 visible="1" band=summary font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" x="5510" y="42" height="156" width="364" format="	f_SetColumnFormat('Qty')" expression="sum(purqty for all)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_6 visible="1" band=summary font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" x="4718" y="42" height="156" width="760" format="	f_SetColumnFormat('Qty')" expression="sum(itemopeningstock for all)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_36 visible="1" band=summary font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" x="8520" y="42" height="145" width="375" format="	f_SetColumnFormat('Qty')" expression="sum(netissue for all)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=c_closingstockretailval visible="1	if(c_closingstockretailval<>0,1,0)" band=detail font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" x="9729" y="10" height="166" width="531" format="####0" expression="( itemopeningstock  +  purqty  +  srqty  -  prqty  -  saleqty ) * saleprice " alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=c_closingstk visible="1	if( c_closingstk <>0 , 1,0)" band=detail font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" x="9270" y="10" height="156" width="416" format="	f_SetColumnFormat('Qty')" expression=" itemopeningstock  +  purqty  +  srqty  -  prqty  -  saleqty + netadj - netissue" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=c_prval visible="1	if(c_prval>0,1,0)" band=detail font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" x="6260" y="10" height="156" width="541" format="###0" expression=" prqty  *  purprice " alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=c_netsaleqty visible="1	if( c_netsaleqty >0,1,0)" band=detail font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" x="7614" y="10" height="156" width="312" format="	f_SetColumnFormat('Qty')" expression=" saleqty  -  srqty " alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=c_netsalevalue visible="1	if(  c_netsalevalue  >0,1,0)" band=detail font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" x="7979" y="10" height="156" width="520" format="###0" expression=" saleprice * (  saleqty  -  srqty ) " alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+column(name=saleprice visible="1" band=detail id=2 x="4489" y="10" height="156" width="479" color="0" border="0" alignment="1" format="###0.00" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=itemname visible="1" band=detail id=9 x="72" y="10" height="156" width="4239" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial Narrow" font.family="2" font.height="-8" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=itemopeningstock visible="1	if( itemopeningstock = 0,0,1)" band=detail id=16 x="5010" y="10" height="156" width="468" color="0" border="0" alignment="1" format="	f_SetColumnFormat('Qty')" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=purqty visible="1	if(  purqty  >0,1,0)" band=detail id=7 x="5510" y="10" height="156" width="364" color="0" border="0" alignment="1" format="	f_SetColumnFormat('Qty')" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=prqty visible="1	if( prqty  >0,1,0)" band=detail id=8 x="5916" y="10" height="156" width="312" color="0" border="0" alignment="1" format="	f_SetColumnFormat('Qty')" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=saleqty visible="1	if(  saleqty  >0,1,0)" band=detail id=5 x="6833" y="10" height="156" width="375" color="0" border="0" alignment="1" format="	f_SetColumnFormat('Qty')" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=srqty visible="1	if(  srqty >0,1,0)" band=detail id=6 x="7250" y="10" height="156" width="333" color="0" border="0" alignment="1" format="	f_SetColumnFormat('Qty')" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=netissue visible="1	if(netissue<>0,1,0)" band=detail id=11 x="8593" y="20" height="145" width="302" color="0" border="0" alignment="1" format="	f_SetColumnFormat('Qty')" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=netadj visible="1	if(netadj<>0,1,0)" band=detail id=10 x="8927" y="20" height="145" width="302" color="0" border="0" alignment="1" format="	f_SetColumnFormat('Qty')" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=category visible="1" band=header.1 id=15 x="677" y="10" height="145" width="2114" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="700" tabsequence=0 )
+text(name=t_category visible="1" band=header.1 font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="700" background.mode="2" background.color="16777215" color="0" alignment="0" border="0" x="31" y="10" height="135" width="604" text="Category:" html.valueishtml="0" )
+text(name=t_24 visible="1" band=trailer.1 font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="700" background.mode="2" background.color="16777215" color="0" alignment="0" border="0" x="62" y="73" height="145" width="385" text="Totals:" html.valueishtml="0" )
+compute(name=compute_18 visible="1" band=trailer.1 font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" x="9739" y="62" height="145" width="520" format="####0" expression="sum(( itemopeningstock  +  purqty  +  srqty  -  prqty  -  saleqty ) * saleprice  for group 1)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+line(name=l_5 visible="1" band=trailer.1 background.mode="1" background.color="553648127" pen.style="2" pen.width="10" pen.color="0" x1="72" y1="10" x2="10229" y2="10" )
+line(name=l_6 visible="1" band=trailer.1 background.mode="1" background.color="553648127" pen.style="2" pen.width="10" pen.color="0" x1="72" y1="260" x2="10218" y2="260" )
+compute(name=compute_21 visible="1" band=trailer.1 font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" x="9270" y="62" height="145" width="406" format="	f_SetColumnFormat('Qty')" expression="sum( c_closingstk  for group 1)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_33 visible="1" band=trailer.1 font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" x="8937" y="62" height="145" width="302" format="	f_SetColumnFormat('Qty')" expression="sum(netadj for group 1)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_28 visible="1" band=trailer.1 font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" x="5916" y="62" height="145" width="312" format="	f_SetColumnFormat('Qty')" expression="sum(prqty for group 1)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_27 visible="1" band=trailer.1 font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" x="6260" y="62" height="145" width="541" format="###0" expression="sum( prqty  *  purprice  for group 1)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_26 visible="1" band=trailer.1 font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" x="6833" y="62" height="145" width="375" format="	f_SetColumnFormat('Qty')" expression="sum(saleqty for group 1)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_25 visible="1" band=trailer.1 font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" x="7250" y="62" height="145" width="333" format="	f_SetColumnFormat('Qty')" expression="sum(srqty for group 1)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_24 visible="1" band=trailer.1 font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" x="7614" y="62" height="145" width="312" format="	f_SetColumnFormat('Qty')" expression="sum( saleqty  -  srqty  for group 1)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_23 visible="1" band=trailer.1 font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" x="7958" y="62" height="145" width="531" format="###0" expression="sum( saleprice * (  saleqty  -  srqty )  for group 1)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_30 visible="1" band=trailer.1 font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" x="5510" y="62" height="145" width="364" format="	f_SetColumnFormat('Qty')" expression="sum(purqty for group 1)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_31 visible="1" band=trailer.1 font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" x="4718" y="62" height="145" width="760" format="	f_SetColumnFormat('Qty')" expression="sum(itemopeningstock for group 1)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_34 visible="1" band=trailer.1 font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" x="8520" y="62" height="145" width="375" format="	f_SetColumnFormat('Qty')" expression="sum(netissue for group 1)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+htmltable(border="0" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" encodeSelfLinkArgs="1" generateJavaScript="1" netscapeLayers="0" pagingMethod=0 )
+xhtmlgen() cssgen(sessionSpecific="0" )
+xmlgen(inline="0" )
+xsltgen()
+jsgen()
+export.xml(headGroups="1" includewhitespace="0" metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 distill.customPostScript="0" xslfop.print="0" )
+export.xhtml()

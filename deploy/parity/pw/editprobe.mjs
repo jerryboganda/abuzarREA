@@ -1,0 +1,17 @@
+﻿import { chromium } from 'playwright';
+const browser = await chromium.launch();
+const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
+await page.goto('http://127.0.0.1:5173/?app=1&db=mock', { waitUntil: 'load' });
+await page.waitForTimeout(4000);
+const cell = page.locator('[data-obj="login"]');
+console.log('before', await page.evaluate(() => ({active: document.activeElement.tagName, cell: document.querySelector('[data-obj="login"]').outerHTML.slice(0,400)})));
+await cell.click(); await page.waitForTimeout(300);
+console.log('after click', await page.evaluate(() => ({active: document.activeElement.tagName + ' ' + document.activeElement.className, cell: document.querySelector('[data-obj="login"]').outerHTML.slice(0,600)})));
+await page.keyboard.type('admin'); await page.waitForTimeout(300);
+console.log('after type', await page.evaluate(() => ({cell: document.querySelector('[data-obj="login"]').outerHTML.slice(0,600), text: document.querySelector('[data-obj="login"]').textContent})));
+await cell.dblclick(); await page.waitForTimeout(300);
+console.log('after dblclick', await page.evaluate(() => ({active: document.activeElement.tagName + ' ' + document.activeElement.className, cell: document.querySelector('[data-obj="login"]').outerHTML.slice(0,700)})));
+await page.keyboard.type('admin'); await page.waitForTimeout(300);
+console.log('after dbl type', await page.evaluate(() => ({cell: document.querySelector('[data-obj="login"]').outerHTML.slice(0,700), text: document.querySelector('[data-obj="login"]').textContent})));
+await page.screenshot({ path: 'C:/Projects/Abuzar/deploy/parity/shots/rebuild-login-edit.png' });
+await browser.close();

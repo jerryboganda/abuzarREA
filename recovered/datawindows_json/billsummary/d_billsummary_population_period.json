@@ -1,0 +1,339 @@
+{
+ "release": "12.5",
+ "datawindow": {
+  "units": "0",
+  "timer_interval": "0",
+  "processing": "0",
+  "color": "1073741824",
+  "brushmode": "0",
+  "transparency": "0",
+  "gradient.color": "8421504",
+  "gradient.transparency": "0",
+  "gradient.angle": "0",
+  "gradient.repetition.mode": "0",
+  "gradient.repetition.count": "0",
+  "gradient.repetition.length": "100",
+  "gradient.focus": "0",
+  "gradient.scale": "100",
+  "gradient.spread": "100",
+  "picture.mode": "0",
+  "picture.scale.x": "100",
+  "picture.scale.y": "100",
+  "picture.clip.left": "0",
+  "picture.clip.right": "0",
+  "picture.clip.top": "0",
+  "picture.clip.bottom": "0",
+  "picture.blur": "0",
+  "picture.transparency": "0",
+  "print.printername": "",
+  "print.documentname": "",
+  "print.orientation": "0",
+  "print.margin.left": "110",
+  "print.margin.right": "110",
+  "print.margin.top": "96",
+  "print.margin.bottom": "96",
+  "print.paper.size": "0",
+  "print.paper.source": "0",
+  "print.canusedefaultprinter": "yes",
+  "selected.mouse": "no",
+  "hidegrayline": "no",
+  "showbackcoloronxp": "no"
+ },
+ "bands": {
+  "header": {
+   "height": "0"
+  },
+  "summary": {
+   "height": "0",
+   "color": "536870912"
+  },
+  "footer": {
+   "height": "0",
+   "color": "536870912"
+  },
+  "detail": {
+   "height": "76",
+   "color": "536870912"
+  }
+ },
+ "table": {
+  "columns": [
+   {
+    "type": "long",
+    "updatewhereclause": "yes",
+    "name": "areacode",
+    "dbname": "AreaCode"
+   },
+   {
+    "type": "char(60)",
+    "updatewhereclause": "yes",
+    "name": "areaname",
+    "dbname": "AreaName"
+   },
+   {
+    "type": "long",
+    "updatewhereclause": "yes",
+    "name": "custcode",
+    "dbname": "CustCode"
+   },
+   {
+    "type": "char(60)",
+    "updatewhereclause": "yes",
+    "name": "custname",
+    "dbname": "CustName"
+   },
+   {
+    "type": "long",
+    "updatewhereclause": "yes",
+    "name": "saleinvcode",
+    "dbname": "SaleInvCode"
+   }
+  ],
+  "retrieve": "SELECT  \n\tAreaCode=T.AreaCode, \n\tAreaName = AR.Name, \n\tCustCode=T.CustCode,\n\tCustName = AC.Name, \n\tSaleInvCode=T.SaleInvCode\nFROM\n\tArea AR, Accounts AC,\n\t(SELECT DISTINCT \n\t\tAR.AreaCode, S.SaleInvCode, C.CustCode\n\tFROM\n\t\tSaleLedger S, Customer C, Area AR, Accounts A\n\tWHERE\n\t\tS.Posted = CASE UPPER(:as_posted) WHEN 'Y' THEN 'Y' WHEN 'N' THEN 'N' ELSE S.Posted END AND\n\t\tS.DATE BETWEEN :adt_startdate AND :adt_enddate AND \n\t\tS.SaleCatCode <> 3 AND \n\t\tS.CustCode = C.CustCode AND \n\t\tC.CustCode = A.AccCode AND\n\t\tA.Active = 'Y' AND\n\t\tC.AreaCode IN (:ai_areacode) AND \n\t\tC.AreaCode = AR.AreaCode\n\tUNION ALL\n\tSELECT AR.AreaCode, SaleInvCode=NULL, C.CustCode\n\tFROM\n\t\tCustomer C, Area AR, Accounts A, \n\t\t(SELECT V.AccCode, BALANCE=SUM(V.Debit - V.Credit)\n\t\tFROM VirtualGL V\n\t\tGROUP BY V.AccCode\n\t\tHAVING SUM(V.Debit - V.Credit) > 0) B\n\tWHERE\n\t\t:ai_outstandingcust = 1 AND \n\t\tC.CustCode = A.AccCode AND\n\t\tA.AccCode = B.AccCode AND \n\t\tA.Active = 'Y' AND\n\t\tC.AreaCode IN (:ai_areacode) AND \n\t\tC.AreaCode = AR.AreaCode AND \n\t\tC.CustCode NOT IN\n\t\t\t(SELECT DISTINCT C.CustCode\n\t\t\tFROM\n\t\t\t\tSaleLedger S, Customer C\n\t\t\tWHERE\n\t\t\t\tS.Posted = CASE UPPER(:as_posted) WHEN 'Y' THEN 'Y' WHEN 'N' THEN 'N' ELSE S.Posted END AND\n\t\t\t\tS.DATE BETWEEN :adt_startdate AND :adt_enddate AND \n\t\t\t\tS.SaleCatCode <> 3 AND \n\t\t\t\tS.CustCode = C.CustCode AND\n\t\t\t\tC.AreaCode IN (:ai_areacode))\n\tUNION ALL\n\tSELECT AR.AreaCode, SaleInvCode=NULL, C.CustCode\n\tFROM\n\t\tCustomer C, Area AR, Accounts A\n\tWHERE\n\t\t:ai_zerobalcust = 1 AND\n\t\tC.CustCode NOT IN \n\t\t\t(SELECT V.AccCode\n\t\t\tFROM VirtualGL V\n\t\t\tGROUP BY V.AccCode\n\t\t\tHAVING SUM(V.Debit - V.Credit) > 0) AND\n\t\tC.CustCode = A.AccCode AND\n\t\tA.Active = 'Y' AND \n\t\tC.AreaCode IN (:ai_areacode) AND\n\t\tC.AreaCode = AR.AreaCode AND\n\t\tC.CustCode NOT IN\n\t\t\t(SELECT DISTINCT C.CustCode\n\t\t\tFROM\n\t\t\t\tSaleLedger S, Customer C\n\t\t\tWHERE\n\t\t\t\tS.Posted = CASE UPPER(:as_posted) WHEN 'Y' THEN 'Y' WHEN 'N' THEN 'N' ELSE S.Posted END AND\n\t\t\t\tS.DATE BETWEEN :adt_startdate AND :adt_enddate AND \n\t\t\t\tS.SaleCatCode <> 3 AND \n\t\t\t\tS.CustCode = C.CustCode AND\n\t\t\t\tC.AreaCode IN (:ai_areacode))) T\nWHERE \n\tT.CustCode = AC.AccCode AND\n\tT.AreaCode = AR.AreaCode\nORDER BY\n\tAreaName,\n\tCustName,\n\tSaleInvCode\n\t",
+  "arguments": {
+   "_items": [
+    {
+     "_items": [
+      "ai_areacode",
+      "numberlist"
+     ]
+    },
+    {
+     "_items": [
+      "adt_startdate",
+      "datetime"
+     ]
+    },
+    {
+     "_items": [
+      "adt_enddate",
+      "datetime"
+     ]
+    },
+    {
+     "_items": [
+      "as_posted",
+      "string"
+     ]
+    },
+    {
+     "_items": [
+      "ai_outstandingcust",
+      "number"
+     ]
+    },
+    {
+     "_items": [
+      "ai_zerobalcust",
+      "number"
+     ]
+    }
+   ]
+  }
+ },
+ "objects": [
+  {
+   "name": "areacode",
+   "visible": "1",
+   "band": "detail",
+   "id": "1",
+   "x": "0",
+   "y": "0",
+   "height": "64",
+   "width": "1161",
+   "color": "0",
+   "border": "0",
+   "alignment": "0",
+   "format": "[general]",
+   "html.valueishtml": "0",
+   "edit.focusrectangle": "no",
+   "edit.autohscroll": "no",
+   "edit.autoselect": "no",
+   "edit.autovscroll": "no",
+   "edit.case": "any",
+   "edit.codetable": "no",
+   "edit.displayonly": "no",
+   "edit.hscrollbar": "no",
+   "edit.imemode": "0",
+   "edit.limit": "0",
+   "edit.password": "no",
+   "edit.vscrollbar": "no",
+   "edit.validatecode": "no",
+   "edit.nilisnull": "no",
+   "edit.required": "no",
+   "edit.useellipsis": "no",
+   "criteria.required": "no",
+   "criteria.override_edit": "no",
+   "crosstab.repeat": "no",
+   "background.mode": "2",
+   "background.color": "16777215",
+   "font.charset": "0",
+   "font.face": "Arial",
+   "font.family": "2",
+   "font.height": "-10",
+   "font.pitch": "2",
+   "font.weight": "400",
+   "tabsequence": "0",
+   "type": "column"
+  },
+  {
+   "name": "custcode",
+   "visible": "1",
+   "band": "detail",
+   "id": "3",
+   "x": "1161",
+   "y": "0",
+   "height": "64",
+   "width": "1161",
+   "color": "0",
+   "border": "0",
+   "alignment": "0",
+   "format": "[general]",
+   "html.valueishtml": "0",
+   "edit.focusrectangle": "no",
+   "edit.autohscroll": "no",
+   "edit.autoselect": "no",
+   "edit.autovscroll": "no",
+   "edit.case": "any",
+   "edit.codetable": "no",
+   "edit.displayonly": "no",
+   "edit.hscrollbar": "no",
+   "edit.imemode": "0",
+   "edit.limit": "0",
+   "edit.password": "no",
+   "edit.vscrollbar": "no",
+   "edit.validatecode": "no",
+   "edit.nilisnull": "no",
+   "edit.required": "no",
+   "edit.useellipsis": "no",
+   "criteria.required": "no",
+   "criteria.override_edit": "no",
+   "crosstab.repeat": "no",
+   "background.mode": "2",
+   "background.color": "16777215",
+   "font.charset": "0",
+   "font.face": "Arial",
+   "font.family": "2",
+   "font.height": "-10",
+   "font.pitch": "2",
+   "font.weight": "400",
+   "tabsequence": "0",
+   "type": "column"
+  },
+  {
+   "name": "saleinvcode",
+   "visible": "1",
+   "band": "detail",
+   "id": "5",
+   "x": "2322",
+   "y": "0",
+   "height": "64",
+   "width": "1161",
+   "color": "0",
+   "border": "0",
+   "alignment": "0",
+   "format": "[general]",
+   "html.valueishtml": "0",
+   "edit.focusrectangle": "no",
+   "edit.autohscroll": "no",
+   "edit.autoselect": "no",
+   "edit.autovscroll": "no",
+   "edit.case": "any",
+   "edit.codetable": "no",
+   "edit.displayonly": "no",
+   "edit.hscrollbar": "no",
+   "edit.imemode": "0",
+   "edit.limit": "0",
+   "edit.password": "no",
+   "edit.vscrollbar": "no",
+   "edit.validatecode": "no",
+   "edit.nilisnull": "no",
+   "edit.required": "no",
+   "edit.useellipsis": "no",
+   "criteria.required": "no",
+   "criteria.override_edit": "no",
+   "crosstab.repeat": "no",
+   "background.mode": "2",
+   "background.color": "16777215",
+   "font.charset": "0",
+   "font.face": "Arial",
+   "font.family": "2",
+   "font.height": "-10",
+   "font.pitch": "2",
+   "font.weight": "400",
+   "tabsequence": "0",
+   "type": "column"
+  }
+ ],
+ "extras": [
+  {
+   "type": "htmltable",
+   "props": {
+    "border": "1"
+   }
+  },
+  {
+   "type": "htmlgen",
+   "props": {
+    "clientComputedFields": "1",
+    "clientEvents": "1",
+    "clientFormatting": "0",
+    "clientScriptable": "0",
+    "clientValidation": "1",
+    "encodeSelfLinkArgs": "1",
+    "generateJavaScript": "1",
+    "netscapeLayers": "0",
+    "pagingMethod": "0"
+   }
+  },
+  {
+   "type": "xhtmlgen",
+   "props": {}
+  },
+  {
+   "type": "cssgen",
+   "props": {
+    "sessionSpecific": "0"
+   }
+  },
+  {
+   "type": "xmlgen",
+   "props": {
+    "inline": "0"
+   }
+  },
+  {
+   "type": "xsltgen",
+   "props": {}
+  },
+  {
+   "type": "jsgen",
+   "props": {}
+  },
+  {
+   "type": "export.xml",
+   "props": {
+    "headGroups": "1",
+    "includewhitespace": "0",
+    "metadatatype": "0",
+    "savemetadata": "0"
+   }
+  },
+  {
+   "type": "import.xml",
+   "props": {}
+  },
+  {
+   "type": "export.pdf",
+   "props": {
+    "method": "0",
+    "distill.customPostScript": "0",
+    "xslfop.print": "0"
+   }
+  },
+  {
+   "type": "export.xhtml",
+   "props": {}
+  }
+ ]
+}

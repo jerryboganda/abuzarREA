@@ -1,0 +1,252 @@
+release 12.5;
+datawindow ( units=2 timer_interval=60000 processing=0 color=16777215 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.printername=""  print.documentname=""  print.orientation=1 print.margin.left=250 print.margin.right=250 print.margin.top=250 print.margin.bottom=250 print.paper.size=1 print.paper.source=0 print.canusedefaultprinter=yes selected.mouse=no hidegrayline=no showbackcoloronxp=no)
+header(height=1333 color="536870912" )
+summary(height=250 color="536870912" )
+footer(height=0 color="536870912" )
+detail(height=197 color="536870912" )
+table(column=(type=char(60) updatewhereclause=yes name=category dbname="Category"  )
+column=(type=char(60) updatewhereclause=yes name=item dbname="Item"  )
+column=(type=char(75) updatewhereclause=yes name=aliasname dbname="AliasName"  )
+column=(type=char(50) updatewhereclause=yes name=packing dbname="Packing"  )
+column=(type=decimal(13) updatewhereclause=yes name=price dbname="Price"  )
+column=(type=decimal(4) updatewhereclause=yes name=qty1 dbname="Qty1"  )
+column=(type=decimal(4) updatewhereclause=yes name=bonus1 dbname="Bonus1"  )
+column=(type=decimal(6) updatewhereclause=yes name=value1 dbname="Value1"  )
+column=(type=decimal(4) updatewhereclause=yes name=qty2 dbname="Qty2"  )
+column=(type=decimal(4) updatewhereclause=yes name=bonus2 dbname="Bonus2"  )
+column=(type=decimal(6) updatewhereclause=yes name=value2 dbname="Value2"  )
+column=(type=decimal(4) updatewhereclause=yes name=qty3 dbname="Qty3"  )
+column=(type=decimal(4) updatewhereclause=yes name=bonus3 dbname="Bonus3"  )
+column=(type=decimal(6) updatewhereclause=yes name=value3 dbname="Value3"  )
+ retrieve="SELECT
+	Category=IC.Name,  
+	Item=I.Name,
+	AliasName=I.CustomICode, 
+	Packing=I.PackingDesc, 
+	Price=Round(I.SalePrice / CASE I.PackUnits WHEN 0 THEN 1 ELSE I.PackUnits END, 2),
+	Qty1=SUM(CASE S.SLOT WHEN 1 THEN S.Qty ELSE 0 END),
+	Bonus1=SUM(CASE S.SLOT WHEN 1 THEN S.BonusQty ELSE 0 END),
+	Value1=SUM(CASE S.SLOT WHEN 1 THEN CASE :ai_Price WHEN 1 THEN S.Value ELSE S.Qty * Round(I.SalePrice / CASE I.PackUnits WHEN 0 THEN 1 ELSE I.PackUnits END, 2) END ELSE 0 END),
+	Qty2=SUM(CASE S.SLOT WHEN 2 THEN S.Qty ELSE 0 END), 
+	Bonus2=SUM(CASE S.SLOT WHEN 2 THEN S.BonusQty ELSE 0 END), 
+	Value2=SUM(CASE S.SLOT WHEN 2 THEN CASE :ai_Price WHEN 1 THEN S.Value ELSE S.Qty * Round(I.SalePrice / CASE I.PackUnits WHEN 0 THEN 1 ELSE I.PackUnits END, 2) END ELSE 0 END), 
+	Qty3=SUM(CASE S.SLOT WHEN 3 THEN S.Qty ELSE 0 END),
+	Bonus3=SUM(CASE S.SLOT WHEN 3 THEN S.BonusQty ELSE 0 END), 
+	Value3=SUM(CASE S.SLOT WHEN 3 THEN CASE :ai_Price WHEN 1 THEN S.Value ELSE S.Qty * Round(I.SalePrice / CASE I.PackUnits WHEN 0 THEN 1 ELSE I.PackUnits END, 2) END ELSE 0 END)
+FROM 
+(SELECT
+	MNO=MAX(MONTH(sl.DATE)),
+	inv=sl.saleinvcode,
+	sd.icode,
+	i.icatcode,
+	qty = SUM(sd.looseqty),
+	bonusqty = SUM(sd.bonusqty),
+	Value = SUM((sd.looseqty * (sd.saleprice - sd.itemflatdisc)) * (1 - sd.discperc * 0.01) * (1 - sl.discperc * 0.01)),
+	slot = CASE MAX(MONTH(sl.DATE)) 
+		WHEN :ai_smonth then 1 
+		WHEN CASE ((:ai_smonth + 1) % 12) WHEN 0 THEN 12 ELSE ((:ai_smonth + 1) % 12) END THEN 2
+		ELSE 3 END
+FROM
+	saleledger sl,
+	saledetail sd, 
+	item i
+WHERE
+	( (month(sl.date) = :ai_smonth AND year(sl.date) = :ai_syear) OR 
+	  (month(sl.date) = CASE ((:ai_smonth + 1) % 12) WHEN 0 THEN 12 ELSE ((:ai_smonth + 1) % 12) END AND
+	   year(sl.date) = CASE WHEN (:ai_smonth + 1) > 12 THEN :ai_syear + 1 ELSE :ai_syear END) OR
+	  (month(sl.date) = CASE ((:ai_smonth + 2) % 12) WHEN 0 THEN 12 ELSE ((:ai_smonth + 2) % 12) END AND
+	   year(sl.date) = CASE WHEN (:ai_smonth + 2) > 12 THEN :ai_syear + 1 ELSE :ai_syear END) ) AND
+	sl.saleinvcode = sd.saleinvcode and
+	sd.icode = i.icode and
+	i.icatcode in (:ai_icatcode)
+GROUP BY 
+	 sl.saleinvcode,
+	 i.icatcode,
+	 sd.icode
+UNION ALL
+SELECT
+	MNO=MAX(MONTH(sl.DATE)),
+	inv=sl.saleinvcode,
+	sd.icode,
+	i.icatcode,
+	qty = SUM(sd.looseqty),
+	bonusqty = SUM(sd.bonusqty),
+	Value = SUM((sd.looseqty * (sd.saleprice - sd.itemflatdisc)) * (1 - sd.discperc * 0.01) * (1 - sl.discperc * 0.01)),
+	slot = CASE MAX(MONTH(sl.DATE)) 
+		WHEN :ai_smonth then 1 
+		WHEN CASE ((:ai_smonth + 1) % 12) WHEN 0 THEN 12 ELSE ((:ai_smonth + 1) % 12) END THEN 2
+		ELSE 3 END
+FROM
+	saleledger sl,
+	saleinvdetail sd, 
+	item i
+WHERE
+	( sl.impactinventory = 'N' ) AND
+	( (month(sl.date) = :ai_smonth AND year(sl.date) = :ai_syear) OR 
+	  (month(sl.date) = CASE ((:ai_smonth + 1) % 12) WHEN 0 THEN 12 ELSE ((:ai_smonth + 1) % 12) END AND
+	   year(sl.date) = CASE WHEN (:ai_smonth + 1) > 12 THEN :ai_syear + 1 ELSE :ai_syear END) OR
+	  (month(sl.date) = CASE ((:ai_smonth + 2) % 12) WHEN 0 THEN 12 ELSE ((:ai_smonth + 2) % 12) END AND
+	   year(sl.date) = CASE WHEN (:ai_smonth + 2) > 12 THEN :ai_syear + 1 ELSE :ai_syear END) ) AND
+	sl.saleinvcode = sd.saleinvcode and
+	sd.icode = i.icode and
+	i.icatcode in (:ai_icatcode)
+GROUP BY 
+	 sl.saleinvcode,
+	 i.icatcode,
+	 sd.icode
+UNION ALL
+SELECT
+	MNO=:ai_smonth,
+	inv=0,
+	i.icode,
+	i.icatcode,
+	qty = 0,
+	bonusqty = 0,
+	Value = 0,
+	slot = 1
+FROM
+	item i
+WHERE
+	i.icatcode in (:ai_icatcode)
+UNION ALL
+SELECT
+	MNO=MAX(MONTH(sl.DATE)),
+	inv=sl.srinvcode,
+	sd.icode,
+	i.icatcode,
+	qty = - SUM(sd.looseqty),
+	bonusqty = - SUM(sd.bonusqty),
+	Value = - SUM(sd.looseqty * sd.srprice * (1 - sd.discperc * 0.01) * (1 - sl.discperc * 0.01)),
+	slot = CASE MAX(MONTH(CASE :as_return WHEN 'A' THEN sl.DATE ELSE s.Date END)) 
+		WHEN :ai_smonth then 1 
+		WHEN CASE ((:ai_smonth + 1) % 12) WHEN 0 THEN 12 ELSE ((:ai_smonth + 1) % 12) END THEN 2
+		ELSE 3 END
+FROM
+	srledger sl
+	LEFT OUTER JOIN saleledger AS s ON (sl.saleinvcode = s.saleinvcode),
+	srdetail sd, 
+	item i
+WHERE
+	( (month(sl.date) = :ai_smonth AND year(sl.date) = :ai_syear) OR 
+	  (month(sl.date) = CASE ((:ai_smonth + 1) % 12) WHEN 0 THEN 12 ELSE ((:ai_smonth + 1) % 12) END AND
+	   year(sl.date) = CASE WHEN (:ai_smonth + 1) > 12 THEN :ai_syear + 1 ELSE :ai_syear END) OR
+	  (month(sl.date) = CASE ((:ai_smonth + 2) % 12) WHEN 0 THEN 12 ELSE ((:ai_smonth + 2) % 12) END AND
+	   year(sl.date) = CASE WHEN (:ai_smonth + 2) > 12 THEN :ai_syear + 1 ELSE :ai_syear END) ) AND
+	sl.srinvcode = sd.srinvcode and
+	sd.icode = i.icode and
+	i.icatcode in (:ai_icatcode) AND
+	IsNull(SL.saleinvcode,-1) IN (SELECT saleinvcode =
+		CASE :as_return when 'A' THEN
+			IsNull(SL.saleinvcode,-1) 
+		ELSE
+			(SELECT SaleLedger.SALEINVCODE FROM dbo.SaleLedger 
+			WHERE ( (month(SaleLedger.date) = :ai_smonth AND year(SaleLedger.date) = :ai_syear) OR 
+			  (month(SaleLedger.date) = CASE ((:ai_smonth + 1) % 12) WHEN 0 THEN 12 ELSE ((:ai_smonth + 1) % 12) END AND
+				year(SaleLedger.date) = CASE WHEN (:ai_smonth + 1) > 12 THEN :ai_syear + 1 ELSE :ai_syear END) OR
+			  (month(SaleLedger.date) = CASE ((:ai_smonth + 2) % 12) WHEN 0 THEN 12 ELSE ((:ai_smonth + 2) % 12) END AND
+				year(SaleLedger.date) = CASE WHEN (:ai_smonth + 2) > 12 THEN :ai_syear + 1 ELSE :ai_syear END) ) AND 
+				SaleLedger.SALEINVCODE = sl.saleinvcode
+			 
+			)
+		END
+		)
+GROUP BY 
+	 sl.srinvcode,
+	 sl.saleinvcode,
+	 i.icatcode,
+	 sd.icode) S, Item I, ItemCategory IC
+WHERE S.ICode = I.ICode AND I.ICatCode = IC.ICatCode
+GROUP BY 
+	IC.Name, 
+	I.Name, 
+	I.CustomICode,
+	I.PackingDesc,
+	I.SalePrice,
+	I.PackUnits,
+	I.ICODE,
+	I.ICATCODE
+ORDER BY 
+	IC.Name, 
+	I.Name, 
+	I.CustomICode"
+  arguments=(("ai_smonth", number), ("ai_syear", number), ("ai_icatcode", numberlist), ("ai_price", number), ("as_return", string))
+)
+group(level=1 header.height=229 trailer.height=281 by=("category"  ) header.color="536870912" trailer.color="536870912" )
+text(name=t_12 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="700" background.mode="2" background.color="16777215" color="0" alignment="2" border="0" x="4000" y="31" height="187" width="1864" text="Quarterly Sales Statement" html.valueishtml="0" )
+compute(name=compute_4 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="468" y="52" height="166" width="656" format="dd/mm/yyyy" expression="today()" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_15 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="93" y="52" height="166" width="322" text="Date: " html.valueishtml="0" )
+line(name=l_2 visible="1" band=header background.mode="2" background.color="16777215" pen.style="2" pen.width="10" pen.color="0" x1="62" y1="1312" x2="9812" y2="1312" )
+line(name=l_1 visible="1" band=header background.mode="2" background.color="16777215" pen.style="2" pen.width="10" pen.color="0" x1="52" y1="843" x2="9802" y2="843" )
+compute(name=c_address2 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="41" y="645" height="156" width="9739" format="[general]" expression="f_ReportHeaderInfo('address2')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=c_address1 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="41" y="447" height="156" width="9739" format="[general]" expression="f_ReportHeaderInfo('address1')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=c_companyname visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" x="41" y="250" height="156" width="9739" format="[general]" expression="f_ReportHeaderInfo('clientname')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_5 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="7937" y="52" height="166" width="1843" format="[general]" expression="'Page ' + page() + ' of ' + pageCount()" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=item_t visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="2" border="0" x="989" y="895" height="333" width="2072" text="Item
+Name" html.valueishtml="0" )
+text(name=aliasname_t visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="416" y="895" height="333" width="510" text="Alias
+Name" html.valueishtml="0" )
+text(name=t_1 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="0" border="0" x="62" y="895" height="333" width="312" text="Sr.
+No." html.valueishtml="0" )
+text(name=packing_t visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="3145" y="895" height="333" width="750" text="Packing
+Units" html.valueishtml="0" )
+text(name=price_t visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="1" border="0" x="3947" y="895" height="166" width="572" text="Unit/Price" html.valueishtml="0" )
+line(name=l_5 visible="1" band=header background.mode="2" background.color="16777215" pen.style="2" pen.width="10" pen.color="0" x1="4562" y1="864" x2="4562" y2="1291" )
+text(name=qty1_t visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="1" border="0" x="4604" y="1114" height="166" width="437" text="Qty" html.valueishtml="0" )
+text(name=bonus1_t visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="1" border="0" x="5083" y="1114" height="166" width="364" text="Bonus" html.valueishtml="0" )
+text(name=value1_t visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="1" border="0" x="5510" y="1114" height="166" width="750" text="Value" html.valueishtml="0" )
+compute(name=compute_2 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="4604" y="885" height="187" width="1656" format="[General]" expression="case(ai_smonth  when 1 then 'JANUARY' when 2 then 'FEBRUARY' when 3 then 'MARCH' when 4 then 'APRIL' when 5 then 'MAY' when 6 then 'JUNE' when 7 then 'JULY' when 8 then 'AUGUST' when 9 then 'SEPTEMBER' when 10 then 'OCTOBER' when 11 then 'NOVEMBER' else 'DECEMBER') + ' ' + trim(string(ai_syear))" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=qty2_t visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="1" border="0" x="6333" y="1114" height="166" width="437" text="Qty" html.valueishtml="0" )
+text(name=bonus2_t visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="1" border="0" x="6812" y="1114" height="166" width="364" text="Bonus" html.valueishtml="0" )
+text(name=value2_t visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="1" border="0" x="7239" y="1114" height="166" width="750" text="Value" html.valueishtml="0" )
+compute(name=compute_3 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="6333" y="885" height="187" width="1656" format="[General]" expression="case( mod((ai_smonth + 1), 12) when 0 THEN 'DECEMBER' when 1 then 'JANUARY' when 2 then 'FEBRUARY' when 3 then 'MARCH' when 4 then 'APRIL' when 5 then 'MAY' when 6 then 'JUNE' when 7 then 'JULY' when 8 then 'AUGUST' when 9 then 'SEPTEMBER' when 10 then 'OCTOBER' when 11 then 'NOVEMBER' else 'DECEMBER') + ' ' + trim(string(ai_syear + if(ai_smonth + 1 > 12, 1, 0)))" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+line(name=l_7 visible="1" band=header background.mode="2" background.color="16777215" pen.style="2" pen.width="10" pen.color="0" x1="6291" y1="895" x2="6291" y2="1322" )
+line(name=l_14 visible="1" band=header background.mode="2" background.color="16777215" pen.style="2" pen.width="10" pen.color="0" x1="8031" y1="895" x2="8031" y2="1322" )
+text(name=qty3_t visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="1" border="0" x="8083" y="1114" height="166" width="437" text="Qty" html.valueishtml="0" )
+text(name=bonus3_t visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="1" border="0" x="8562" y="1114" height="166" width="364" text="Bonus" html.valueishtml="0" )
+text(name=value3_t visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="1" border="0" x="8989" y="1114" height="166" width="750" text="Value" html.valueishtml="0" )
+compute(name=compute_6 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="8083" y="885" height="187" width="1656" format="[General]" expression="case( mod((ai_smonth + 2), 12) when 0 THEN 'DECEMBER' when 1 then 'JANUARY' when 2 then 'FEBRUARY' when 3 then 'MARCH' when 4 then 'APRIL' when 5 then 'MAY' when 6 then 'JUNE' when 7 then 'JULY' when 8 then 'AUGUST' when 9 then 'SEPTEMBER' when 10 then 'OCTOBER' when 11 then 'NOVEMBER' else 'DECEMBER') + ' ' + trim(string(ai_syear + if(ai_smonth + 2 > 12, 1, 0)))" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_12 visible="1	if(sum(value1 for all)=0,0,1)" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="4604" y="21" height="177" width="1656" format="###,###,###0.00" expression="sum(value1 for all)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+line(name=l_13 visible="1" band=summary background.mode="2" background.color="16777215" pen.style="2" pen.width="10" pen.color="0" x1="4562" y1="31" x2="4562" y2="188" )
+text(name=t_3 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="3510" y="21" height="166" width="1020" text="Report Total:" html.valueishtml="0" )
+line(name=l_6 visible="1" band=summary background.mode="2" background.color="16777215" pen.style="2" pen.width="10" pen.color="0" x1="3510" y1="229" x2="9781" y2="229" )
+compute(name=compute_10 visible="1	if(sum(value2 for all)=0,0,1)" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="6333" y="21" height="177" width="1656" format="###,###,###0.00" expression="sum(value2 for all)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+line(name=l_11 visible="1" band=summary background.mode="2" background.color="16777215" pen.style="2" pen.width="10" pen.color="0" x1="6291" y1="21" x2="6291" y2="177" )
+line(name=l_17 visible="1" band=summary background.mode="2" background.color="16777215" pen.style="2" pen.width="10" pen.color="0" x1="8031" y1="21" x2="8031" y2="177" )
+compute(name=compute_11 visible="1	if(sum(value3 for all)=0,0,1)" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="8083" y="21" height="177" width="1656" format="###,###,###0.00" expression="sum(value3 for all)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+column(name=item visible="1" band=detail id=2 x="989" y="10" height="177" width="2072" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=60 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=aliasname visible="1" band=detail id=3 x="416" y="10" height="177" width="510" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=75 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+compute(name=compute_1 visible="1" band=detail font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="62" y="10" height="166" width="312" format="[GENERAL]" expression="cumulativeSum( 1 for group 1)" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+column(name=packing visible="1" band=detail id=4 x="3135" y="10" height="177" width="750" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=50 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=price visible="1" band=detail id=5 x="3947" y="10" height="177" width="572" color="0" border="0" alignment="1" format="###,###,###0.00" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=value1 visible="1	if( value1 =0,0,1)" band=detail id=8 x="5510" y="10" height="177" width="750" color="0" border="0" alignment="1" format="###,###,###0.00" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+line(name=l_8 visible="1" band=detail background.mode="2" background.color="16777215" pen.style="2" pen.width="10" pen.color="0" x1="4562" y1="20" x2="4562" y2="177" )
+column(name=value2 visible="1	if( value2 =0,0,1)" band=detail id=11 x="7239" y="10" height="177" width="739" color="0" border="0" alignment="1" format="###,###,###0.00" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+line(name=l_9 visible="1" band=detail background.mode="2" background.color="16777215" pen.style="2" pen.width="10" pen.color="0" x1="6291" y1="20" x2="6291" y2="177" )
+line(name=l_15 visible="1" band=detail background.mode="2" background.color="16777215" pen.style="2" pen.width="10" pen.color="0" x1="8031" y1="20" x2="8031" y2="177" )
+column(name=value3 visible="1	if( value3 =0,0,1)" band=detail id=14 x="8979" y="10" height="177" width="750" color="0" border="0" alignment="1" format="###,###,###0.00" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=qty1 visible="1	if( qty1 =0,0,1)" band=detail id=6 x="4604" y="10" height="177" width="437" color="0" border="0" alignment="1" format="	f_SetColumnFormat('Qty')" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=bonus1 visible="1	if( bonus1 =0,0,1)" band=detail id=7 x="5104" y="10" height="177" width="343" color="0" border="0" alignment="1" format="	f_SetColumnFormat('Qty')" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=qty2 visible="1	if( qty2 =0,0,1)" band=detail id=9 x="6333" y="10" height="177" width="437" color="0" border="0" alignment="1" format="	f_SetColumnFormat('Qty')" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=bonus2 visible="1	if( bonus2 =0,0,1)" band=detail id=10 x="6833" y="10" height="177" width="343" color="0" border="0" alignment="1" format="	f_SetColumnFormat('Qty')" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=qty3 visible="1	if( qty3 =0,0,1)" band=detail id=12 x="8072" y="10" height="177" width="437" color="0" border="0" alignment="1" format="	f_SetColumnFormat('Qty')" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=bonus3 visible="1	if( bonus3 =0,0,1)" band=detail id=13 x="8572" y="10" height="177" width="343" color="0" border="0" alignment="1" format="	f_SetColumnFormat('Qty')" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=category visible="1" band=header.1 id=1 x="93" y="21" height="197" width="3812" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=60 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="700" tabsequence=0 )
+compute(name=compute_7 visible="1	if(sum(value1 for group 1)=0,0,1)" band=trailer.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="4604" y="52" height="177" width="1656" format="###,###,###0.00" expression="sum(value1 for group 1)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+line(name=l_12 visible="1" band=trailer.1 background.mode="2" background.color="16777215" pen.style="2" pen.width="10" pen.color="0" x1="4562" y1="62" x2="4562" y2="218" )
+text(name=t_2 visible="1" band=trailer.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="3510" y="52" height="166" width="1020" text="Category Total:" html.valueishtml="0" )
+line(name=l_4 visible="1" band=trailer.1 background.mode="2" background.color="16777215" pen.style="2" pen.width="10" pen.color="0" x1="3510" y1="260" x2="9781" y2="260" )
+line(name=l_3 visible="1" band=trailer.1 background.mode="2" background.color="16777215" pen.style="2" pen.width="10" pen.color="0" x1="3510" y1="10" x2="9781" y2="10" )
+compute(name=compute_8 visible="1	if(sum(value2 for group 1)=0,0,1)" band=trailer.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="6333" y="52" height="177" width="1656" format="###,###,###0.00" expression="sum(value2 for group 1)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+line(name=l_10 visible="1" band=trailer.1 background.mode="2" background.color="16777215" pen.style="2" pen.width="10" pen.color="0" x1="6291" y1="62" x2="6291" y2="218" )
+line(name=l_16 visible="1" band=trailer.1 background.mode="2" background.color="16777215" pen.style="2" pen.width="10" pen.color="0" x1="8031" y1="62" x2="8031" y2="218" )
+compute(name=compute_9 visible="1	if(sum(value3 for group 1)=0,0,1)" band=trailer.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="8083" y="52" height="177" width="1656" format="###,###,###0.00" expression="sum(value3 for group 1)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+htmltable(border="1" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" encodeSelfLinkArgs="1" generateJavaScript="1" netscapeLayers="0" pagingMethod=0 )
+xhtmlgen() cssgen(sessionSpecific="0" )
+xmlgen(inline="0" )
+xsltgen()
+jsgen()
+export.xml(headGroups="1" includewhitespace="0" metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 distill.customPostScript="0" xslfop.print="0" )
+export.xhtml()

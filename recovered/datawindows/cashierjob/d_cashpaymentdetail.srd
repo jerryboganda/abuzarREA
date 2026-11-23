@@ -1,0 +1,74 @@
+release 12.5;
+datawindow ( units=0 timer_interval=0 processing=1 color=80263581 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.documentname=""  print.orientation=0 print.margin.left=110 print.margin.right=110 print.margin.top=97 print.margin.bottom=97 print.paper.size=0 print.paper.source=0 grid.lines=0 selected.mouse=yes hidegrayline=no showbackcoloronxp=no)
+header(height=72 color="536870912" )
+summary(height=0 color="536870912" )
+footer(height=72 color="536870912" )
+detail(height=76 color="536870912" )
+table(column=(type=char(12) updatewhereclause=yes name=fullcode dbname="fullcode"  )
+column=(type=long update=yes updatewhereclause=yes name=acccode dbname="GLDetail.acccode" 
+ values=""  )
+column=(type=decimal(2) update=yes updatewhereclause=yes validation="real(GetText()) >= 0" initial="0" name=credit dbname="GLDetail.credit"  )
+column=(type=char(20) update=yes updatewhereclause=yes name=chkno dbname="GLDetail.chkno"  )
+column=(type=char(100) update=yes updatewhereclause=yes name=remarks dbname="GLDetail.remarks"  )
+column=(type=long key=yes update=yes updatewhereclause=yes name=code dbname="GLDetail.glvochcode"  )
+column=(type=char(50) updatewhereclause=yes name=regno dbname="regno"  )
+column=(type=long update=yes updatewhereclause=yes name=patientcode dbname="GLDetail.patientcode" 
+ values=""  )
+column=(type=long key=yes identity=yes update=yes updatewhereclause=yes name=glrowid dbname="GLROWID"  )
+column=(type=decimal(0) update=yes updatewhereclause=yes name=glutn dbname="GLUTN"  )
+column=(type=char(200) updatewhereclause=yes name=balance dbname="balance"  )
+column=(type=decimal(2) update=yes updatewhereclause=yes validation="Real(GetText()) > 0" initial="0" name=debit dbname="GLDetail.debit"  )
+ retrieve="  SELECT  
+			 fullcode=dbo.accounts.aliasname,
+			 dbo.gldetail.acccode ,
+			 dbo.gldetail.credit ,
+          dbo.gldetail.chkno ,
+          dbo.gldetail.remarks ,
+          dbo.gldetail.glvochcode ,
+			 regno = (SELECT regno FROM Patient WHERE Patient.PatientCode = dbo.gldetail.patientcode),
+			 dbo.gldetail.patientcode,
+			 GLROWID=dbo.gldetail.IDENTITYCOL,
+			 GLUTN=dbo.gldetail.GLUTN,
+			 balance=space(200),
+          dbo.gldetail.debit
+
+  FROM    dbo.gldetail ,
+          dbo.glheader, 
+			 dbo.accounts
+
+  WHERE   ( dbo.glheader.glvochcode = :ar_VochCode ) and
+          ( dbo.glheader.glvochcode = dbo.gldetail.glvochcode ) and
+          ( dbo.glheader.acccode <> dbo.gldetail.acccode ) and 
+			 ( dbo.gldetail.acccode = dbo.accounts.acccode )
+ORDER BY  dbo.gldetail.IDENTITYCOL
+"
+  update="gldetail" updatewhere=1 updatekeyinplace=yes
+  arguments=(("ar_VochCode", number))
+)
+text(name=t_1 band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="553648127" color="0" alignment="2" border="6" x="9" y="8" height="60" width="101" text="No." )
+text(name=aliasname_t band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80263581" color="0" alignment="2" border="6" x="119" y="8" height="60" width="311" text="Alias Name" )
+text(name=acccode_t band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="2" border="6" x="439" y="8" height="60" width="1189" text="Account Name" )
+text(name=remarks_t band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80263581" color="0" alignment="2" border="6" x="1637" y="8" height="60" width="1033" text="Description" )
+text(name=t_2 band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80263581" color="0" alignment="2" border="6" x="2679" y="8" height="60" width="416" text="Amount" )
+text(name=regno_t band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80263581" color="0" alignment="2" border="6" x="3104" y="8" height="60" width="343" text="Reg. No." )
+text(name=patientcode_t band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80263581" color="0" alignment="2" border="6" x="3456" y="8" height="60" width="855" text="Patient" )
+text(name=t_balance visible="1	0" band=footer font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="553648127" color="0" alignment="0" border="0" x="439" y="4" height="64" width="1189" text="" )
+compute(name=c_totalamt band=footer font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="553648127" color="0" x="2679" y="4" height="60" width="416" format="###,###,###,##0.00" expression="sum(debit for all)" alignment="1" border="0" crosstab.repeat=no )
+text(name=t_3 band=footer font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="553648127" color="0" alignment="1" border="0" x="1637" y="4" height="64" width="1033" text="Total : " )
+compute(name=c_rowid band=detail font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" x="9" y="4" height="68" width="101" format="[general]" expression="GetRow()" alignment="0" border="0" crosstab.repeat=no )
+column(name=remarks band=detail id=5 x="1637" y="4" height="68" width="1033" color="0" border="0" alignment="0" format="[general]" edit.focusrectangle=no edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=upper edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=100 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=30 )
+column(name=acccode band=detail id=2 x="439" y="4" height="68" width="1189" color="0" border="0" alignment="0" format="[general]" dddw.allowedit=yes dddw.autohscroll=yes dddw.autoretrieve=yes dddw.useasborder=no dddw.case=upper dddw.datacolumn=acccode dddw.displaycolumn=name dddw.hscrollbar=yes dddw.hsplitscroll=no dddw.imemode=0 dddw.limit=50 dddw.name=ddd_allaccounts dddw.nilisnull=yes dddw.percentwidth=265 dddw.lines=15 dddw.required=yes dddw.showlist=no dddw.vscrollbar=yes criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=20 )
+column(name=fullcode band=detail id=1 x="119" y="4" height="68" width="311" color="0" border="0" alignment="0" format="[general]" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=upper edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=12 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=10 )
+column(name=debit band=detail id=12 x="2679" y="4" height="68" width="416" color="0" border="0" alignment="1" format="###,###,##0.00" editmask.focusrectangle=no editmask.autoskip=no editmask.required=yes editmask.readonly=no editmask.codetable=no editmask.ddcalendar=no editmask.spin=no editmask.useformat=no editmask.mask="###,###,##0.00" editmask.imemode=0 editmask.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=40 )
+column(name=regno band=detail id=7 x="3104" y="4" height="68" width="343" color="0" border="0" alignment="0" format="[general]" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=50 )
+column(name=patientcode band=detail id=8 x="3456" y="4" height="68" width="855" color="0" border="0" alignment="0" format="[general]" dddw.allowedit=yes dddw.autohscroll=no dddw.autoretrieve=yes dddw.useasborder=no dddw.case=upper dddw.datacolumn=patientcode dddw.displaycolumn=patient dddw.hscrollbar=yes dddw.hsplitscroll=no dddw.imemode=0 dddw.limit=60 dddw.name=ddd_patientall dddw.nilisnull=yes dddw.percentwidth=200 dddw.lines=8 dddw.required=no dddw.showlist=no dddw.vscrollbar=yes criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=60 )
+htmltable(border="0" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" generateJavaScript="1" pagingMethod=0 )
+xhtmlgen() cssgen()
+xmlgen()
+xsltgen()
+jsgen()
+export.xml(metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 )
+export.xhtml()

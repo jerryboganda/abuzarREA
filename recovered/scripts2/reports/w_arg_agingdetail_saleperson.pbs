@@ -1,0 +1,94 @@
+// window w_arg_agingdetail_saleperson (reports)  ancestor: w_listarguments
+
+// w_arg_agingdetail_saleperson.create() returns 0
+	integer icurrent
+	call super::create
+	this.st_4 = create st_4
+	this.st_8 = create st_8
+	this.em_interval = create em_interval
+	this.st_9 = create st_9
+	this.st_10 = create st_10
+	this.em_limit = create em_limit
+	this.gb_5 = create gb_5
+	this.gb_7 = create gb_7
+	icurrent = upperbound(this.control)
+	this.control[icurrent + 1] = this.st_4
+	this.control[icurrent + 2] = this.st_8
+	this.control[icurrent + 3] = this.em_interval
+	this.control[icurrent + 4] = this.st_9
+	this.control[icurrent + 5] = this.st_10
+	this.control[icurrent + 6] = this.em_limit
+	this.control[icurrent + 7] = this.gb_5
+	this.control[icurrent + 8] = this.gb_7
+
+// w_arg_agingdetail_saleperson.destroy() returns 0
+	call super::destroy
+	destroy this.st_4
+	destroy this.st_8
+	destroy this.em_interval
+	destroy this.st_9
+	destroy this.st_10
+	destroy this.em_limit
+	destroy this.gb_5
+	destroy this.gb_7
+
+// w_arg_agingdetail_saleperson.open() returns long
+	long ancestorreturnvalue
+	long ll_counter
+	long ll_rowcount
+	integer rtncode
+	listviewitem l_lvi
+	ancestorreturnvalue = super::open()
+	this.dw_control.settransobject(sqlca)
+	this.dw_control.insertrow(0)
+	this.dw_control.scrolltorow(0)
+	return ::message.returnvalue
+
+// dw_control.ue_enterkey() returns long
+	long ancestorreturnvalue
+	ancestorreturnvalue = super::ue_enterkey()
+	send(handle(this), 256, 9, long(90))
+	return 1
+
+// cb_ok.clicked() returns long
+	long ancestorreturnvalue
+	long ll_count
+	long ll_counter
+	long ll_found
+	double ld_value
+	ancestorreturnvalue = super::clicked()
+	parent.istr_arg.l_code3 = parent.dw_control.getitemnumber(1, "salesman")
+	parent.istr_arg.i_supress = parent.cbx_supress.checked
+	parent.istr_arg.i_hide = parent.cbx_hide.checked
+	parent.em_startdate.getdata(parent.istr_arg.d_sdate)
+	parent.em_enddate.getdata(parent.istr_arg.d_edate)
+	parent.em_interval.getdata(ld_value)
+	parent.istr_arg.l_code1 = long(ld_value)
+	parent.em_limit.getdata(ld_value)
+	parent.istr_arg.l_code2 = long(ld_value)
+	if parent.istr_arg.l_code1 <= 0 then
+		messagebox("Aging Interval Validation!", "Aging interval should be greater than zero.")
+		parent.em_interval.setfocus()
+		return ::message.returnvalue
+	end if
+	if parent.istr_arg.l_code2 <= 0 then
+		messagebox("Aging Limit Validation!", "Aging Limit should be greater than zero.")
+		parent.em_limit.setfocus()
+		return ::message.returnvalue
+	end if
+	if parent.istr_arg.l_code1 > parent.istr_arg.l_code2 then
+		messagebox("Aging Interval Validation!", "Aging interval should be less or equal to aging limit.")
+		parent.em_interval.setfocus()
+		return ::message.returnvalue
+	end if
+	parent.istr_arg.i_status = 1
+	parent.post event ue_close(1)
+	return ::message.returnvalue
+
+// em_interval.ue_enterkey() returns long
+	send(handle(this), 256, 9, long(90))
+	return 1
+
+// em_limit.ue_enterkey() returns long
+	send(handle(this), 256, 9, long(90))
+	return 1

@@ -1,0 +1,106 @@
+release 12.5;
+datawindow ( units=0 timer_interval=0 processing=4 color=1090519039 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.documentname=""  print.orientation=0 print.margin.left=110 print.margin.right=110 print.margin.top=96 print.margin.bottom=96 print.paper.size=1 print.paper.source=0 grid.lines=2 grid.columnmove=no selected.mouse=no hidegrayline=no showbackcoloronxp=no crosstab.dynamic=yes)
+header[1](height=616 color="536870912" )
+header[2](height=76 color="536870912" )
+summary(height=112 color="536870912" )
+footer(height=0 color="536870912" )
+detail(height=84 color="536870912" )
+table(column=(type=char(20) updatewhereclause=yes name=customer dbname="customer"  )
+column=(type=number updatewhereclause=yes name=documentcode dbname="documentcode"  )
+column=(type=datetime updatewhereclause=yes name=date dbname="date"  )
+column=(type=char(20) updatewhereclause=yes name=patient dbname="patient"  )
+column=(type=char(20) updatewhereclause=yes name=designation dbname="designation"  )
+column=(type=char(20) updatewhereclause=yes name=division dbname="division"  )
+column=(type=number updatewhereclause=yes name=invtotal dbname="invtotal"  )
+ retrieve=" SELECT  documentcode = saleledgermodified.saleinvcode,
+		division=max(custrefno2),
+		customer=(select name from accounts where accounts.acccode=:ai_custcode),
+		relation=ISNULL((select name from relation where relationcode=saleledgermodified.relationcode),'None'),
+		patient=(select name from patient where patient.patientcode=saleledgermodified.patientcode),
+		Designation=(select rank.name from rank,patient where patient.patientcode=saleledgermodified.patientcode and patient.rankcode=rank.rankcode),
+		
+		AlternateAccCode = CASE saleledgermodified.saleCatCode
+				WHEN 1 THEN saleledgermodified.custcode  /* Cash Sale */
+				WHEN 3 THEN saleledgermodified.custcode  /* Cash Sale */
+				ELSE Null
+				END,
+		Date    = saleledgermodified.date,
+		
+		invtotal= /*-------gross------*/
+			Round(
+			SUM((saledetailmodified.looseqty*(saledetailmodified.saleprice - saledetailmodified.itemflatdisc)) *
+			(1 - (.01 * saledetailmodified.discperc))) * (1- (.01 * saleledgermodified.discperc)) + 
+			saleledgermodified.misccharges + saleledgermodified.salestax - saleledgermodified.flatdisc, 0)
+			+ /*-----sales tax-------*/
+			Round(
+			SUM( (saledetailmodified.looseqty + saledetailmodified.bonusqty) * saledetailmodified.unitsalestax) + 
+			SUM(ROUND( (saledetailmodified.looseqty * 
+			(saledetailmodified.saleprice - saledetailmodified.itemflatdisc)) *
+			(1 - (.01 * saledetailmodified.discperc)) * saledetailmodified.gstperc * .01, 2)) +
+			ROUND( (SUM((saledetailmodified.looseqty * 
+			(saledetailmodified.saleprice - saledetailmodified.itemflatdisc)) *
+			(1 - (.01 * saledetailmodified.discperc))) * (1- (.01 * saleledgermodified.discperc)) -
+			saleledgermodified.flatdisc) * (saleledgermodified.invgstperc1 * .01), 2), 0)
+
+		
+		
+	FROM    saleledgermodified,	 
+			  saledetailmodified		
+	WHERE saleledgermodified.custcode IN (:ai_custcode) AND
+			saleledgermodified.date>=:ad_sdate AND saleledgermodified.date<=:ad_ldate AND
+			saleledgermodified.saleinvcode = saledetailmodified.saleinvcode 
+	GROUP BY saleledgermodified.saleinvcode,
+		 saleledgermodified.custcode, 
+		 saleledgermodified.salecatcode,
+		 saleledgermodified.date,
+		 saleledgermodified.discperc,
+		 saleledgermodified.misccharges,
+		 saleledgermodified.salestax,
+		 saleledgermodified.flatdisc,
+		 saleledgermodified.invgstperc1,
+		 saleledgermodified.relationcode,
+		 saleledgermodified.patientcode
+  ORDER BY saleledgermodified.saleinvcode"
+  arguments=(("ad_sdate", datetime), ("ad_ldate", datetime), ("ai_custcode", number))
+ sort="customer A, documentcode A, date A, patient A, designation A, division A"
+)
+compute(name=compute_4 band=background font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" x="50" y="108" height="64" width="3118" format="[General]" expression="f_ReportHeaderInfo('clientname')" alignment="2" border="0" crosstab.repeat=no )
+compute(name=compute_5 band=background font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="50" y="188" height="64" width="3118" format="[General]" expression="f_ReportHeaderInfo('address1')" alignment="2" border="0" crosstab.repeat=no )
+compute(name=compute_6 band=background font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="50" y="264" height="64" width="3118" format="[General]" expression="f_ReportHeaderInfo('address2')" alignment="2" border="0" crosstab.repeat=no )
+compute(name=page_1 band=background font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="2226" y="24" height="64" width="855" format="[general]" expression="'Page ' + page() + ' of ' + pageCount()" alignment="0" border="0" crosstab.repeat=no )
+text(name=t_1 band=background font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" alignment="2" border="0" x="73" y="20" height="64" width="3090" text="Customer Wise Sale Summary" )
+text(name=t_3 band=background font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="50" y="448" height="64" width="215" text="FROM:" )
+compute(name=compute_1 band=background font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="283" y="448" height="64" width="430" format="DD/MM/YYYY" expression=" ad_sdate " alignment="0" border="0" crosstab.repeat=no )
+text(name=t_4 band=background font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="731" y="448" height="64" width="133" text="TO:" )
+compute(name=compute_2 band=background font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="873" y="448" height="64" width="571" format="DD/MM/YYYY" expression=" ad_ldate " alignment="0" border="0" crosstab.repeat=no )
+text(name=t_5 band=background font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="50" y="524" height="64" width="370" text="CUSTOMER:" )
+compute(name=compute_3 band=background font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="434" y="524" height="64" width="1723" format="[GENERAL]" expression=" customer " alignment="0" border="0" crosstab.repeat=no )
+line(name=l_1 band=background background.mode="2" background.color="16777215" pen.style="0" pen.width="5" pen.color="0" x1="50" y1="596" x2="3118" y2="596" )
+text(name=t_2 band=header[1] font.charset="0" font.face="MS Sans Serif" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="23" y="4" height="52" width="5" text="Relation" )
+compute(name=date_1 band=header[1] font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="50" y="20" height="64" width="983" format="DD/MM/YY" expression="today()" alignment="0" border="0" crosstab.repeat=no )
+text(name=documentcode_t band=header[2] font.charset="0" font.face="MS Sans Serif" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="23" y="4" height="52" width="5" text="Documentcode" )
+text(name=date_t visible="1	0" band=header[2] font.charset="0" font.face="MS Sans Serif" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="37" y="4" height="52" width="5" text="Date" )
+text(name=patient_t band=header[2] font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="50" y="4" height="64" width="983" text="PATIENT" )
+text(name=designation_t band=header[2] font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="1042" y="4" height="64" width="457" text="DESIG" )
+text(name=division_t band=header[2] font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="1509" y="4" height="64" width="329" text="DIVISIN" )
+text(name=invtotal_t band=header[2] font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" alignment="1" border="0" x="1847" y="4" height="64" width="343" text="@relation" )
+compute(name=compute_17 band=summary font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" x="1847" y="4" height="76" width="343" format="####0.00" expression="sum(invtotal for all )" alignment="1" border="0" crosstab.repeat=no )
+column(name=customer visible="1	0" band=detail id=1 x="9" y="4" height="76" width="5" color="0" border="0" alignment="0" format="[general]" edit.focusrectangle=no edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=documentcode visible="1	0" band=detail id=2 x="23" y="4" height="76" width="5" color="0" border="0" alignment="1" format="[general]" edit.focusrectangle=no edit.autohscroll=yes edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=date visible="1	0" band=detail id=3 x="37" y="4" height="76" width="5" color="0" border="0" alignment="0" format="[shortdate] [time]" edit.focusrectangle=no edit.autohscroll=yes edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=patient band=detail id=4 x="50" y="4" height="76" width="983" color="0" border="0" alignment="0" format="[general]" edit.focusrectangle=no edit.autohscroll=yes edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=designation band=detail id=5 x="1042" y="4" height="76" width="457" color="0" border="0" alignment="0" format="[general]" edit.focusrectangle=no edit.autohscroll=yes edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=division band=detail id=6 x="1509" y="4" height="76" width="329" color="0" border="0" alignment="0" format="[general]" edit.focusrectangle=no edit.autohscroll=yes edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=invtotal band=detail id=7 x="1847" y="4" height="76" width="343" color="0" border="0" alignment="1" format="####0.00" edit.focusrectangle=no edit.autohscroll=yes edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=yes background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+crosstab(columns="relation" rows="customer, documentcode, date, patient, designation, division" values="sum(invtotal for crosstab)" sourcenames = "documentcode, division, customer, relation, patient, designation, alternateacccode, date, invtotal" crosstabonly=yes  band=foreground )
+sparse(names="customer	documentcode	date	patient	designation")
+htmltable(border="0" cellPadding="1" cellSpacing="1" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" generateJavaScript="1" pagingMethod=0 )
+xhtmlgen() cssgen()
+xmlgen()
+xsltgen()
+jsgen()
+export.xml(metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 )
+export.xhtml()

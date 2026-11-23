@@ -1,0 +1,80 @@
+release 12.5;
+datawindow ( units=0 timer_interval=60000 processing=0 color=16777215 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.printername=""  print.documentname=""  print.orientation=0 print.margin.left=110 print.margin.right=110 print.margin.top=96 print.margin.bottom=96 print.paper.size=0 print.paper.source=0 print.canusedefaultprinter=yes selected.mouse=no hidegrayline=no showbackcoloronxp=no)
+header(height=564 color="536870912" )
+summary(height=0 color="536870912" )
+footer(height=0 color="536870912" )
+detail(height=72 color="536870912" )
+table(column=(type=datetime updatewhereclause=yes name=transdate dbname="TransDate"  )
+column=(type=char(75) updatewhereclause=yes name=aliasname dbname="AliasName"  )
+column=(type=char(60) updatewhereclause=yes name=itemname dbname="ItemName"  )
+column=(type=char(19) updatewhereclause=yes name=transtype dbname="TransType"  )
+column=(type=long updatewhereclause=yes name=transcode dbname="TransCode"  )
+ retrieve="SELECT TransDate=H.Date, AliasName=I.CustomICode, ItemName = I.Name, TransType = 'Purchase', TransCode = H.PurInvCode
+FROM PurDetail D, PurLedger H, Item I
+Where H.Posted = 'N' AND H.PurInvCode = D.PurInvCode AND D.ICode = :ai_icode AND D.ICode=I.ICode
+UNION ALL  
+SELECT TransDate=H.Date, AliasName=I.CustomICode, ItemName = I.Name, TransType = 'P/Return', TransCode = H.PrInvCode
+FROM PrDetail D, PrLedger H, Item I
+Where H.Posted = 'N' AND H.PrInvCode = D.PrInvCode AND D.ICode = :ai_icode AND D.ICode=I.ICode
+UNION ALL  
+SELECT TransDate=H.Date, AliasName=I.CustomICode, ItemName = I.Name, TransType = 'Sale', TransCode = H.SaleInvCode
+FROM SaleDetail D, SaleLedger H, Item I
+Where H.Posted = 'N' AND H.SaleInvCode = D.SaleInvCode AND D.ICode = :ai_icode AND D.ICode=I.ICode
+UNION ALL  
+SELECT TransDate=H.Date, AliasName=I.CustomICode, ItemName = I.Name, TransType = 'S/Return', TransCode = H.SrInvCode
+FROM SRDetail D, SRLedger H, Item I
+Where H.Posted = 'N' AND H.SRInvCode = D.SRInvCode AND D.ICode = :ai_icode AND D.ICode=I.ICode
+UNION ALL  
+SELECT TransDate=H.Date, AliasName=I.CustomICode, ItemName = I.Name, TransType = 'S/Return Buffer', TransCode = H.SRBufferInvCode
+FROM SRBufferDetail D, SRBufferLedger H, Item I
+Where H.Posted = 'N' AND H.SRBufferInvCode = D.SRBufferInvCode AND D.ICode = :ai_icode AND D.ICode=I.ICode
+UNION ALL  
+SELECT TransDate=H.Date, AliasName=I.CustomICode, ItemName = I.Name, TransType = 'Adjustment ' + CASE H.AdjCatCode WHEN 1 THEN 'Increase' ELSE 'Decrease' END, TransCode = H.AdjCode
+FROM AdjDetail D, AdjHeader H, Item I
+Where H.Posted = 'N' AND H.AdjCode = D.AdjCode AND D.ICode = :ai_icode AND D.ICode=I.ICode
+UNION ALL  
+SELECT TransDate=H.Date, AliasName=I.CustomICode, ItemName = I.Name, TransType = 'Issue', TransCode = H.IssueInvCode
+FROM IssueDetail D, IssueHeader H, Item I
+Where H.Posted = 'N' AND H.IssueInvCode = D.IssueInvCode AND D.ICode = :ai_icode AND D.ICode=I.ICode
+UNION ALL  
+SELECT TransDate=H.Date, AliasName=I.CustomICode, ItemName = I.Name, TransType = 'Receipt', TransCode = H.ReceiptInvCode
+FROM ReceiptDetail D, ReceiptHeader H, Item I
+Where H.Posted = 'N' AND H.ReceiptInvCode = D.ReceiptInvCode AND D.ICode = :ai_icode AND D.ICode=I.ICode
+UNION ALL  
+SELECT TransDate=H.Date, AliasName=I.CustomICode, ItemName = I.Name, TransType = 'Transfer', TransCode = H.TransCode
+FROM TDetail D, THeader H, Item I
+Where H.Posted = 'N' AND H.TransCode = D.TransCode  AND D.ICode = :ai_icode AND D.ICode=I.ICode
+ORDER BY TransDate"
+  arguments=(("ai_icode", number))
+)
+compute(name=c_address1 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="41" y="244" height="60" width="3255" format="[general]" expression="f_ReportHeaderInfo('address1')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=c_companyname visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" x="41" y="172" height="60" width="3255" format="[general]" expression="f_ReportHeaderInfo('clientname')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_6 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" alignment="2" border="0" x="41" y="96" height="64" width="3255" text="Unposted Transaction List for an Item" html.valueishtml="0" )
+compute(name=compute_2 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="2619" y="20" height="60" width="677" format="[general]" expression="'Page ' + page() + ' of ' + pageCount()" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=c_address2 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="41" y="316" height="60" width="3255" format="[general]" expression="f_ReportHeaderInfo('address2')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+line(name=l_1 visible="1" band=header background.mode="2" background.color="16777215" pen.style="2" pen.width="5" pen.color="0" x1="41" y1="464" x2="3296" y2="464" )
+line(name=l_2 visible="1" band=header background.mode="2" background.color="16777215" pen.style="2" pen.width="5" pen.color="0" x1="41" y1="556" x2="3296" y2="556" )
+text(name=t_2 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="37" y="20" height="64" width="160" text="Date: " html.valueishtml="0" )
+compute(name=compute_1 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="224" y="20" height="64" width="699" format="dd/mm/yyyy hh:mm:ss" expression="today()" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+column(name=aliasname visible="1" band=header id=2 x="375" y="388" height="64" width="841" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=75 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="700" tabsequence=0 )
+text(name=itemname_t visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" alignment="0" border="0" x="1243" y="388" height="64" width="288" text="Item Name:" html.valueishtml="0" )
+column(name=itemname visible="1" band=header id=3 x="1545" y="388" height="64" width="1746" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=60 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="700" tabsequence=0 )
+text(name=aliasname_t visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" alignment="0" border="0" x="37" y="388" height="64" width="325" text="Alias Name:" html.valueishtml="0" )
+text(name=t_1 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" alignment="0" border="0" x="37" y="480" height="64" width="210" text="Sr. No." html.valueishtml="0" )
+text(name=transtype_t visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" alignment="2" border="0" x="1010" y="480" height="64" width="251" text="Type" html.valueishtml="0" )
+text(name=transdate_t visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" alignment="2" border="0" x="293" y="480" height="64" width="238" text="Date" html.valueishtml="0" )
+text(name=transcode_t visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" alignment="2" border="0" x="1824" y="480" height="64" width="517" text="Transaction code" html.valueishtml="0" )
+compute(name=compute_3 visible="1" band=detail font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" x="41" y="4" height="64" width="215" format="[GENERAL]" expression="getrow()" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+column(name=transtype visible="1" band=detail id=4 x="1010" y="4" height="64" width="777" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=19 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=transdate visible="1" band=detail id=1 x="293" y="4" height="64" width="681" color="33554432" border="0" alignment="0" format="dd/mm/yyyy hh:mm:ss" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=transcode visible="1" band=detail id=5 x="1824" y="4" height="64" width="517" color="33554432" border="0" alignment="2" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+htmltable(border="1" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" encodeSelfLinkArgs="1" generateJavaScript="1" netscapeLayers="0" pagingMethod=0 )
+xhtmlgen() cssgen(sessionSpecific="0" )
+xmlgen(inline="0" )
+xsltgen()
+jsgen()
+export.xml(headGroups="1" includewhitespace="0" metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 distill.customPostScript="0" xslfop.print="0" )
+export.xhtml()

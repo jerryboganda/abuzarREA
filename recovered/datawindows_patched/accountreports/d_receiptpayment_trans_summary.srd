@@ -1,0 +1,416 @@
+release 12.5;
+datawindow ( units=0 timer_interval=60000 processing=0 color=16777215 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.printername=""  print.documentname=""  print.orientation=0 print.margin.left=110 print.margin.right=110 print.margin.top=96 print.margin.bottom=96 print.paper.size=0 print.paper.source=0 print.canusedefaultprinter=yes selected.mouse=no hidegrayline=no showbackcoloronxp=no)
+header(height=456 color="536870912" )
+summary(height=8 color="536870912" )
+footer(height=0 color="536870912" )
+detail(height=72 color="536870912" )
+table(column=(type=long updatewhereclause=yes name=maintype dbname="MainType"  )
+column=(type=char(8) updatewhereclause=yes name=type dbname="Type"  )
+column=(type=long updatewhereclause=yes name=id dbname="ID"  )
+column=(type=char(60) updatewhereclause=yes name=source dbname="Source"  )
+column=(type=decimal(2) updatewhereclause=yes name=amount dbname="Amount"  )
+column=(type=decimal(2) updatewhereclause=yes name=opening dbname="Opening"  )
+column=(type=decimal(2) updatewhereclause=yes name=receipts dbname="Receipts"  )
+column=(type=decimal(2) updatewhereclause=yes name=payments dbname="Payments"  )
+column=(type=decimal(2) updatewhereclause=yes name=closing dbname="Closing"  )
+ retrieve="SELECT
+	MainType=1,
+	BC.Type,
+	BC.ID,
+	Source=CASE BC.Code 
+		WHEN -100 THEN 'Opening Balance' 
+		WHEN -101 THEN 'Cash From Sales' 
+		WHEN -102 THEN 'Cash From Service Sales' 
+		WHEN -103 THEN 'Cash Paid for Sales Returns' 
+		WHEN -104 THEN 'Cash Paid for Servives Sales Returns' 
+		WHEN -105 THEN 'Cash Paid for Purchase ' 
+		WHEN -106 THEN 'Cash From Purchase Returns' 
+		ELSE (SELECT Accounts.Name FROM Accounts WHERE Accounts.AccCode = BC.Code) END,
+	Amount=SUM(BC.Amount),
+	Opening = 0.00,
+	Receipts = 0.00,
+	Payments = 0.00,
+	Closing = 0.00
+FROM
+	(/*SELECT V.AccCode, 
+		Code=-100,
+		Amount = ISNULL(SUM(V.Debit-V.Credit), 0), 
+		Type='Opening Balance...............', 
+		id=0
+	FROM VirtualGL V
+	WHERE
+		V.Date < :ar_startdate AND
+		V.AccCode IN
+			(SELECT AccCode 
+			FROM Accounts 
+			WHERE SUBCODE IN 
+				(SELECT Code FROM Global WHERE Name = LOWER('GT_CashSub') AND (:ar_cashbank=1 OR :ar_cashbank=3)
+				UNION
+				SELECT Code FROM Global WHERE Name = LOWER('GT_BankSub') AND (:ar_cashbank=2 OR :ar_cashbank=3)
+				UNION
+				SELECT Code FROM Global WHERE Name IN (LOWER('GT_CashSub'), LOWER('GT_BankSub')) AND :ar_cashbank=3))
+	GROUP BY V.AccCode
+	UNION ALL
+	*/
+	SELECT 	V.AccCode,
+		Code=-101, 
+		Amount = ISNULL(Sum(V.Debit), 0), 
+		Type='Receipts', 
+		Id=1
+	FROM VirtualGl V
+	WHERE
+		V.DocumentType = 'SV' AND
+		V.Debit > 0 AND
+		V.Date >= :ar_startdate AND V.Date <= :ar_enddate AND
+		V.AccCode IN
+			(SELECT AccCode FROM Accounts WHERE SUBCODE IN 
+				(SELECT Code FROM Global WHERE Name = LOWER('GT_CashSub') AND (:ar_cashbank=1 OR :ar_cashbank=3)
+				UNION
+				SELECT Code FROM Global WHERE Name = LOWER('GT_BankSub') AND (:ar_cashbank=2 OR :ar_cashbank=3)
+				UNION
+				SELECT Code FROM Global WHERE Name IN (LOWER('GT_CashSub'), LOWER('GT_BankSub')) AND :ar_cashbank=3))
+	GROUP BY V.AccCode
+	UNION ALL
+	SELECT 	V.AccCode,
+		Code=-102, 
+		Amount = ISNULL(Sum(V.Debit), 0), 
+		Type='Receipts', 
+		Id=2
+	FROM VirtualGl V
+	WHERE
+		V.DocumentType = 'RS' AND
+		V.Debit > 0 AND
+		V.Date >= :ar_startdate AND V.Date <= :ar_enddate AND
+		V.AccCode IN
+			(SELECT AccCode FROM Accounts WHERE SUBCODE IN 
+				(SELECT Code FROM Global WHERE Name = LOWER('GT_CashSub') AND (:ar_cashbank=1 OR :ar_cashbank=3)
+				UNION
+				SELECT Code FROM Global WHERE Name = LOWER('GT_BankSub') AND (:ar_cashbank=2 OR :ar_cashbank=3)
+				UNION
+				SELECT Code FROM Global WHERE Name IN (LOWER('GT_CashSub'), LOWER('GT_BankSub')) AND :ar_cashbank=3))
+	GROUP BY V.AccCode
+	UNION ALL
+	SELECT 	V.AccCode,
+		Code=-103, 
+		Amount = - ISNULL(Sum(V.Credit), 0), 
+		Type='Payments', 
+		Id=50
+	FROM VirtualGl V
+	WHERE
+		V.DocumentType = 'SR' AND
+		V.Credit > 0 AND
+		V.Date >= :ar_startdate AND V.Date <= :ar_enddate AND
+		V.AccCode IN
+			(SELECT AccCode FROM Accounts WHERE SUBCODE IN 
+				(SELECT Code FROM Global WHERE Name = LOWER('GT_CashSub') AND (:ar_cashbank=1 OR :ar_cashbank=3)
+				UNION
+				SELECT Code FROM Global WHERE Name = LOWER('GT_BankSub') AND (:ar_cashbank=2 OR :ar_cashbank=3)
+				UNION
+				SELECT Code FROM Global WHERE Name IN (LOWER('GT_CashSub'), LOWER('GT_BankSub')) AND :ar_cashbank=3))
+	GROUP BY V.AccCode
+	UNION ALL
+	SELECT 	V.AccCode,
+		Code=-104, 
+		Amount = - ISNULL(Sum(V.Credit), 0), 
+		Type='Payments', 
+		Id=50
+	FROM VirtualGl V
+	WHERE
+		V.DocumentType = 'RR' AND
+		V.Credit > 0 AND
+		V.Date >= :ar_startdate AND V.Date <= :ar_enddate AND
+		V.AccCode IN
+			(SELECT AccCode FROM Accounts WHERE SUBCODE IN 
+				(SELECT Code FROM Global WHERE Name = LOWER('GT_CashSub') AND (:ar_cashbank=1 OR :ar_cashbank=3)
+				UNION
+				SELECT Code FROM Global WHERE Name = LOWER('GT_BankSub') AND (:ar_cashbank=2 OR :ar_cashbank=3)
+				UNION
+				SELECT Code FROM Global WHERE Name IN (LOWER('GT_CashSub'), LOWER('GT_BankSub')) AND :ar_cashbank=3))
+	GROUP BY V.AccCode
+	UNION ALL
+	SELECT 	V.AccCode,
+		Code=-105, 
+		Amount = - ISNULL(Sum(V.Credit), 0), 
+		Type='Payments', 
+		Id=50
+	FROM VirtualGl V
+	WHERE
+		V.DocumentType = 'PV' AND
+		V.Credit > 0 AND
+		V.Date >= :ar_startdate AND V.Date <= :ar_enddate AND
+		V.AccCode IN
+			(SELECT AccCode FROM Accounts WHERE SUBCODE IN 
+				(SELECT Code FROM Global WHERE Name = LOWER('GT_CashSub') AND (:ar_cashbank=1 OR :ar_cashbank=3)
+				UNION
+				SELECT Code FROM Global WHERE Name = LOWER('GT_BankSub') AND (:ar_cashbank=2 OR :ar_cashbank=3)
+				UNION
+				SELECT Code FROM Global WHERE Name IN (LOWER('GT_CashSub'), LOWER('GT_BankSub')) AND :ar_cashbank=3))
+	GROUP BY V.AccCode
+	UNION ALL
+	SELECT 	V.AccCode,
+		Code=-106, 
+		Amount = ISNULL(Sum(V.Debit), 0), 
+		Type='Receipts', 
+		Id=3
+	FROM VirtualGl V
+	WHERE
+		V.DocumentType = 'PR' AND
+		V.Debit > 0 AND
+		V.Date >= :ar_startdate AND V.Date <= :ar_enddate AND
+		V.AccCode IN
+			(SELECT AccCode FROM Accounts WHERE SUBCODE IN 
+				(SELECT Code FROM Global WHERE Name = LOWER('GT_CashSub') AND (:ar_cashbank=1 OR :ar_cashbank=3)
+				UNION
+				SELECT Code FROM Global WHERE Name = LOWER('GT_BankSub') AND (:ar_cashbank=2 OR :ar_cashbank=3)
+				UNION
+				SELECT Code FROM Global WHERE Name IN (LOWER('GT_CashSub'), LOWER('GT_BankSub')) AND :ar_cashbank=3))
+	GROUP BY V.AccCode
+	UNION ALL
+	SELECT 	GL.AccCode,	/*Cash/Bank Receipts & Payments Customized For CASH/BANK (Other than JV)*/
+		Code=GD.AccCode, 
+		Amount = ISNULL(GD.Credit - GD.Debit, 0), 
+		Type=CASE WHEN GD.Credit - GD.Debit > 0 THEN 'Receipts' ELSE 'Payments' END, 
+		Id=CASE WHEN GD.Credit - GD.Debit > 0  THEN 11 ELSE 51 END
+	FROM GlDetail GD, GlHeader GL, VocherCategory VC
+	WHERE
+		GL.Posted='Y' AND
+		GL.Date >= :ar_startdate AND GL.Date <= :ar_enddate AND
+		GL.GlVochCode = GD.GlVochCode AND
+		GL.VochCatCode = VC.VochCatCode AND
+		VC.JournalVoucher=0 AND
+		GL.AccCode <> GD.AccCode AND	
+		GL.AccCode IN
+			(SELECT AccCode FROM Accounts WHERE SUBCODE IN 
+				(SELECT Code FROM Global WHERE Name = LOWER('GT_CashSub') AND (:ar_cashbank=1 OR :ar_cashbank=3)
+				UNION
+				SELECT Code FROM Global WHERE Name = LOWER('GT_BankSub') AND (:ar_cashbank=2 OR :ar_cashbank=3)
+				UNION
+				SELECT Code FROM Global WHERE Name IN (LOWER('GT_CashSub'), LOWER('GT_BankSub')) AND :ar_cashbank=3))
+	UNION ALL
+	SELECT GD.AccCode,	/*Cash/Bank Receipts & Payments Customized For CASH/BANK (Other than JV) CONTRA AFFECT*/
+		Code=GL.AccCode, 
+		Amount = ISNULL(GD.Debit - GD.Credit, 0), 
+		Type=CASE WHEN GD.Debit - GD.Credit > 0 THEN 'Receipts' ELSE 'Payments' END, 
+		Id=CASE WHEN GD.Debit - GD.Credit > 0 THEN 12 ELSE 52 END
+	FROM GlDetail GD, GlHeader GL, VocherCategory VC
+	WHERE
+		GL.POsted='Y' AND
+		GL.Date >= :ar_startdate AND GL.Date <= :ar_enddate AND
+		GL.GlVochCode = GD.GlVochCode AND
+		GL.VochCatCode = VC.VochCatCode AND
+		VC.JournalVoucher=0 AND
+		GL.AccCode <> GD.AccCode AND
+		GD.AccCode IN
+			(SELECT AccCode FROM Accounts WHERE SUBCODE IN 
+				(SELECT Code FROM Global WHERE Name = LOWER('GT_CashSub') AND (:ar_cashbank=1 OR :ar_cashbank=3)
+				UNION
+				SELECT Code FROM Global WHERE Name = LOWER('GT_BankSub') AND (:ar_cashbank=2 OR :ar_cashbank=3)
+				UNION
+				SELECT Code FROM Global WHERE Name IN (LOWER('GT_CashSub'), LOWER('GT_BankSub')) AND :ar_cashbank=3)) AND
+		GL.AccCode IN
+			(SELECT AccCode FROM Accounts WHERE SUBCODE IN 
+				(SELECT Code FROM Global WHERE Name = LOWER('GT_CashSub') AND (:ar_cashbank=1 OR :ar_cashbank=3)
+				UNION
+				SELECT Code FROM Global WHERE Name = LOWER('GT_BankSub') AND (:ar_cashbank=2 OR :ar_cashbank=3)
+				UNION
+				SELECT Code FROM Global WHERE Name IN (LOWER('GT_CashSub'), LOWER('GT_BankSub')) AND :ar_cashbank=3))
+	UNION ALL
+	SELECT GD.AccCode,	/*Cash/Bank Receipts & Payments (Other than JV) NOT Customized For CASH/BANK*/
+		Code=GL.AccCode, 
+		Amount = ISNULL(GD.Debit - GD.Credit, 0), 
+		Type=CASE WHEN GD.Debit > 0 THEN 'Receipts' ELSE 'Payments' END, 
+		Id=CASE WHEN GD.Debit > 0 THEN 13 ELSE 53 END
+	FROM GlDetail GD, GlHeader GL, VocherCategory VC
+	WHERE
+		GL.POsted='Y' AND
+		GL.Date >= :ar_startdate AND GL.Date <= :ar_enddate AND
+		GL.VochCatCode = VC.VochCatCode AND
+		VC.JournalVoucher=0 AND
+		GL.GlVochCode = GD.GlVochCode AND
+		GD.AccCode IN
+			(SELECT AccCode FROM Accounts WHERE SUBCODE IN 
+				(SELECT Code FROM Global WHERE Name = LOWER('GT_CashSub') AND (:ar_cashbank=1 OR :ar_cashbank=3)
+				UNION
+				SELECT Code FROM Global WHERE Name = LOWER('GT_BankSub') AND (:ar_cashbank=2 OR :ar_cashbank=3)
+				UNION
+				SELECT Code FROM Global WHERE Name IN (LOWER('GT_CashSub'), LOWER('GT_BankSub')) AND :ar_cashbank=3)) AND
+		GL.AccCode NOT IN
+			(SELECT AccCode FROM Accounts WHERE SUBCODE IN 
+				(SELECT Code FROM Global WHERE Name = LOWER('GT_CashSub') AND (:ar_cashbank=1 OR :ar_cashbank=3)
+				UNION
+				SELECT Code FROM Global WHERE Name = LOWER('GT_BankSub') AND (:ar_cashbank=2 OR :ar_cashbank=3)
+				UNION
+				SELECT Code FROM Global WHERE Name IN (LOWER('GT_CashSub'), LOWER('GT_BankSub')) AND :ar_cashbank=3))
+	UNION ALL
+	SELECT GD.AccCode,	/*Journal Vocher Cash/Bank Receipts OR Payments*/
+		Code=GD.AccCode, 
+		Amount = ISNULL(Debit - GD.Credit, 0), 
+		Type= CASE WHEN Debit > 0 THEN 'Receipts' ELSE 'Payments' END,
+		Id= CASE WHEN Debit > 0 THEN 14 ELSE 54 END
+	FROM GlDetail GD, GlHeader GL, VocherCategory VC
+	WHERE
+		GL.POsted='Y' AND
+		GL.Date >= :ar_startdate AND GL.Date <= :ar_enddate AND
+		GL.VochCatCode = VC.VochCatCode AND
+		VC.JournalVoucher=1 AND
+		GL.GlVochCode = GD.GlVochCode AND
+		GD.AccCode IN
+			(SELECT AccCode FROM Accounts WHERE SUBCODE IN 
+				(SELECT Code FROM Global WHERE Name = LOWER('GT_CashSub') AND (:ar_cashbank=1 OR :ar_cashbank=3)
+				UNION
+				SELECT Code FROM Global WHERE Name = LOWER('GT_BankSub') AND (:ar_cashbank=2 OR :ar_cashbank=3)
+				UNION
+				SELECT Code FROM Global WHERE Name IN (LOWER('GT_CashSub'), LOWER('GT_BankSub')) AND :ar_cashbank=3))
+	UNION ALL
+	SELECT 	V.AccCode,
+		Code=V.AccCode, 
+		Amount = ISNULL(V.Debit - V.Credit, 0), 
+		Type=CASE WHEN V.Debit > 0 THEN 'Receipts' ELSE 'Payments' END, 
+		Id=CASE WHEN V.Debit > 0 THEN 15 ELSE 55 END
+	FROM VirtualGl V
+	WHERE
+		V.DocumentType IN ('NR', 'NP') AND
+		V.Date >= :ar_startdate AND V.Date <= :ar_enddate AND
+		V.AccCode IN
+			(SELECT AccCode FROM Accounts WHERE SUBCODE IN 
+				(SELECT Code FROM Global WHERE Name = LOWER('GT_CashSub') AND (:ar_cashbank=1 OR :ar_cashbank=3)
+				UNION
+				SELECT Code FROM Global WHERE Name = LOWER('GT_BankSub') AND (:ar_cashbank=2 OR :ar_cashbank=3)
+				UNION
+				SELECT Code FROM Global WHERE Name IN (LOWER('GT_CashSub'), LOWER('GT_BankSub')) AND :ar_cashbank=3))) BC
+GROUP BY
+	BC.Type,
+	BC.ID,
+	BC.Code
+UNION ALL
+SELECT
+	MainType=2,
+	Type=' ',
+	ID=0,
+	Source=	(SELECT Accounts.Name FROM Accounts WHERE Accounts.AccCode = BC.AccCode),
+	Amount=0.00,
+	Opening = SUM(BC.Opening),
+	Receipts = SUM(BC.Receipts),
+	Payments = SUM(Payments),
+	Closing = SUM(BC.Closing)
+FROM
+	(SELECT V.AccCode, 
+		Opening = ISNULL(SUM(V.Debit-V.Credit), 0),
+		Receipts = 0.00,
+		Payments = 0.00,
+		Closing = 0.00
+	FROM VirtualGL V
+	WHERE
+		V.Date < :ar_startdate AND
+		V.AccCode IN
+			(SELECT AccCode 
+			FROM Accounts 
+			WHERE SUBCODE IN 
+				(SELECT Code FROM Global WHERE Name = LOWER('GT_CashSub') AND (:ar_cashbank=1 OR :ar_cashbank=3)
+				UNION
+				SELECT Code FROM Global WHERE Name = LOWER('GT_BankSub') AND (:ar_cashbank=2 OR :ar_cashbank=3)
+				UNION
+				SELECT Code FROM Global WHERE Name IN (LOWER('GT_CashSub'), LOWER('GT_BankSub')) AND :ar_cashbank=3))
+	GROUP BY V.AccCode
+	UNION ALL
+	SELECT V.AccCode, 
+		Opening = 0.00,
+		Receipts = 0.00,
+		Payments = 0.00,
+		Closing = ISNULL(SUM(V.Debit-V.Credit), 0)
+	FROM VirtualGL V
+	WHERE
+		V.Date <= :ar_enddate AND
+		V.AccCode IN
+			(SELECT AccCode 
+			FROM Accounts 
+			WHERE SUBCODE IN 
+				(SELECT Code FROM Global WHERE Name = LOWER('GT_CashSub') AND (:ar_cashbank=1 OR :ar_cashbank=3)
+				UNION
+				SELECT Code FROM Global WHERE Name = LOWER('GT_BankSub') AND (:ar_cashbank=2 OR :ar_cashbank=3)
+				UNION
+				SELECT Code FROM Global WHERE Name IN (LOWER('GT_CashSub'), LOWER('GT_BankSub')) AND :ar_cashbank=3))
+	GROUP BY V.AccCode
+	UNION ALL
+	SELECT 	V.AccCode,
+		Opening = 0.00,
+		Receipts = ISNULL(Sum(V.Debit), 0), 
+		Payments = ISNULL(Sum(V.Credit), 0), 
+		Closing = 0.00
+	FROM VirtualGl V
+	WHERE
+		V.Date BETWEEN :ar_startdate AND :ar_enddate AND
+		V.AccCode IN
+			(SELECT AccCode FROM Accounts WHERE SUBCODE IN 
+				(SELECT Code FROM Global WHERE Name = LOWER('GT_CashSub') AND (:ar_cashbank=1 OR :ar_cashbank=3)
+				UNION
+				SELECT Code FROM Global WHERE Name = LOWER('GT_BankSub') AND (:ar_cashbank=2 OR :ar_cashbank=3)
+				UNION
+				SELECT Code FROM Global WHERE Name IN (LOWER('GT_CashSub'), LOWER('GT_BankSub')) AND :ar_cashbank=3))
+	GROUP BY V.AccCode) BC
+WHERE BC.AccCode IN 
+	(SELECT DISTINCT AccCode FROM VirtualGL WHERE Date BETWEEN :ar_startdate AND :ar_enddate AND :ar_transacconly=1
+	UNION
+	SELECT AccCode FROM Accounts WHERE :ar_transacconly=0 AND SUBCODE IN 
+				(SELECT Code FROM Global WHERE Name = LOWER('GT_CashSub') AND (:ar_cashbank=1 OR :ar_cashbank=3)
+				UNION
+				SELECT Code FROM Global WHERE Name = LOWER('GT_BankSub') AND (:ar_cashbank=2 OR :ar_cashbank=3)
+				UNION
+				SELECT Code FROM Global WHERE Name IN (LOWER('GT_CashSub'), LOWER('GT_BankSub')) AND :ar_cashbank=3))
+GROUP BY
+	BC.AccCode
+ORDER BY
+	MainType,
+	id,
+	TYPE Desc,
+	source
+"
+  arguments=(("ar_startdate", datetime), ("ar_enddate", datetime), ("ar_cashbank", number), ("ar_transacconly", number))
+)
+group(level=1 header.height=180 trailer.height=76 by=("maintype"  ) header.color="536870912" trailer.color="536870912" )
+group(level=2 header.height=76 trailer.height=76 by=("type"  ) header.color="536870912" trailer.color="536870912" )
+text(name=t_2 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="1769" y="20" height="64" width="160" text="Date: " html.valueishtml="0" )
+compute(name=compute_5 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="1957" y="20" height="60" width="613" format="dd/mm/yyyy hh:mm:ss" expression="today()" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_4 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" alignment="0" border="0" x="1029" y="388" height="64" width="219" text="To Date:" html.valueishtml="0" )
+compute(name=compute_6 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" x="352" y="388" height="64" width="654" format="dd/mm/yyyy hh:mm" expression=" ar_startdate " alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_7 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" x="1262" y="388" height="64" width="654" format="dd/mm/yyyy hh:mm" expression=" ar_startdate " alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_8 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" x="1957" y="388" height="64" width="1307" format="[GENERAL]" expression="if( ar_cashbank = 1, 'Cash Accounts Only', if( ar_cashbank = 2, 'Bank Accounts Only', 'Cash and Bank Accounts Only'))" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_3 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" alignment="0" border="0" x="41" y="388" height="64" width="293" text="From Date:" html.valueishtml="0" )
+compute(name=c_address2 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="41" y="316" height="60" width="3369" format="[general]" expression="f_ReportHeaderInfo('address2')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=c_address1 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="41" y="244" height="60" width="3369" format="[general]" expression="f_ReportHeaderInfo('address1')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=c_companyname visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" x="41" y="172" height="60" width="3369" format="[general]" expression="f_ReportHeaderInfo('clientname')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_6 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" alignment="2" border="0" x="41" y="96" height="64" width="3369" text="Receipt and Payment Transaction Summary" html.valueishtml="0" )
+compute(name=compute_4 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="2734" y="20" height="60" width="677" format="[general]" expression="'Page ' + page() + ' of ' + pageCount()" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+line(name=l_3 visible="1" band=summary background.mode="1" background.color="553648127" pen.style="2" pen.width="5" pen.color="0" x1="41" y1="0" x2="3410" y2="0" )
+column(name=amount visible="0	if(amount <> 0, 1, 0)" band=detail id=5 x="1527" y="4" height="64" width="448" color="33554432" border="0" alignment="1" format="	if(amount > 0, '###,###,##0.00', '(###,###,##0.00)')" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=opening visible="0	if(opening <> 0, 1, 0)" band=detail id=6 x="1527" y="4" height="64" width="448" color="33554432" border="0" alignment="1" format="	if(opening > 0, '###,###,##0.00', '(###,###,##0.00)')" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=source visible="1" band=detail id=4 x="82" y="4" height="64" width="1417" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=60 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=receipts visible="0	if( receipts <> 0, 1, 0)" band=detail id=7 x="1989" y="4" height="64" width="448" color="33554432" border="0" alignment="1" format="	if( receipts > 0, '###,###,##0.00', '(###,###,##0.00)')" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=payments visible="0	if( payments <> 0, 1, 0)" band=detail id=8 x="2455" y="4" height="64" width="448" color="33554432" border="0" alignment="1" format="	if(payments > 0, '###,###,##0.00', '(###,###,##0.00)')" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=closing visible="0	if(closing<> 0, 1, 0)" band=detail id=9 x="2921" y="4" height="64" width="448" color="33554432" border="0" alignment="1" format="	if(closing > 0, '###,###,##0.00', '(###,###,##0.00)')" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+compute(name=compute_3 visible="1" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" x="41" y="104" height="72" width="1659" format="[GENERAL]" expression="if(maintype=1,'Receipt and Payments', 'Cash and Banks')" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+line(name=l_1 visible="1" band=header.1 background.mode="1" background.color="553648127" pen.style="2" pen.width="5" pen.color="0" x1="41" y1="88" x2="3410" y2="88" )
+line(name=l_2 visible="1" band=header.1 background.mode="1" background.color="553648127" pen.style="2" pen.width="5" pen.color="0" x1="41" y1="0" x2="3410" y2="0" )
+text(name=amount_t visible="1" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" alignment="1" border="0" x="1518" y="12" height="64" width="457" text="	if( maintype =1, 'Amount', 'Opening')" html.valueishtml="0" )
+text(name=source_t visible="1" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" alignment="2" border="0" x="41" y="12" height="64" width="869" text="A/c Head / Description" html.valueishtml="0" )
+text(name=t_1 visible="0	if( maintype =1, 0, 1)" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" alignment="1" border="0" x="1989" y="12" height="64" width="448" text="Receipts" html.valueishtml="0" )
+text(name=t_5 visible="0	if( maintype =1, 0, 1)" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" alignment="1" border="0" x="2455" y="12" height="64" width="448" text="Payments" html.valueishtml="0" )
+text(name=t_7 visible="0	if( maintype =1, 0, 1)" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" alignment="1" border="0" x="2921" y="12" height="64" width="448" text="Closing" html.valueishtml="0" )
+compute(name=compute_12 visible="0	if(sum(opening for group 1)<>0,1,0)" band=trailer.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" x="1527" y="4" height="68" width="448" format="	if(sum(opening for group 1) > 0, '###,###,##0.00', '(###,###,##0.00)')" expression="sum(opening for group 1)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_2 visible="1" band=trailer.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" x="41" y="4" height="68" width="1458" format="[GENERAL]" expression="if(maintype=1, '','Total:')" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_16 visible="0	if(sum(closing for group 1) <> 0, 1, 0)" band=trailer.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" x="2921" y="4" height="64" width="448" format="	if(sum( closing for group 1) > 0, '###,###,##0.00', '(###,###,##0.00)')" expression="sum(closing for group 1)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_17 visible="0	if(sum( payments for group 1) <> 0, 1, 0)" band=trailer.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" x="2455" y="4" height="64" width="448" format="	if(sum( payments  for group 1) > 0, '###,###,##0.00', '(###,###,##0.00)')" expression="sum(payments for group 1)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_18 visible="0	if(sum(receipts for group 1) <> 0, 1, 0)" band=trailer.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" x="1989" y="4" height="64" width="448" format="	if(sum( receipts  for group 1) > 0, '###,###,##0.00', '(###,###,##0.00)')" expression="sum(receipts for group 1)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+column(name=type visible="0	if(id=0,0,1)" band=header.2 id=2 x="41" y="4" height="68" width="1614" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=30 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-9" font.pitch="2" font.weight="700" tabsequence=0 )
+compute(name=compute_10 visible="0	if(id=0,0,1)" band=trailer.2 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" x="41" y="4" height="68" width="1458" format="[GENERAL]" expression="'Total ' + type + ':'" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_9 visible="0	if(id=0,0,if(sum(amount for group 2)<>0,1,0))" band=trailer.2 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" x="1527" y="4" height="68" width="448" format="	if(sum(amount for group 2) > 0, '###,###,##0.00', '(###,###,##0.00)')" expression="sum(amount for group 2)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+htmltable(border="1" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" encodeSelfLinkArgs="1" generateJavaScript="1" netscapeLayers="0" pagingMethod=0 )
+xhtmlgen() cssgen(sessionSpecific="0" )
+xmlgen(inline="0" )
+xsltgen()
+jsgen()
+export.xml(headGroups="1" includewhitespace="0" metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 distill.customPostScript="0" xslfop.print="0" )
+export.xhtml()

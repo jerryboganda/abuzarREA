@@ -1,0 +1,15 @@
+SET NOCOUNT ON;
+SET STATISTICS IO ON;
+SET STATISTICS TIME ON;
+PRINT '=== Q1 StockReport one day (real DW shape) ===';
+SELECT SUM(S.Stock), COUNT(*) FROM StockReport S WHERE S.[Date] = '2025-01-01 00:00:03.040';
+PRINT '=== Q2 VirtualGl account full history ===';
+SELECT SUM(V.Debit - V.Credit) FROM VirtualGl V WHERE V.AccCode = 19 AND V.[Date] < '2025-01-01';
+PRINT '=== Q3 VirtualGl account one month ===';
+SELECT SUM(V.Debit - V.Credit) FROM VirtualGl V WHERE V.AccCode = 19 AND V.[Date] >= '2024-12-01' AND V.[Date] < '2025-01-01';
+PRINT '=== Q4 SaleLedger customer one month ===';
+SELECT COUNT(*), SUM(L.InvTotal) FROM SaleLedger L WHERE L.CustCode = 19 AND L.[date] >= '2024-12-01' AND L.[date] < '2025-01-01';
+PRINT '=== Q5 SaleDetail by invoice ===';
+SELECT SUM(D.PackQty) FROM Saledetail D WHERE D.SaleInvcode = 500000;
+SET STATISTICS IO OFF;
+SET STATISTICS TIME OFF;

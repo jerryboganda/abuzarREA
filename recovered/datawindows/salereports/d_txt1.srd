@@ -1,0 +1,208 @@
+release 12.5;
+datawindow ( units=0 timer_interval=0 processing=4 color=1090519039 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.documentname=""  print.orientation=0 print.margin.left=110 print.margin.right=110 print.margin.top=96 print.margin.bottom=96 print.paper.size=0 print.paper.source=0 grid.lines=1 grid.columnmove=no selected.mouse=no hidegrayline=no showbackcoloronxp=no crosstab.dynamic=yes)
+header[1](height=136 color="536870912" )
+header[2](height=80 color="536870912" )
+header[3](height=88 color="536870912" )
+summary(height=764 color="536870912" )
+footer(height=0 color="536870912" )
+detail(height=84 color="536870912" )
+table(column=(type=char(20) updatewhereclause=yes name=category dbname="category"  )
+column=(type=number updatewhereclause=yes name=allsale dbname="allsale"  )
+column=(type=number updatewhereclause=yes name=creditsale dbname="creditsale"  )
+column=(type=number updatewhereclause=yes name=srtotal dbname="srtotal"  )
+column=(type=number updatewhereclause=yes name=totaldisc dbname="totaldisc"  )
+column=(type=number updatewhereclause=yes name=misccharg dbname="misccharg"  )
+column=(type=number updatewhereclause=yes name=totalinvdiscperc dbname="totalinvdiscperc"  )
+column=(type=number updatewhereclause=yes name=diff dbname="diff"  )
+ retrieve="SELECT   SL.salesmancode,
+			allsale=  IsNull( sum(round(((SD.looseqty + SD.packqty * SD.packunits) * (SD.saleprice - SD.itemflatdisc)) * (1 - (.01 *  SD.discperc)),2))  ,0),
+	   	
+			category=IC.name, 
+
+	   	totaldisc= ( select sum(flatdisc) 
+	    					 from saleledger
+	      		 		 where
+									 saleledger.date between :ar_startdate and :ar_enddate),
+	   	misccharg= ( select sum(misccharges) 
+	    					 from saleledger
+	      		 		 where 
+									 saleledger.date between :ar_startdate and :ar_enddate),
+	      totalinvdiscperc= (select sum(ISNULL(B.invdiscperc,0))
+		     						 from
+											(select   salesmancode,invdiscperc = IsNull( sum(Round(((saledetail.looseqty + saledetail.packqty * saledetail.packunits) * (saledetail.saleprice - saledetail.itemflatdisc)) * (1 - (.01 * saledetail.discperc)),2)) * 0.01 * saleledger.discperc, 0)
+	 
+		    								 from     saleledger, saledetail  
+		   								 where    
+									 					 (saleledger.date between :ar_startdate and :ar_enddate) AND
+			     										 saleledger.saleinvcode = saledetail.saleinvcode 
+	 		     										 
+	 
+		    								  group by saleledger.saleinvcode,
+															saleledger.salesmancode,
+	 		    									     saleledger.discperc
+				 
+											) as  B where B.salesmancode=SL.salesmancode ),
+
+		
+			diff=(select sum ( ISNULL(A.rounddifference,0)) 
+					from
+
+						(SELECT 
+									salesmancode,
+        							rounddifference= Round(Sum ( dbo.saledetail.looseqty * dbo.saledetail.saleprice)
+						 		   						- Round(Sum (Round(( dbo.saledetail.looseqty  * (dbo.saledetail.saleprice - dbo.saledetail.itemflatdisc) * (dbo.saledetail.discperc * .01)) + (dbo.saledetail.looseqty  * dbo.saledetail.itemflatdisc),2)), 2)
+															- Sum ( Round(dbo.saledetail.looseqty   * (dbo.saledetail.saleprice  - dbo.saledetail.itemflatdisc) * (1 - (dbo.saledetail.discperc * .01)),2)) * (dbo.saleledger.discperc /100) 
+					 										+ dbo.saleledger.misccharges - saleledger.flatdisc,0)  
+			
+									-
+			
+								  (Sum ( dbo.saledetail.looseqty * dbo.saledetail.saleprice)
+						 		   						- Round(Sum (Round(( dbo.saledetail.looseqty  * (dbo.saledetail.saleprice - dbo.saledetail.itemflatdisc) * (dbo.saledetail.discperc * .01)) + (dbo.saledetail.looseqty  * dbo.saledetail.itemflatdisc),2)), 2)
+															- Sum (Round( dbo.saledetail.looseqty   * (dbo.saledetail.saleprice  - dbo.saledetail.itemflatdisc) * (1 - (dbo.saledetail.discperc * .01)),2)) * (dbo.saleledger.discperc /100)
+					 										+ dbo.saleledger.misccharges - saleledger.flatdisc)
+									,
+								 netammount= (Sum ( dbo.saledetail.looseqty * dbo.saledetail.saleprice)
+												 - Round(Sum (Round(( dbo.saledetail.looseqty  * (dbo.saledetail.saleprice - dbo.saledetail.itemflatdisc) * (dbo.saledetail.discperc * .01)) + (dbo.saledetail.looseqty  * dbo.saledetail.itemflatdisc),2)), 2) + Round(Sum ( dbo.saledetail.looseqty   * (dbo.saledetail.saleprice  - dbo.saledetail.itemflatdisc) * (1 - (dbo.saledetail.discperc * .01))) * (dbo.saleledger.discperc /100), 2) + dbo.saleledger.flatdisc + dbo.saleledger.misccharges )
+
+							FROM     dbo.saleledger, 
+         						   dbo.saledetail
+
+							WHERE ( dbo.saleledger.saleinvcode = dbo.saledetail.saleinvcode ) and 
+					      		( dbo.saleledger.salecatcode IN (3) ) and  
+       
+
+									 (saleledger.date between :ar_startdate and :ar_enddate)          
+
+							GROUP BY dbo.saleledger.misccharges,   
+        					 			dbo.saleledger.flatdisc,   
+       						  		dbo.saleledger.date,   
+         							dbo.saleledger.saleinvcode,   
+										dbo.saleledger.discperc,  
+										dbo.saleledger.salestax, 
+										dbo.saleledger.salecatcode,
+										dbo.saleledger.salesmancode
+							) as A where A.salesmancode=SL.salesmancode
+
+
+				),
+
+srtotal=(select  ISNULL(sum(isnull(c.invsalereturn,0)),0)
+	 		from (select
+							salesmancode,
+							invsalereturn= IsNull( Round(sum(Round(((srdetail.looseqty + srdetail.packqty * srdetail.packunits) * srdetail.srprice) * (1 - (.01 * srdetail.discperc)),2)) * (1- (.01 * srledger.discperc)) + srledger.misccharges - srledger.flatdisc,0),0)
+					from     srledger, srdetail  
+					where    srledger.srinvcode = srdetail.srinvcode and
+	 							srledger.srcatcode = 8     and 
+
+								srledger.date between :ar_startdate and :ar_enddate
+	 
+
+					group by srledger.srinvcode,
+	 							 srledger.srcatcode,
+	 							srledger.date,
+	 							srledger.discperc,
+								srledger.salesmancode,
+	 							srledger.misccharges,
+								srledger.flatdisc
+
+					) as C Where C.salesmancode=SL.salesmancode
+
+		),
+
+
+creditsale=  (select ISNULL(sum (isNull(d.creditsale,0)),0)
+
+              from   (select  salesmancode, 
+										creditsale = IsNull( Round(sum(Round(((saledetail.looseqty + saledetail.packqty * saledetail.packunits) * (saledetail.saleprice - saledetail.itemflatdisc)) * (1 - (.01 * saledetail.discperc)),2)) * (1- (.01 * saleledger.discperc)) + saleledger.misccharges + saleledger.salestax - saleledger.flatdisc,0),0)
+										 		 
+							 from     saleledger, saledetail  
+							 where 	 
+									 	 saleledger.date between :ar_startdate and :ar_enddate AND
+	 									 saleledger.saleinvcode = saledetail.saleinvcode and
+	 									 saleledger.salecatcode = 2   
+ 	 
+	  
+	 
+							group by saleledger.saleinvcode,
+	 									salecatcode, 
+										saleledger.date,
+	 									saleledger.discperc,
+	 									saleledger.misccharges,
+	 									saleledger.salestax,
+										saleledger.salesmancode,
+	 									saleledger.flatdisc
+							)as D where D.salesmancode=SL.salesmancode
+				),
+
+
+username= (select users.username from users where usercode=SL.salesmancode)
+
+
+FROM saledetail SD,
+     saleledger SL,
+     item I, 
+     itemcategory IC
+WHERE 
+
+		 SL.date between :ar_startdate and :ar_enddate and
+       SL.saleinvcode=SD.saleinvcode and
+		 SD.icode=I.icode AND
+		 I.icatcode=IC.icatcode 
+
+GROUP BY SL.salesmancode,
+			I.icatcode,
+         IC.name
+
+
+"
+  arguments=(("ar_startdate", datetime), ("ar_enddate", datetime))
+ sort="category A"
+)
+text(name=t_1 band=header[1] font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="0" border="0" x="896" y="4" height="128" width="398" text="Username" )
+text(name=t_2 band=header[2] font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="0" border="0" x="896" y="4" height="76" width="485" text="@username" )
+text(name=category_t band=header[3] font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="0" border="0" x="9" y="4" height="72" width="878" text="Category" )
+text(name=creditsale_t visible="1	0" band=header[3] font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="0" border="0" x="1303" y="4" height="72" width="5" text="Sum Of Creditsale" )
+text(name=srtotal_t visible="1	0" band=header[3] font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="0" border="0" x="1317" y="4" height="72" width="5" text="Sum Of Srtotal" )
+text(name=totaldisc_t visible="1	0" band=header[3] font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="0" border="0" x="1330" y="4" height="72" width="5" text="Sum Of Totaldisc" )
+text(name=misccharg_t visible="1	0" band=header[3] font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="0" border="0" x="1344" y="4" height="72" width="5" text="Sum Of Misccharg" )
+text(name=totalinvdiscperc_t visible="1	0" band=header[3] font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="0" border="0" x="1358" y="4" height="72" width="5" text="Sum Of Totalinvdiscperc" )
+text(name=diff_t visible="1	0" band=header[3] font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="0" border="0" x="1371" y="4" height="72" width="5" text="Sum Of Diff" )
+compute(name=compute_8 visible="1	0" band=summary font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" x="9" y="28" height="128" width="878" format="[general]" expression="sum(diff for all )" alignment="1" border="0" crosstab.repeat=no )
+text(name=t_3 band=summary font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" alignment="0" border="0" x="9" y="156" height="64" width="878" text="Credit Sale" )
+text(name=t_9 band=summary font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" alignment="0" border="0" x="9" y="232" height="64" width="878" text="Diff." )
+text(name=t_10 band=summary font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" alignment="0" border="0" x="9" y="320" height="64" width="878" text="Sale Return Cash" )
+text(name=t_11 band=summary font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" alignment="0" border="0" x="9" y="408" height="64" width="878" text="Misc.Charges" )
+compute(name=compute_1 band=summary font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" x="9" y="4" height="128" width="878" format="[general]" expression="~"Grand Total~"" alignment="1" border="0" crosstab.repeat=no )
+compute(name=compute_2 band=summary font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" x="896" y="4" height="128" width="398" format="[general]" expression="sum(allsale for all )" alignment="1" border="0" crosstab.repeat=no )
+compute(name=compute_3 visible="1	0" band=summary font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" x="9" y="4" height="128" width="878" format="[general]" expression="sum(creditsale for all )" alignment="1" border="0" crosstab.repeat=no )
+compute(name=compute_4 visible="1	0" band=summary font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" x="9" y="4" height="128" width="878" format="[general]" expression="sum(srtotal for all )" alignment="1" border="0" crosstab.repeat=no )
+compute(name=compute_5 visible="1	0" band=summary font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" x="9" y="4" height="128" width="878" format="[general]" expression="sum(totaldisc for all )" alignment="1" border="0" crosstab.repeat=no )
+compute(name=compute_6 visible="1	0" band=summary font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" x="9" y="4" height="128" width="878" format="[general]" expression="sum(misccharg for all )" alignment="1" border="0" crosstab.repeat=no )
+compute(name=compute_7 visible="1	0" band=summary font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" x="9" y="4" height="128" width="878" format="[general]" expression="sum(totalinvdiscperc for all )" alignment="1" border="0" crosstab.repeat=no )
+compute(name=compute_9 band=summary font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" x="1385" y="8" height="128" width="686" format="[general]" expression="sum(grand_sum_allsale for all )" alignment="1" border="0" crosstab.repeat=no )
+compute(name=compute_16 band=summary font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" x="896" y="156" height="64" width="398" format="[GENERAL]" expression=" creditsale " alignment="1" border="0" crosstab.repeat=no )
+compute(name=compute_17 band=summary font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" x="896" y="236" height="64" width="398" format="[GENERAL]" expression=" diff " alignment="1" border="0" crosstab.repeat=no )
+compute(name=compute_18 band=summary font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" x="896" y="316" height="64" width="398" format="[GENERAL]" expression=" srtotal " alignment="1" border="0" crosstab.repeat=no )
+compute(name=compute_19 band=summary font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" x="896" y="408" height="64" width="398" format="[GENERAL]" expression=" misccharg " alignment="1" border="0" crosstab.repeat=no )
+text(name=t_12 band=summary font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" alignment="0" border="0" x="896" y="484" height="52" width="398" text="-----------------------" )
+compute(name=compute_20 band=summary font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" x="896" y="572" height="64" width="398" format="[GENERAL]" expression="sum(allsale )  -  creditsale  +  srtotal  -  totaldisc  +  misccharg  -  totalinvdiscperc  +  diff   " alignment="1" border="0" crosstab.repeat=no )
+column(name=category band=detail id=1 x="9" y="4" height="76" width="878" color="33554432" border="0" alignment="0" format="[general]" edit.focusrectangle=no edit.autohscroll=yes edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=60 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=allsale band=detail id=2 x="896" y="4" height="76" width="398" color="33554432" border="0" alignment="1" format="[general]" edit.focusrectangle=no edit.autohscroll=yes edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=yes background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=creditsale visible="1	0" band=detail id=3 x="1303" y="4" height="76" width="5" color="33554432" border="0" alignment="1" format="[general]" edit.focusrectangle=no edit.autohscroll=yes edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=yes background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=srtotal visible="1	0" band=detail id=4 x="1317" y="4" height="76" width="5" color="33554432" border="0" alignment="1" format="[general]" edit.focusrectangle=no edit.autohscroll=yes edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=yes background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=totaldisc visible="1	0" band=detail id=5 x="1330" y="4" height="76" width="5" color="33554432" border="0" alignment="1" format="[general]" edit.focusrectangle=no edit.autohscroll=yes edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=yes background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=misccharg visible="1	0" band=detail id=6 x="1344" y="4" height="76" width="5" color="33554432" border="0" alignment="1" format="[general]" edit.focusrectangle=no edit.autohscroll=yes edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=yes background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=totalinvdiscperc visible="1	0" band=detail id=7 x="1358" y="4" height="76" width="5" color="33554432" border="0" alignment="1" format="[general]" edit.focusrectangle=no edit.autohscroll=yes edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=yes background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=diff visible="1	0" band=detail id=8 x="1371" y="4" height="76" width="5" color="33554432" border="0" alignment="1" format="[general]" edit.focusrectangle=no edit.autohscroll=yes edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=yes background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+compute(name=grand_sum_allsale band=detail font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" x="1385" y="4" height="76" width="686" format="[general]" expression="crosstabsum(1)" alignment="1" border="0" crosstab.repeat=no )
+crosstab(columns="username" rows="category" values="sum(allsale for crosstab), sum(creditsale for crosstab), sum(srtotal for crosstab), sum(totaldisc for crosstab), sum(misccharg for crosstab), sum(totalinvdiscperc for crosstab), sum(diff for crosstab)" sourcenames = "saleledger_salesmancode, allsale, category, totaldisc, misccharg, totalinvdiscperc, diff, srtotal, creditsale, username" crosstabonly=yes  band=foreground )
+htmltable(border="0" cellPadding="1" cellSpacing="1" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" generateJavaScript="1" pagingMethod=0 )
+xhtmlgen() cssgen()
+xmlgen()
+xsltgen()
+jsgen()
+export.xml(metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 )
+export.xhtml()

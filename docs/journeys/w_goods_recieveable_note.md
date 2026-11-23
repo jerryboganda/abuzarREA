@@ -1,0 +1,28 @@
+# w_goods_recieveable_note
+
+- title: Goods Receiving Note Pack
+- library: purchasecomponents (Purchase & stock)
+- ancestor: `w_multi_entry`
+- size: 3032 x 3059 PBU
+- reached from: Purchase > Goods Receiving Note > Pack; Purchase > Goods Receiving Note > Loose
+- script size: 2763 lines; 20 events, 69 functions
+
+## Controls (3)
+
+- `tab_retrieve` (tab_retrieve)
+- `dw_purinvrep` (u_dwstandard) dataobject `d_grninvreport`
+- `dw_changeprice_foritemlog` (datawindow) dataobject `d_purdetail_changeprice_foritemlog`
+
+## Data
+
+- DataWindows: `d_SaleOrderdetail_retrieve`, `d_SaleOrderheader`, `d_grninvreport`, `d_groupallowedmoduleheader`, `d_normalpurchasedetail`, `d_normalpurchaseheader`, `d_populateditems_active`, `d_populateditems_active_and`, `d_populatepurorder`, `d_purchase_expenses`, `d_purdetail_changeprice_foritemlog`, `d_purinvno`
+- tables touched by embedded SQL: accounts, godown, godowndetail, groupallowedgodown, item, itemcategory, itemclass, itemsgroupcategory, manufacturer, purdetail, purledger, purorderdetail, purorderheader, supplier, usergroups
+- stored procedures: getglobalcode, getitemavgprice, getitemstockall, getitemstockbatch, getitemstockinallowedgodown, getitemstocktotal, getmaxutn, purchasebased_satisfydue, updateactivitymonitor, updateitemavgprice, updateitemstockbatch, updatetransitstock
+- global functions: f_datepreferences, f_generateheaderinvcode, f_generateitemlog, f_getgroupcode, f_groupallowedgodowncount, f_groupgodownstrategy, f_numberpreferences, f_setcolumnstyle, f_stringpreferences, f_validatedw
+- windows opened: w_arg_item_populate3, w_arg_purchasefromcustomer, w_arg_sinvcode_linvcode, w_copypurinvoicefrom, w_editsaleorder_in_purchase_form, w_iteminfo, w_itempurchasehistory, w_purinv_slip, w_salesmanpassword, w_supplierinfo
+
+## Events and functions
+
+`w_goods_recieveable_note.create`, `w_goods_recieveable_note.destroy`, `w_goods_recieveable_note.ue_save`, `w_goods_recieveable_note.ue_newform`, `w_goods_recieveable_note.ue_detail`, `w_goods_recieveable_note.ue_newitem`, `w_goods_recieveable_note.ue_deleteitem`, `w_goods_recieveable_note.close`, `w_goods_recieveable_note.ue_new`, `w_goods_recieveable_note.ue_list`, `w_goods_recieveable_note.ue_refreshddw`, `w_goods_recieveable_note.ue_print`, `w_goods_recieveable_note.ue_postopen`, `w_goods_recieveable_note.open`, `w_goods_recieveable_note.closequery`, `dw_footer.itemchanged`, `dw_detail.itemchanged`, `dw_detail.ue_dwnkey`, `dw_itemsdetail.itemchanged`, `dw_itemsdetail.ue_enterkey`, `w_goods_recieveable_note.wf_lockpurchaseinvoice`, `w_goods_recieveable_note.wf_lockloosepurinvoices`, `w_goods_recieveable_note.wf_updateitempurdisc`, `w_goods_recieveable_note.wf_locknormalpurinvoices`, `w_goods_recieveable_note.wf_getitemsaleprice`, `w_goods_recieveable_note.wf_lockpurinvoices`, `w_goods_recieveable_note.wf_lockopeningpurinvoices`, `w_goods_recieveable_note.wf_getpomanfcode`, `w_goods_recieveable_note.wf_itempurchasehistory`, `w_goods_recieveable_note.wf_initmodify`, `w_goods_recieveable_note.wf_assigndatawindowobjects`, `w_goods_recieveable_note.wf_findsuppcode`, `w_goods_recieveable_note.wf_genfullcode`, `w_goods_recieveable_note.wf_protectdw`, `w_goods_recieveable_note.wf_releaselock`, `w_goods_recieveable_note.wf_retrievelist`, `w_goods_recieveable_note.wf_retrievelistall`, `w_goods_recieveable_note.wf_setgodownoption`, `w_goods_recieveable_note.wf_setpurchasetype`, `w_goods_recieveable_note.wf_setpurorderinfo`, `w_goods_recieveable_note.wf_setsuppinfo`, `w_goods_recieveable_note.wf_updateitemavgprice`, `w_goods_recieveable_note.wf_updateitempurprice`, `w_goods_recieveable_note.wf_updaterecentpurprice`, `w_goods_recieveable_note.wf_validatefullcode`, `w_goods_recieveable_note.wf_validateitem`, `w_goods_recieveable_note.wf_setsuppname`, `w_goods_recieveable_note.wf_iteminfo`, `w_goods_recieveable_note.wf_setpurorderqty`, `w_goods_recieveable_note.wf_inititeminfo`, `w_goods_recieveable_note.wf_purchaseslip`, `w_goods_recieveable_note.wf_populatedetaildwfrompo`, `w_goods_recieveable_note.wf_populatepurorder`, `w_goods_recieveable_note.wf_findfullcode`, `w_goods_recieveable_note.wf_populatefiltereditems`, `w_goods_recieveable_note.wf_selectprintreport`, `w_goods_recieveable_note.wf_post`, `w_goods_recieveable_note.wf_replacesalediscperc`, `w_goods_recieveable_note.wf_updateitemsaleprice`, `w_goods_recieveable_note.wf_grandtotal`, `w_goods_recieveable_note.wf_columns_releatedtopurchase`, `w_goods_recieveable_note.wf_allowpurchasemodification`, `w_goods_recieveable_note.wf_saveandpost`, `w_goods_recieveable_note.wf_post_purchase`, `w_goods_recieveable_note.wf_fetchserverdate`, `w_goods_recieveable_note.wf_itemstockinfo`, `w_goods_recieveable_note.wf_updateitemstock`, `w_goods_recieveable_note.wf_setiteminfo`, `w_goods_recieveable_note.wf_getsupplierinfo`, `w_goods_recieveable_note.wf_view_iteminfo`, `w_goods_recieveable_note.wf_populate_saleorder`, `w_goods_recieveable_note.wf_setnull`, `w_goods_recieveable_note.wf_update_manfdate`, `w_goods_recieveable_note.wf_purchase_from_customer`, `w_goods_recieveable_note.wf_assign_purexp_object`, `w_goods_recieveable_note.wf_set_itemexpense_interface`, `dw_footer.losefocus`, `dw_footer.itemfocuschanged`, `dw_footer.itemerror`, `dw_detail.itemerror`, `dw_detail.editchanged`, `dw_detail.itemfocuschanged`, `dw_itemsdetail.itemfocuschanged`, `dw_itemsdetail.rowfocuschanged`, `dw_itemsdetail.losefocus`, `dw_itemsdetail.editchanged`, `dw_itemsdetail.itemerror`, `dw_itemsdetail.getfocus`, `dw_itemsdetail.rowfocuschanging`
+
+Source: `recovered/scripts/purchasecomponents/w_goods_recieveable_note.pbs`

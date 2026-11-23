@@ -1,0 +1,134 @@
+release 12.5;
+datawindow ( units=0 timer_interval=0 processing=0 color=80263581 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.printername=""  print.documentname=""  print.orientation=0 print.margin.left=110 print.margin.right=110 print.margin.top=97 print.margin.bottom=97 print.paper.size=0 print.paper.source=0 print.canusedefaultprinter=yes selected.mouse=no hidegrayline=no showbackcoloronxp=no)
+header(height=0 )
+summary(height=0 color="536870912" )
+footer(height=0 color="536870912" )
+detail(height=324 color="536870912" )
+table(column=(type=long key=yes update=yes updatewhereclause=yes name=code dbname="ServiceRHeader.servicerinvcode"  )
+column=(type=long update=yes updatewhereclause=yes name=serviceinvcode dbname="ServiceRHeader.serviceinvcode"  )
+column=(type=datetime update=yes updatewhereclause=yes initial="today" name=date dbname="ServiceRHeader.date"  )
+column=(type=long update=yes updatewhereclause=yes initial="14" name=servicercatcode dbname="ServiceRHeader.servicercatcode"  )
+column=(type=long update=yes updatewhereclause=yes name=custcode dbname="ServiceRHeader.custcode" 
+ values=""  )
+column=(type=long update=yes updatewhereclause=yes name=salesmancode dbname="ServiceRHeader.salesmancode"  )
+column=(type=decimal(2) update=yes updatewhereclause=yes name=discperc dbname="ServiceRHeader.discperc"  )
+column=(type=decimal(2) update=yes updatewhereclause=yes name=flatdisc dbname="ServiceRHeader.flatdisc"  )
+column=(type=decimal(2) update=yes updatewhereclause=yes name=misccharges dbname="ServiceRHeader.misccharges"  )
+column=(type=char(60) updatewhereclause=yes name=users_username dbname="Users.username"  )
+column=(type=long update=yes updatewhereclause=yes initial="1" name=headerno dbname="ServiceRHeader.headerno"  )
+column=(type=char(1) update=yes updatewhereclause=yes initial="Y" name=posted dbname="ServiceRHeader.posted"  )
+column=(type=datetime update=yes updatewhereclause=yes initial="today" name=postdate dbname="ServiceRHeader.postdate"  )
+column=(type=char(100) update=yes updatewhereclause=yes name=remarks dbname="ServiceRHeader.remarks"  )
+column=(type=char(12) updatewhereclause=yes name=aliasname dbname="Accounts.aliasname"  )
+column=(type=char(60) updatewhereclause=yes name=custname dbname="Accounts.name"  )
+column=(type=char(60) updatewhereclause=yes name=address dbname="Customer.address1"  )
+column=(type=char(60) updatewhereclause=yes name=city dbname="Customer.city"  )
+column=(type=char(100) updatewhereclause=yes name=phone dbname="Customer.phone"  )
+column=(type=datetime update=yes updatewhereclause=yes initial="today" name=originaldate dbname="ServiceRHeader.originaldate"  )
+column=(type=long update=yes updatewhereclause=yes name=modifiedby dbname="ServiceRHeader.modifiedby"  )
+column=(type=long update=yes updatewhereclause=yes name=postedby dbname="ServiceRHeader.postedby"  )
+column=(type=long update=yes updatewhereclause=yes name=doctcode dbname="ServiceRHeader.doctcode" 
+ values=""  )
+column=(type=char(50) updatewhereclause=yes name=patientregno dbname="patientregno"  )
+column=(type=long update=yes updatewhereclause=yes name=patientcode dbname="ServiceRHeader.patientcode" 
+ values=""  )
+column=(type=long update=yes updatewhereclause=yes name=admissioncode dbname="ServiceRHeader.admissioncode" 
+ values=""  )
+column=(type=long updatewhereclause=yes name=locationcode dbname="PatientAdmission.locationcode" 
+ values=""  )
+column=(type=long update=yes updatewhereclause=yes initial="2" name=cashacccode dbname="ServiceRHeader.CashAccCode"  )
+column=(type=decimal(2) update=yes updatewhereclause=yes initial="0" name=cashtendered dbname="ServiceRHeader.CashTendered"  )
+column=(type=decimal(2) update=yes updatewhereclause=yes initial="0" name=cashcharged dbname="ServiceRHeader.CashCharged"  )
+column=(type=decimal(2) update=yes updatewhereclause=yes initial="0" name=cashback dbname="ServiceRHeader.CashBack"  )
+column=(type=decimal(2) update=yes updatewhereclause=yes initial="0" name=invtotal dbname="ServiceRHeader.InvTotal"  )
+ retrieve="SELECT
+	SVCRH.servicerinvcode ,
+	SVCRH.serviceinvcode ,
+	SVCRH.date ,
+	SVCRH.servicercatcode ,
+	SVCRH.custcode ,
+	SVCRH.salesmancode ,
+	SVCRH.discperc ,
+	SVCRH.flatdisc ,
+	SVCRH.misccharges ,
+	users.username ,
+	SVCRH.headerno ,
+	SVCRH.posted ,
+	SVCRH.postdate ,
+	SVCRH.remarks ,
+	accounts.aliasname ,
+	accounts.name , 
+	customer.address1 ,
+	customer.city ,
+	customer.phone,
+	SVCRH.originaldate,
+	SVCRH.modifiedby,
+	SVCRH.postedby,	   
+	SVCRH.doctcode,
+	patientregno=patient.regno,
+	SVCRH.patientcode,
+	SVCRH.admissioncode,
+	patientadmission.locationcode,
+	SVCRH.CashAccCode,
+	SVCRH.CashTendered,
+	SVCRH.CashCharged,
+	SVCRH.CashBack,
+	SVCRH.InvTotal
+FROM
+	accounts ,
+	customer ,
+	users ,
+	servicerheader SVCRH
+	LEFT OUTER JOIN Doctors ON (SVCRH.doctcode = Doctors.doctcode),
+	patientadmission,
+	patient
+WHERE 
+	( SVCRH.servicerinvcode = :ai_servicerinvcode ) and
+	( SVCRH.admissioncode IS NOT NULL ) and
+   ( SVCRH.custcode = customer.custcode ) and          
+	( SVCRH.salesmancode = users.usercode ) and          
+	( SVCRH.custcode = accounts.acccode ) and
+	( SVCRH.admissioncode = patientadmission.admissioncode ) and
+	( patientadmission.patientcode = patient.patientcode )
+"
+  update="servicerheader" updatewhere=1 updatekeyinplace=yes
+  arguments=(("ai_servicerinvcode", number))
+)
+column(name=code visible="1" band=detail id=1 x="302" y="16" height="56" width="338" color="0" border="5" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="80263581" font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=patientregno visible="1" band=detail id=24 x="302" y="96" height="56" width="338" color="0" border="5" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=yes edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" tabsequence=10 )
+column(name=aliasname visible="1" band=detail id=15 x="302" y="176" height="56" width="338" color="0" border="5" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="80263581" font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" tabsequence=0 )
+text(name=saleinvcode_t visible="1" band=detail font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="23" y="16" height="56" width="261" text="Ret. Inv. #:" html.valueishtml="0" )
+text(name=t_regno visible="1" band=detail font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="23" y="96" height="56" width="261" text="Reg. No.:" html.valueishtml="0" )
+text(name=t_1 visible="1" band=detail font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="23" y="176" height="56" width="261" text="Alias Name:" html.valueishtml="0" )
+column(name=remarks visible="1" band=detail id=14 x="302" y="256" height="56" width="1051" color="0" border="5" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="1090519039" font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" tabsequence=30 )
+text(name=remarks_t visible="1" band=detail font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="23" y="256" height="56" width="261" text="Remarks:" html.valueishtml="0" )
+text(name=doctcode_t visible="1" band=detail font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="1394" y="256" height="56" width="160" text="Doctor:" html.valueishtml="0" )
+text(name=t_patient visible="1" band=detail font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="667" y="96" height="56" width="224" text="Patient:" html.valueishtml="0" )
+text(name=custcode_t visible="1" band=detail font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="667" y="176" height="56" width="224" text="Customer:" html.valueishtml="0" )
+text(name=salesman_name_t visible="1" band=detail font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="667" y="16" height="56" width="224" text="User:" html.valueishtml="0" )
+column(name=users_username visible="1" band=detail id=10 x="910" y="16" height="56" width="795" color="0" border="5" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="80263581" font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=admissioncode visible="1" band=detail id=26 x="910" y="96" height="56" width="795" color="0" border="5" alignment="0" format="[general]" html.valueishtml="0" dddw.allowedit=yes dddw.autohscroll=yes dddw.autoretrieve=yes dddw.useasborder=no dddw.datacolumn=code dddw.displaycolumn=patient dddw.hscrollbar=yes dddw.hsplitscroll=no dddw.imemode=0 dddw.limit=60 dddw.name=d_dischargeablepatient_list dddw.nilisnull=yes dddw.percentwidth=200 dddw.lines=10 dddw.required=yes dddw.showlist=no dddw.vscrollbar=yes criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" tabsequence=20 )
+column(name=custcode visible="1" band=detail id=5 x="910" y="176" height="56" width="1499" color="0" border="5" alignment="0" format="[general]" html.valueishtml="0" dddw.allowedit=no dddw.autohscroll=no dddw.autoretrieve=yes dddw.useasborder=no dddw.datacolumn=accounts_acccode dddw.displaycolumn=customer_name dddw.hscrollbar=no dddw.hsplitscroll=no dddw.imemode=0 dddw.limit=0 dddw.name=ddd_customer dddw.nilisnull=no dddw.percentwidth=0 dddw.required=no dddw.showlist=no dddw.vscrollbar=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="80263581" font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=patientcode visible="1	0" band=detail id=25 x="910" y="96" height="56" width="795" color="0" border="5" alignment="0" format="[general]" html.valueishtml="0" dddw.allowedit=no dddw.autohscroll=no dddw.autoretrieve=yes dddw.useasborder=no dddw.datacolumn=patientcode dddw.displaycolumn=patient dddw.hscrollbar=no dddw.hsplitscroll=no dddw.imemode=0 dddw.limit=0 dddw.name=ddd_patient dddw.nilisnull=no dddw.percentwidth=0 dddw.required=no dddw.showlist=no dddw.vscrollbar=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" tabsequence=0 )
+text(name=date_t visible="1" band=detail font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="1733" y="16" height="56" width="201" text="Date:" html.valueishtml="0" )
+text(name=t_locationcode visible="1" band=detail font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="2" background.color="67108864" color="0" alignment="0" border="0" x="1733" y="96" height="56" width="201" text="Location:" html.valueishtml="0" )
+column(name=doctcode visible="1" band=detail id=23 x="1573" y="256" height="56" width="837" color="0" border="5" alignment="0" format="[general]" html.valueishtml="0" dddw.allowedit=no dddw.autohscroll=no dddw.autoretrieve=yes dddw.useasborder=yes dddw.datacolumn=doctcode dddw.displaycolumn=name dddw.hscrollbar=yes dddw.hsplitscroll=no dddw.imemode=0 dddw.limit=0 dddw.name=ddd_doctors dddw.nilisnull=no dddw.percentwidth=200 dddw.lines=20 dddw.required=no dddw.showlist=no dddw.vscrollbar=yes criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" tabsequence=40 )
+column(name=date visible="1" band=detail id=3 x="1952" y="16" height="56" width="457" color="0" border="5" alignment="0" format="dd/mm/yyyy hh:mm:ss" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="80263581" font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=locationcode visible="1" band=detail id=27 x="1952" y="96" height="56" width="457" color="0" border="5" alignment="0" format="[general]" html.valueishtml="0" dddw.allowedit=no dddw.autohscroll=no dddw.autoretrieve=yes dddw.useasborder=no dddw.datacolumn=locationcode dddw.displaycolumn=location_name dddw.hscrollbar=no dddw.hsplitscroll=no dddw.imemode=0 dddw.limit=0 dddw.name=ddd_patientlocation_ward dddw.nilisnull=no dddw.percentwidth=0 dddw.required=no dddw.showlist=no dddw.vscrollbar=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="80263581" font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=headerno visible="1	0" band=detail id=11 x="2469" y="108" height="56" width="23" color="0" border="5" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="1090519039" font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=cashtendered visible="0" band=detail id=29 x="2537" y="112" height="56" width="23" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" tabsequence=60 )
+column(name=cashcharged visible="0" band=detail id=30 x="2642" y="132" height="56" width="23" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" tabsequence=70 )
+column(name=posted visible="1	0" band=detail id=12 x="2464" y="12" height="56" width="23" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=originaldate visible="1	0" band=detail id=20 x="2523" y="12" height="56" width="23" color="0" border="5" alignment="0" format="[shortdate] [time]" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="1090519039" font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=cashback visible="0" band=detail id=31 x="2478" y="220" height="56" width="23" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" tabsequence=80 )
+column(name=cashacccode visible="0" band=detail id=28 x="2537" y="220" height="56" width="23" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" tabsequence=50 )
+htmltable(border="0" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" encodeSelfLinkArgs="1" generateJavaScript="1" netscapeLayers="0" pagingMethod=0 )
+xhtmlgen() cssgen(sessionSpecific="0" )
+xmlgen(inline="0" )
+xsltgen()
+jsgen()
+export.xml(headGroups="1" includewhitespace="0" metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 distill.customPostScript="0" xslfop.print="0" )
+export.xhtml()

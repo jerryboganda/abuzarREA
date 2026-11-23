@@ -1,0 +1,276 @@
+release 12.5;
+datawindow ( units=2 timer_interval=0 processing=0 color=16777215 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.printername=""  print.documentname=""  print.orientation=2 print.margin.left=0 print.margin.right=0 print.margin.top=0 print.margin.bottom=0 print.paper.size=0 print.paper.source=0 print.canusedefaultprinter=yes selected.mouse=no hidegrayline=no showbackcoloronxp=no)
+header(height=1322 color="536870912" )
+summary(height=1062 color="536870912" )
+footer(height=0 color="536870912" )
+detail(height=312 color="536870912" )
+table(column=(type=char(60) updatewhereclause=yes name=itemname dbname="itemname"  )
+column=(type=long updatewhereclause=yes name=type dbname="type"  )
+column=(type=decimal(2) updatewhereclause=yes name=nettotal dbname="nettotal"  )
+column=(type=long updatewhereclause=yes name=invcode dbname="invcode"  )
+column=(type=char(75) updatewhereclause=yes name=itemalias dbname="itemalias"  )
+column=(type=datetime updatewhereclause=yes name=reprintdate dbname="reprintdate"  )
+column=(type=char(60) updatewhereclause=yes name=users_username dbname="Users.username"  )
+column=(type=char(60) updatewhereclause=yes name=accounts_name dbname="Accounts.name"  )
+column=(type=long updatewhereclause=yes name=altersaleinvcode dbname="altersaleinvcode"  )
+column=(type=long updatewhereclause=yes name=headerno dbname="headerno"  )
+column=(type=long updatewhereclause=yes name=headerinvno dbname="headerinvno"  )
+column=(type=char(1) updatewhereclause=yes name=posted dbname="posted"  )
+column=(type=decimal(5) updatewhereclause=yes name=balance dbname="balance"  )
+column=(type=decimal(2) updatewhereclause=yes name=cashreceived dbname="cashreceived"  )
+column=(type=long updatewhereclause=yes name=saleinvcode dbname="SaleLedger.saleinvcode"  )
+column=(type=datetime updatewhereclause=yes name=saleledger_date dbname="SaleLedger.date"  )
+column=(type=decimal(2) updatewhereclause=yes name=saleledger_discperc dbname="SaleLedger.discperc"  )
+column=(type=decimal(2) updatewhereclause=yes name=saleledger_misccharges dbname="SaleLedger.misccharges"  )
+column=(type=decimal(2) updatewhereclause=yes name=saleledger_flatdisc dbname="SaleLedger.flatdisc"  )
+column=(type=decimal(2) updatewhereclause=yes name=saleledger_salestax dbname="SaleLedger.salestax"  )
+column=(type=long updatewhereclause=yes name=custcode dbname="SaleLedger.custcode"  )
+column=(type=char(100) updatewhereclause=yes name=saleledger_remarks dbname="SaleLedger.remarks"  )
+column=(type=char(30) updatewhereclause=yes name=saleledger_custrefno dbname="SaleLedger.custrefno"  )
+column=(type=long updatewhereclause=yes name=saledetail_icode dbname="Saledetail.icode"  )
+column=(type=long updatewhereclause=yes name=gcode dbname="Saledetail.gcode"  )
+column=(type=long updatewhereclause=yes name=salecatcode dbname="salecatcode"  )
+column=(type=long updatewhereclause=yes name=id dbname="Id"  )
+column=(type=decimal(4) updatewhereclause=yes name=looseqty dbname="looseqty"  )
+column=(type=long updatewhereclause=yes name=packqty dbname="packqty"  )
+column=(type=long updatewhereclause=yes name=packunits dbname="packunits"  )
+column=(type=decimal(2) updatewhereclause=yes name=saledetail_saleprice dbname="saleprice"  )
+column=(type=decimal(2) updatewhereclause=yes name=saledetail_rate dbname="rate"  )
+column=(type=decimal(2) updatewhereclause=yes name=salestax dbname="salestax"  )
+column=(type=decimal(2) updatewhereclause=yes name=saledetail_discperc dbname="discperc"  )
+column=(type=char(34) updatewhereclause=yes name=ccustomername dbname="customername"  )
+column=(type=decimal(2) updatewhereclause=yes name=itemflatdisc dbname="itemflatdisc"  )
+column=(type=decimal(2) updatewhereclause=yes name=unitsalestax dbname="unitsalestax"  )
+column=(type=decimal(2) updatewhereclause=yes name=gstperc dbname="gstperc"  )
+column=(type=decimal(2) updatewhereclause=yes name=invgstperc dbname="invgstperc"  )
+column=(type=long updatewhereclause=yes name=reprintcounter dbname="reprintcounter"  )
+column=(type=datetime updatewhereclause=yes name=serverdate dbname="serverdate"  )
+column=(type=char(20) updatewhereclause=yes name=machinename dbname="machinename"  )
+column=(type=datetime updatewhereclause=yes name=expiry dbname="expiry"  )
+ retrieve="  SELECT itemname = case printable when  0  then ltrim(str(item.icode)) + ' Counter Sale'   else item.name end,
+			type = 1, 
+			nettotal = dbo.Fn_getSaleInvTotal_with_AssocSaleInv(:ra_InvCode) ,
+			invcode = :ra_invcode,
+			itemalias=max(item.customicode),
+			reprintdate=getdate(),
+			users.username,  
+			accounts.name, 
+			altersaleinvcode = Case When Max(altersaleinvcode) Is Null Then Max(saleledger.headerinvno) Else Max(altersaleinvcode) End,
+			headerno =max(saleledger.headerno),
+			headerinvno = max(saleledger.headerinvno),
+			posted=max(saleledger.posted),
+			balance=isnull(max(balance),0),
+			cashreceived=max(saleledger.cashreceived),
+			dbo.saleledger.saleinvcode, 
+         dbo.saleledger.date,   
+         dbo.saleledger.discperc,   
+         dbo.saleledger.misccharges,   
+         dbo.saleledger.flatdisc,   
+         dbo.saleledger.salestax,   
+         dbo.saleledger.custcode,   
+         dbo.saleledger.remarks,
+   		dbo.saleledger.custrefno,	
+         dbo.saledetail.icode,   
+         dbo.saledetail.gcode,
+         salecatcode=max(saleledger.salecatcode),
+			Id        = MAX(dbo.saledetail.IDENTITYCOL),     
+         looseqty  = sum(saledetail.looseqty), 
+			packqty   = sum(saledetail.packqty), 
+			packunits = max(saledetail.packunits), 
+	 		saleprice = max(saledetail.saleprice), 
+	 		rate      = max(saledetail.rate),
+         salestax  = max(saledetail.salestax),   
+         discperc  = max(saledetail.discperc),
+			customername='                                  '  ,
+         itemflatdisc  = max(saledetail.itemflatdisc),
+			unitsalestax  = max(saledetail.unitsalestax),
+			gstperc       = max(saledetail.gstperc),
+			invgstperc    = max(saleledger.invgstperc1),
+			reprintcounter=max(saleledger.reprintingcounter),
+			serverdate=getdate(),
+			machinename=max(saleledger.machinename),
+			expiry=saledetail.expiry
+
+    FROM dbo.saleledger,   
+         dbo.saledetail,  
+         item, 
+			customer, 
+			accounts,
+			users 
+
+   WHERE ( dbo.saleledger.saleinvcode = :ra_InvCode ) AND
+         
+			( dbo.saleledger.saleinvcode = dbo.saledetail.saleinvcode ) AND 
+			( dbo.saleledger.custcode = dbo.customer.custcode ) AND 
+			( dbo.customer.custcode = dbo.accounts.acccode ) AND 
+			( dbo.saleledger.salesmancode = dbo.users.usercode ) AND
+			( saledetail.icode = item.icode )  
+
+GROUP BY saleledger.saleinvcode, 
+         
+			saleledger.date, 
+			/*saleledger.headerno,*/
+			saleledger.custcode, 
+			saleledger.discperc, 
+			saleledger.flatdisc, 
+			saleledger.misccharges, 
+			saleledger.salestax, 
+			saleledger.remarks,
+			saleledger.custrefno, 
+			saledetail.icode,
+			saledetail.expiry,
+			saledetail.rowgroup, 
+			saledetail.gcode, 
+			item.name,
+			item.icode,
+			item.printable, 
+			accounts.name,
+			dbo.users.username
+
+Union All
+
+SELECT itemname = 'DO.: '  +  CAST ( saleinvcode As VarChar(25) ),
+			TYPE = 2,
+			nettotal = dbo.Fn_getSaleInvTotal_with_AssocSaleInv(:ra_InvCode) ,
+			invcode = :ra_invcode,
+			itemalias= CAST( Case When Max(altersaleinvcode) Is Null Then Max(saleledger.headerinvno) Else Max(altersaleinvcode) End AS varchar(50) ),
+			reprintdate=getdate(),
+			users_username = ' ',  
+			accounts_name = ' ' , 
+			altersaleinvcode = Case When Max(altersaleinvcode) Is Null Then Max(saleledger.headerinvno) Else Max(altersaleinvcode) End,
+			headerno =max(saleledger.headerno),
+			headerinvno = max(saleledger.headerinvno),
+			posted=max(saleledger.posted),
+			balance=isnull(max(balance),0),
+			cashreceived=max(saleledger.cashreceived),
+			dbo.saleledger.saleinvcode,   
+       	  	dbo.saleledger.date,   
+         	saleledger_discperc = 0,   
+         	saleledger_misccharges = 0,   
+         	saleledger_flatdisc = 0,   
+         	saleledger_salestax = 0,   
+         	dbo.saleledger.custcode,   
+         	dbo.saleledger.remarks,
+   			dbo.saleledger.custrefno,	
+         	saledetail_icode = 0,   
+         	saledetail_gcode = 0,
+         	salecatcode=max(saleledger.salecatcode),
+			Id        = 1 + saleledger.saleinvcode,     
+         	looseqty  = 1, 
+			packqty   = 0, 
+			packunits = 1, 
+	 		saleprice = max(saleledger.invtotal), 
+	 		rate      = 0,
+         	salestax  = 0,   
+         	discperc  = 0, 
+			customername='                                  '  ,
+         	itemflatdisc  = 0,
+			unitsalestax  = 0,
+			gstperc       = 0,
+			invgstperc    = 0,
+			reprintcounter  = 0,
+			serverdate=getdate(),
+			machinename=max(saleledger.machinename),
+			expiry=null
+
+    FROM dbo.saleledger   
+
+   WHERE dbo.saleledger.saleinvcode IN (Select assocsaleinvcode From AssocSaleInvList Where SaleInvCode = :ra_invcode ) 
+
+	Group By dbo.saleledger.saleinvcode,
+       	  	dbo.saleledger.date,   
+         	dbo.saleledger.discperc,   
+         	dbo.saleledger.misccharges,   
+         	dbo.saleledger.flatdisc,   
+         	dbo.saleledger.salestax,   
+         	dbo.saleledger.custcode,   
+         	dbo.saleledger.remarks,
+   			dbo.saleledger.custrefno
+		
+
+
+
+"
+  arguments=(("ra_InvCode", number))
+ sort="type A, id A"
+)
+compute(name=c_companyname visible="1	if(getrow()=1,1,0)" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="0" y="177" height="166" width="3916" format="[general]" expression="f_ReportHeaderInfosale('clientname',  headerno )" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_3 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="31" y="20" height="135" width="1354" format="[GENERAL]" expression="if ( reprintcounter >1, ('Reprint' + '(' + string(reprintcounter -1) + ')'  ),'')" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=c_address1 visible="1	if(getrow()=1,1,0)" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="20" y="416" height="135" width="3916" format="[general]" expression="f_ReportHeaderInfosale('address1',    headerno )" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_invno visible="1	if(getrow()=1,1,0)" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="0" border="0" x="41" y="593" height="145" width="375" text="Inv. No." html.valueishtml="0" )
+column(name=altersaleinvcode visible="1" band=header id=9 x="447" y="583" height="187" width="1104" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-12" font.pitch="2" font.weight="700" tabsequence=0 )
+compute(name=c_salestaxval visible="1	0" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="3802" y="239" height="145" width="135" format="###0.00" expression="round( c_amount  *  gstperc * 0.01, 2) +  Round(looseqty * unitsalestax ,2)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+column(name=gstperc visible="1	0" band=header id=38 x="3791" y="406" height="156" width="135" color="0" border="0" alignment="1" format="[general]" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-11" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=unitsalestax visible="1	0" band=header id=37 x="3770" y="604" height="177" width="156" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-11" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=saledetail_discperc visible="1	0" band=header id=34 x="3802" y="41" height="135" width="114" color="0" border="0" alignment="1" format="#####0.00" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-11" font.pitch="2" font.weight="400" tabsequence=0 )
+text(name=t_21 visible="1	if(getrow()=1,1,0)" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="2" border="0" x="2718" y="593" height="125" width="270" text="Time:" html.valueishtml="0" )
+column(name=saleledger_date visible="1	if(getrow()=1,1,0)" band=header id=16 x="3010" y="593" height="125" width="427" color="0" border="0" alignment="0" format="HH:MM:SS" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" tabsequence=0 )
+text(name=saleledger_date_t visible="1	if(getrow()=1,1,0)" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="1" background.color="553648127" color="0" alignment="1" border="0" x="1812" y="593" height="125" width="291" text="Date:" html.valueishtml="0" )
+column(name=saleledger_date_1 visible="1	if(getrow()=1,1,0)" band=header id=16 x="2135" y="593" height="125" width="552" color="0" border="0" alignment="0" format="DD/MM/YYYY" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=headerinvno visible="1	0" band=header id=11 x="1625" y="593" height="145" width="135" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-11" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=users_username visible="1	if(getrow()=1,1,0)" band=header id=7 x="41" y="791" height="125" width="843" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=machinename visible="1	if(getrow()=1,1,0)" band=header id=42 x="2677" y="781" height="135" width="1239" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="700" tabsequence=0 )
+text(name=t_18 visible="1	if(getrow()=1,1,0)" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="1614" y="937" height="125" width="458" text="Remarks: " html.valueishtml="0" )
+column(name=saleledger_remarks visible="1	if(getrow()=1,1,0)" band=header id=22 x="2104" y="937" height="125" width="1916" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=saleledger_custrefno visible="1	if(getrow()=1,1,0)" band=header id=23 x="354" y="937" height="135" width="1135" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" tabsequence=0 )
+text(name=t_17 visible="1	if(getrow()=1,1,0)" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="0" border="0" x="104" y="937" height="125" width="208" text="Ref." html.valueishtml="0" )
+line(name=l_2 visible="1	if(getrow()=1,1,0)" band=header background.mode="1" background.color="553648127" pen.style="1" pen.width="10" pen.color="0" x1="4052" y1="1083" x2="83" y2="1083" )
+text(name=t_7 visible="1	if(getrow()=1,1,0)" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="2" border="0" x="3604" y="1114" height="135" width="437" text="Amount" html.valueishtml="0" )
+text(name=t_14 visible="1	if(getrow()=1,1,0)" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="1" border="0" x="104" y="1114" height="135" width="312" text="Code" html.valueishtml="0" )
+line(name=l_1 visible="1	if(getrow()=1,1,0)" band=header background.mode="1" background.color="553648127" pen.style="1" pen.width="10" pen.color="0" x1="4041" y1="1270" x2="72" y2="1270" )
+text(name=t_5 visible="1	if(getrow()=1,1,0)" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="2" border="0" x="968" y="1114" height="135" width="656" text="Description" html.valueishtml="0" )
+text(name=t_6 visible="1	if(getrow()=1,1,0)" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="2" border="0" x="2447" y="1114" height="135" width="177" text="Qty" html.valueishtml="0" )
+text(name=t_3 visible="1	if(getrow()=1,1,0)" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="1" border="0" x="2937" y="1114" height="135" width="406" text="Rate" html.valueishtml="0" )
+column(name=nettotal visible="1" band=summary id=3 x="2895" y="42" height="156" width="1145" color="0" border="0" alignment="1" format="################0.00" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-11" font.pitch="2" font.weight="700" tabsequence=0 )
+line(name=l_4 visible="1" band=summary background.mode="1" background.color="553648127" pen.style="1" pen.width="10" pen.color="0" x1="4052" y1="11" x2="83" y2="11" )
+text(name=t_16 visible="1" band=summary font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="0" border="0" x="62" y="63" height="156" width="364" text="Items(" html.valueishtml="0" )
+compute(name=compute_1 visible="1" band=summary font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="468" y="63" height="156" width="281" format="[GENERAL]" expression="rowcount()" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_22 visible="1" band=summary font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="0" border="0" x="781" y="63" height="156" width="41" text=")" html.valueishtml="0" )
+compute(name=c_nettotal visible="1	0" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" x="3114" y="42" height="177" width="385" format="#,##,##,##0.00" expression="/*Round(Sum (  c_netamount for all ) -  saleledger_flatdisc  +  saleledger_misccharges  + saleledger_salestax , 0)*/  Round(Sum (  c_netamount for all ) -  saleledger_flatdisc  +  saleledger_misccharges  + saleledger_salestax , 0)  + Round(sum(c_salestaxval for all ) + Round((Round(sum((round(c_amount,2) ) for all)  *  (1 - saleledger_discperc * 0.01) , 2) -  saleledger_flatdisc  )  *  invgstperc  * 0.01,2),0) " alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_10 visible="1" band=summary font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="1" border="0" x="1791" y="42" height="135" width="541" text="Net Total:" html.valueishtml="0" )
+line(name=l_5 visible="1" band=summary background.mode="1" background.color="553648127" pen.style="1" pen.width="10" pen.color="0" x1="4052" y1="250" x2="83" y2="250" )
+compute(name=compute_4 visible="1	if(getrow()=rowcount(),1,0)" band=summary font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" x="83" y="448" height="125" width="3968" format="[GENERAL]" expression="f_StringPreferences('Quartterms2')" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_2 visible="1	if(getrow()=rowcount(),1,0)" band=summary font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" x="83" y="303" height="125" width="3968" format="[GENERAL]" expression="f_StringPreferences('Quartterms1')" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_23 visible="1	if(getrow()=rowcount(),1,0)" band=summary font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="0" border="0" x="72" y="886" height="135" width="4000" text="	f_saleinvfooter()" html.valueishtml="0" )
+compute(name=c_indvsalestaxval visible="1	0" band=summary font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="572" y="292" height="166" width="593" format="###0.00" expression="sum(c_salestaxval for all)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_27 visible="1	0" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="1" border="0" x="552" y="250" height="166" width="958" text="Ind. Sales Tax :" html.valueishtml="0" )
+text(name=t_12 visible="1	0" band=summary font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="1" border="0" x="2135" y="63" height="135" width="729" text="Gross Total :" html.valueishtml="0" )
+column(name=saleledger_discperc visible="1	0" band=summary id=17 x="1395" y="230" height="135" width="406" color="0" border="0" alignment="1" format="[general]" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-11" font.pitch="2" font.weight="400" tabsequence=0 )
+text(name=t_8 visible="1	0" band=summary font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="1" border="0" x="1833" y="230" height="135" width="31" text=":" html.valueishtml="0" )
+compute(name=c_totaltax visible="1	0" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="864" y="292" height="135" width="625" format="###0.00" expression="Round(Round((Round(sum((round(c_amount,2) ) for all)  *  (1 - saleledger_discperc * 0.01) ,2) -  saleledger_flatdisc  )  *  invgstperc  * 0.01,2) + sum(c_salestaxval for all) , 0)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+column(name=invgstperc visible="1	0" band=summary id=39 x="1406" y="386" height="135" width="395" color="0" border="0" alignment="1" format="###0.00" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-11" font.pitch="2" font.weight="400" tabsequence=0 )
+text(name=t_26 visible="1	0" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="1" border="0" x="1833" y="386" height="135" width="31" text=":" html.valueishtml="0" )
+text(name=t_28 visible="1	0" band=summary font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="0" border="0" x="385" y="344" height="135" width="906" text="Total Sales Tax:" html.valueishtml="0" )
+compute(name=c_invpercval visible="1	0" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="1916" y="230" height="135" width="541" format="###0.00" expression="Sum (  c_amount for all )  * (  saleledger_discperc * .01) " alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=c_invsalestaxval visible="1	0" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="1885" y="386" height="135" width="572" format="#0.00" expression="Round((Round(sum((round(c_amount,2) ) for all)  *  (1 - saleledger_discperc * 0.01),2) -  saleledger_flatdisc  )  *  invgstperc  * 0.01,2)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_9 visible="1	0" band=summary font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="1" border="0" x="2500" y="230" height="135" width="562" text="Flat Disc :" html.valueishtml="0" )
+column(name=saleledger_flatdisc visible="1	0" band=summary id=19 x="3520" y="230" height="145" width="572" color="0" border="0" alignment="1" format="#########0.00" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-11" font.pitch="2" font.weight="400" tabsequence=0 )
+text(name=t_11 visible="1	0" band=summary font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="2489" y="396" height="145" width="885" text="Dispatch/Misc.:" html.valueishtml="0" )
+column(name=saleledger_misccharges visible="1	0" band=summary id=18 x="3437" y="407" height="145" width="656" color="0" border="0" alignment="1" format="#########0.00" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-11" font.pitch="2" font.weight="400" tabsequence=0 )
+compute(name=c_grosstotal visible="1	0" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="3500" y="63" height="135" width="604" format="#,##,##,##0.00" expression="Sum (  c_amount for all ) " alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_13 visible="1	0" band=summary font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="1" border="0" x="114" y="230" height="135" width="520" text="Disc(%) :" html.valueishtml="0" )
+text(name=t_25 visible="1	0" band=summary font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="1" border="0" x="114" y="386" height="135" width="1250" text="Over All Sales Tax(%):" html.valueishtml="0" )
+text(name=t_15 visible="1	0" band=summary font.charset="0" font.face="Arial Narrow" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="1" border="0" x="208" y="438" height="156" width="31" text=":" html.valueishtml="0" )
+text(name=t_1 visible="1" band=summary font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="1" border="0" x="916" y="63" height="135" width="218" text="DO." html.valueishtml="0" )
+column(name=invcode visible="1" band=summary id=4 x="1166" y="53" height="145" width="583" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+compute(name=compute_5 visible="1	if(getrow()=rowcount(),1,0)" band=summary font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" x="83" y="584" height="125" width="3968" format="[GENERAL]" expression="f_StringPreferences('Quartterms3')" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_6 visible="1	if(getrow()=rowcount(),1,0)" band=summary font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" x="83" y="730" height="125" width="3968" format="[GENERAL]" expression="f_StringPreferences('Quartterms4')" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=c_netamount visible="1	0" band=detail font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="1281" y="10" height="135" width="416" format="[general]" expression=" c_amount *  ( 1 -  saleledger_discperc  * .01 ) " alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=c_amount visible="1" band=detail font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="400" background.mode="1" background.color="553648127" color="0" x="3416" y="10" height="135" width="604" format="#########0.00" expression="(  looseqty *  saledetail_saleprice - looseqty * itemflatdisc )  *  ( 1 -  (   saledetail_discperc  * .01 )  ) " alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+column(name=itemalias visible="1" band=detail id=5 x="31" y="10" height="135" width="614" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=itemflatdisc visible="1	0" band=detail id=36 x="2281" y="10" height="135" width="364" color="0" border="0" alignment="1" format="	f_SetColumnFormat('Qty')" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-11" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=saledetail_saleprice visible="1	IF ( TYPE = 2 , 0 , 1 )" band=detail id=31 x="2718" y="10" height="135" width="614" color="0" border="0" alignment="1" format="#######0.00" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-11" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=looseqty visible="1	IF ( TYPE = 2 , 0 , 1 )" band=detail id=28 x="2322" y="10" height="135" width="322" color="0" border="0" alignment="1" format="	f_SetColumnFormat('Qty')" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-11" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=itemname visible="1" band=detail id=1 x="697" y="10" height="135" width="1489" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=expiry visible="1" band=detail id=43 x="614" y="166" height="135" width="760" color="0" border="0" alignment="0" format="dd/mm/yy" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+text(name=t_2 visible="1" band=detail font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="0" border="0" x="41" y="166" height="135" width="541" text="Exp. Date:" html.valueishtml="0" )
+htmltable(border="0" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" encodeSelfLinkArgs="1" generateJavaScript="1" netscapeLayers="0" pagingMethod=0 )
+xhtmlgen() cssgen(sessionSpecific="0" )
+xmlgen(inline="0" )
+xsltgen()
+jsgen()
+export.xml(headGroups="1" includewhitespace="0" metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 distill.customPostScript="0" xslfop.print="0" )
+export.xhtml()

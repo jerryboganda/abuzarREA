@@ -1,0 +1,109 @@
+release 12.5;
+datawindow ( units=2 timer_interval=0 processing=0 color=67108864 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.printername=""  print.documentname=""  print.orientation=0 print.margin.left=250 print.margin.right=250 print.margin.top=250 print.margin.bottom=250 print.paper.size=0 print.paper.source=0 print.canusedefaultprinter=yes selected.mouse=no hidegrayline=no showbackcoloronxp=no)
+header(height=0 )
+summary(height=0 color="536870912" )
+footer(height=0 color="536870912" )
+detail(height=239 color="536870912" )
+table(column=(type=long update=yes updatewhereclause=yes name=code dbname="ServiceResultHeader.ServiceResultCode"  )
+column=(type=datetime updatewhereclause=yes name=deliverydate dbname="DeliveryDate"  )
+column=(type=datetime update=yes updatewhereclause=yes name=date dbname="ServiceResultHeader.Date"  )
+column=(type=long update=yes updatewhereclause=yes name=serviceinvcode dbname="ServiceInvCode"  )
+column=(type=datetime updatewhereclause=yes name=servicedate dbname="ServiceDate"  )
+column=(type=char(50) updatewhereclause=yes name=patientregno dbname="PatientRegNo"  )
+column=(type=long updatewhereclause=yes name=patientcode dbname="PatientCode"  )
+column=(type=char(60) updatewhereclause=yes name=fname dbname="FName"  )
+column=(type=long updatewhereclause=yes name=admissioncode dbname="AdmissionCode"  )
+column=(type=datetime updatewhereclause=yes name=dob dbname="DOB"  )
+column=(type=long updatewhereclause=yes name=gestationcode dbname="GestationCode"  )
+column=(type=long updatewhereclause=yes name=ageyears dbname="AgeYears"  )
+column=(type=long updatewhereclause=yes name=agemonths dbname="AgeMonths"  )
+column=(type=long updatewhereclause=yes name=agedays dbname="AgeDays"  )
+column=(type=char(1) updatewhereclause=yes name=gender dbname="Gender" 
+ values="Male	M/Female	F/"  )
+column=(type=long updatewhereclause=yes name=locationcode dbname="LocationCode"  )
+column=(type=long update=yes updatewhereclause=yes name=usercode dbname="ServiceResultHeader.UserCode"  )
+column=(type=char(100) update=yes updatewhereclause=yes name=remarks dbname="ServiceResultHeader.Remarks"  )
+column=(type=char(1) update=yes updatewhereclause=yes initial="N" name=posted dbname="ServiceResultHeader.Posted"  )
+column=(type=datetime update=yes updatewhereclause=yes name=postdate dbname="ServiceResultHeader.PostDate"  )
+column=(type=long update=yes updatewhereclause=yes name=postedby dbname="ServiceResultHeader.PostedBY"  )
+column=(type=long update=yes updatewhereclause=yes initial="1" name=serviceresultstampcode dbname="ServiceResultHeader.ServiceResultStampCode"  )
+ retrieve="SELECT 
+	ServiceResultHeader.ServiceResultCode,   
+	DeliveryDate=GETDATE(),
+	ServiceResultHeader.Date,   
+	ServiceInvCode = ServiceResultHeader.ServiceInvCode,
+	ServiceDate = GETDATE(),
+	PatientRegNo= 
+		(SELECT P.RegNo 
+		FROM Patient P 
+		WHERE P.PatientCode IN 
+			(SELECT ISNULL(SH.PatientCode, (SELECT PA.PatientCode FROM PatientAdmission PA WHERE PA.AdmissionCode = SH.AdmissionCode)))),
+	PatientCode = 
+		(SELECT P.PatientCode 
+		FROM Patient P 
+		WHERE P.PatientCode IN 
+			(SELECT ISNULL(SH.PatientCode, (SELECT PA.PatientCode FROM PatientAdmission PA WHERE PA.AdmissionCode = SH.AdmissionCode)))),
+	FName = 
+		(SELECT P.FName
+		FROM Patient P 
+		WHERE P.PatientCode IN 
+			(SELECT ISNULL(SH.PatientCode, (SELECT PA.PatientCode FROM PatientAdmission PA WHERE PA.AdmissionCode = SH.AdmissionCode)))),
+	AdmissionCode= (SELECT SH.AdmissionCode FROM ServiceHeader SH WHERE SH.ServiceInvCode = ServiceResultHeader.ServiceInvCode),
+	DOB= 
+		(SELECT P.DOB
+		FROM Patient P 
+		WHERE P.PatientCode IN 
+			(SELECT ISNULL(SH.PatientCode, (SELECT PA.PatientCode FROM PatientAdmission PA WHERE PA.AdmissionCode = SH.AdmissionCode)))),
+	GestationCode = 
+		(SELECT P.GestationCode
+		FROM Patient P 
+		WHERE P.PatientCode IN 
+			(SELECT ISNULL(SH.PatientCode, (SELECT PA.PatientCode FROM PatientAdmission PA WHERE PA.AdmissionCode = SH.AdmissionCode)))),
+	AgeYears = 
+		(SELECT DATEDIFF(yy, P.DOB, getdate())
+		FROM Patient P 
+		WHERE P.PatientCode IN 
+			(SELECT ISNULL(SH.PatientCode, (SELECT PA.PatientCode FROM PatientAdmission PA WHERE PA.AdmissionCode = SH.AdmissionCode)))),
+	AgeMonths = 
+		(SELECT CAST(DATEDIFF(dd, P.DOB, getdate()) % 360 / 30 AS INT)
+		FROM Patient P 
+		WHERE P.PatientCode IN 
+			(SELECT ISNULL(SH.PatientCode, (SELECT PA.PatientCode FROM PatientAdmission PA WHERE PA.AdmissionCode = SH.AdmissionCode)))),
+	AgeDays = 
+		(SELECT CAST(DATEDIFF(dd, P.DOB, getdate()) % 360 % 30 AS INT)
+		FROM Patient P 
+		WHERE P.PatientCode IN 
+			(SELECT ISNULL(SH.PatientCode, (SELECT PA.PatientCode FROM PatientAdmission PA WHERE PA.AdmissionCode = SH.AdmissionCode)))),
+	Gender= 
+		(SELECT P.Gender 
+		FROM Patient P 
+		WHERE P.PatientCode IN 
+			(SELECT ISNULL(SH.PatientCode, (SELECT PA.PatientCode FROM PatientAdmission PA WHERE PA.AdmissionCode = SH.AdmissionCode)))),
+	LocationCode= (SELECT PA.LocationCode FROM PatientAdmission PA WHERE PA.AdmissionCode IN (SELECT SH.AdmissionCode FROM ServiceHeader SH WHERE SH.ServiceInvCode = ServiceResultHeader.ServiceInvCode)),
+	ServiceResultHeader.UserCode,
+	ServiceResultHeader.Remarks,
+	ServiceResultHeader.Posted,
+	ServiceResultHeader.PostDate,
+	ServiceResultHeader.PostedBY,
+	ServiceResultHeader.ServiceResultStampCode
+FROM 
+	ServiceResultHeader, ServiceHeader SH
+WHERE 
+	ServiceResultHeader.ServiceResultCode = :ai_code AND
+	ServiceResultHeader.ServiceInvCode = SH.ServiceInvCode
+
+"
+  arguments=(("ai_code", number))
+)
+column(name=deliverydate visible="1" band=detail id=2 x="1166" y="21" height="197" width="4916" color="128" border="2" alignment="0" format="dddd dd - mmmm - yyyy  hh:mm:ss am/pm" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="15780518" font.charset="0" font.face="Arial" font.family="2" font.height="-11" font.pitch="2" font.weight="700" tabsequence=0 )
+text(name=date_t visible="1" band=detail font.charset="0" font.face="Arial" font.family="2" font.height="-11" font.pitch="2" font.weight="700" background.mode="2" background.color="15780518" color="128" alignment="0" border="2" x="31" y="21" height="187" width="1093" text="Delivery Date:" html.valueishtml="0" )
+htmltable(border="1" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" encodeSelfLinkArgs="1" generateJavaScript="1" netscapeLayers="0" pagingMethod=0 )
+xhtmlgen() cssgen(sessionSpecific="0" )
+xmlgen(inline="0" )
+xsltgen()
+jsgen()
+export.xml(headGroups="1" includewhitespace="0" metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 distill.customPostScript="0" xslfop.print="0" )
+export.xhtml()

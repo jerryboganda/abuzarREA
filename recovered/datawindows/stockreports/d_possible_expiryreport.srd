@@ -1,0 +1,150 @@
+release 12.5;
+datawindow ( units=0 timer_interval=0 processing=0 color=16777215 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.printername=""  print.documentname=""  print.orientation=0 print.margin.left=0 print.margin.right=0 print.margin.top=97 print.margin.bottom=97 print.paper.size=1 print.paper.source=0 print.canusedefaultprinter=yes selected.mouse=no hidegrayline=no showbackcoloronxp=no)
+header(height=644 color="536870912" )
+summary(height=0 color="536870912" )
+footer(height=4 color="536870912" )
+detail(height=0 color="536870912" )
+table(column=(type=char(75) updatewhereclause=yes name=item_customicode dbname="Item.CustomICode"  )
+column=(type=long updatewhereclause=yes name=groupcode dbname="GroupCode"  )
+column=(type=char(20) updatewhereclause=yes name=groupname dbname="GroupName"  )
+column=(type=char(60) updatewhereclause=yes name=item_name dbname="Item.Name"  )
+column=(type=char(1) updatewhereclause=yes name=active dbname="active"  )
+column=(type=long updatewhereclause=yes name=item_packunits dbname="Item.PackUnits"  )
+column=(type=char(100) updatewhereclause=yes name=batch dbname="Purdetail.Batch"  )
+column=(type=datetime updatewhereclause=yes name=expiry dbname="Purdetail.Expiry"  )
+column=(type=decimal(4) updatewhereclause=yes name=packqty dbname="Purdetail.packQty"  )
+column=(type=decimal(4) updatewhereclause=yes name=looseqty dbname="Purdetail.looseqty"  )
+ retrieve="    SELECT Item.CustomICode, 
+		GroupCode=
+		CASE :as_reportgrouping
+		WHEN 'M' THEN max(Item.ManfCode)
+		WHEN 'C' THEN max(Item.ICatCode)
+		WHEN 'L' THEN max(Item.ICCode)
+		ELSE Max(Item.PACKCODE) END,
+		GroupName= 
+		CASE :as_reportgrouping 
+		WHEN 'M' THEN (SELECT M.NAME FROM MANUFACTURER M WHERE M.MANFCODE  = max(Item.ManfCode))
+		WHEN 'C' THEN (SELECT C.NAME FROM ITEMCATEGORY C WHERE C.ICATCODE  = max(Item.ICatCode))
+		WHEN 'L' THEN (SELECT C.NAME FROM ITEMCLASS C WHERE C.ICCODE  = max(Item.ICCode))
+		ELSE (SELECT P.NAME FROM ITEMPACKING P WHERE P.PACKCODE  = max(Item.PACKCODE)) END,    
+         Item.Name,   
+		active=CASE item.active WHEN 1 THEN 'Y' ELSE 'N' END,
+         Item.PackUnits,   
+          
+         Purdetail.Batch,   
+         Purdetail.Expiry,   
+         Purdetail.packQty,
+         purdetail.looseqty  
+    FROM Purdetail,   
+         Item
+        
+   WHERE 
+          ( Purdetail.Expiry Between :adt_sdate and :adt_edate ) and
+          ( Purdetail.icode=item.icode)and
+		CASE :as_reportgrouping
+		WHEN 'M' THEN Item.ManfCode
+		WHEN 'C' THEN Item.ICatCode
+		WHEN 'L' THEN Item.ICCode
+		ELSE item.PACKCODE END IN (:ai_groupcode) 
+GROUP BY Item.CustomICode,    
+         Item.Name,   
+		Item.Active,
+         Item.PackUnits,   
+          
+         purdetail.Batch,   
+         PurDetail.Expiry,   
+         purDetail.packQty,
+         purdetail.looseqty 
+
+union all
+
+SELECT Item.CustomICode, 
+		GroupCode=  
+			CASE :as_reportgrouping
+		WHEN 'M' THEN max(Item.ManfCode)
+		WHEN 'C' THEN max(Item.ICatCode)
+		WHEN 'L' THEN max(Item.ICCode)
+		ELSE Max(Item.PACKCODE) END,
+	GroupName= 
+		CASE :as_reportgrouping 
+		WHEN 'M' THEN (SELECT M.NAME FROM MANUFACTURER M WHERE M.MANFCODE  = max(Item.ManfCode))
+		WHEN 'C' THEN (SELECT C.NAME FROM ITEMCATEGORY C WHERE C.ICATCODE  = max(Item.ICatCode))
+		WHEN 'L' THEN (SELECT C.NAME FROM ITEMCLASS C WHERE C.ICCODE  = max(Item.ICCode))
+		ELSE (SELECT P.NAME FROM ITEMPACKING P WHERE P.PACKCODE  = max(Item.PACKCODE)) END,    
+         Item.Name,   
+		active=CASE item.active WHEN 1 THEN 'Y' ELSE 'N' END,
+         Item.PackUnits,   
+            
+         Srdetail.Batch,   
+         srdetail.Expiry,   
+         srdetail.packQty,
+         srdetail.looseqty  
+    FROM srdetail,   
+         Item
+   WHERE 
+          ( srdetail.Expiry Between :adt_sdate and :adt_edate ) and
+          ( srdetail.icode=item.icode)and
+		 CASE :as_reportgrouping
+		WHEN 'M' THEN Item.ManfCode
+		WHEN 'C' THEN Item.ICatCode
+		WHEN 'L' THEN Item.ICCode
+		ELSE item.PACKCODE END IN (:ai_groupcode) 
+GROUP BY Item.CustomICode,   
+         Item.Name,   
+		Item.Active,
+         Item.PackUnits,   
+         
+         Srdetail.Batch,   
+         SrDetail.Expiry,   
+         SrDetail.packQty,
+         Srdetail.looseqty 
+order by 
+		GroupName,
+		 Item.Name,   
+         Item.PackUnits,   
+           
+         purdetail.Batch,   
+         PurDetail.Expiry,   
+         purDetail.packQty,
+         purdetail.looseqty 
+"
+  arguments=(("as_reportgrouping", string), ("ai_groupcode", numberlist), ("adt_sdate", datetime), ("adt_edate", datetime))
+)
+group(level=1 header.height=84 trailer.height=0 by=("groupname"  ) header.color="536870912" trailer.color="536870912" )
+group(level=2 header.height=68 trailer.height=0 by=("item_name" "batch" "expiry"  ) header.color="536870912" trailer.color="536870912" )
+compute(name=expirdate visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="279" y="436" height="60" width="311" format="[General]" expression="/* RelativeDate (today(), ar_date  ) */" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_1 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="279" y="348" height="60" width="261" text="Phone(s) :" html.valueishtml="0" )
+compute(name=c_phone visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="571" y="348" height="60" width="1353" format="[general]" expression="f_ReportHeaderInfo('phone')" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_2 visible="1	0" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="1961" y="348" height="60" width="114" text="Fax :" html.valueishtml="0" )
+compute(name=c_fax visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="2098" y="348" height="60" width="1216" format="[general]" expression="'Fax : '+f_ReportHeaderInfo('fax')" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_3 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" alignment="2" border="0" x="279" y="32" height="60" width="3035" text="Possible Expiry Report" html.valueishtml="0" )
+compute(name=c_companyname visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" x="279" y="112" height="60" width="3035" format="[general]" expression="f_ReportHeaderInfo('clientname')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=c_address1 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="279" y="192" height="60" width="3035" format="[general]" expression="f_ReportHeaderInfo('address1')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=c_address2 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="279" y="272" height="60" width="3035" format="[general]" expression="f_ReportHeaderInfo('address2')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+line(name=l_1 visible="1" band=header background.mode="1" background.color="553648127" pen.style="2" pen.width="5" pen.color="0" x1="297" y1="516" x2="3319" y2="516" )
+line(name=l_2 visible="1" band=header background.mode="1" background.color="553648127" pen.style="2" pen.width="5" pen.color="0" x1="297" y1="632" x2="3319" y2="632" )
+text(name=t_item_name visible="1" band=header font.charset="0" font.face="Arial Narrow" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="2" border="0" x="334" y="544" height="64" width="215" text="Item Name" html.valueishtml="0" )
+column(name=packqty visible="1	0" band=header id=9 x="2514" y="436" height="64" width="201" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial Narrow" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=looseqty visible="1	0" band=header id=10 x="2747" y="444" height="60" width="187" color="0" border="0" alignment="1" format="[general]" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial Narrow" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+text(name=t_qty visible="1" band=header font.charset="0" font.face="Arial Narrow" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="1" border="0" x="3035" y="544" height="64" width="160" text="Quantity" html.valueishtml="0" )
+text(name=godowndetail_batch_t visible="1" band=header font.charset="0" font.face="Arial Narrow" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="2" border="0" x="1893" y="544" height="64" width="110" text="Batch" html.valueishtml="0" )
+text(name=t_item_packunits visible="1" band=header font.charset="0" font.face="Arial Narrow" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="1" border="0" x="1522" y="544" height="64" width="215" text="Pack Units" html.valueishtml="0" )
+text(name=t_batch visible="1" band=header font.charset="0" font.face="Arial Narrow" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="2" border="0" x="2359" y="544" height="64" width="206" text="Expir Date" html.valueishtml="0" )
+line(name=l_3 visible="1" band=summary background.mode="1" background.color="553648127" pen.style="2" pen.width="5" pen.color="0" x1="325" y1="4" x2="3346" y2="4" )
+compute(name=compute_3 visible="1" band=header.1 font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.italic="1" font.pitch="2" font.weight="700" font.underline="1" background.mode="1" background.color="536870912" color="0" x="274" y="8" height="64" width="1010" format="[GENERAL]" expression=" groupname " alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_1 visible="0" band=header.2 font.charset="0" font.face="Arial Narrow" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="2249" y="0" height="60" width="261" format="[GENERAL]" expression=" packqty  *  item_packunits  +  looseqty " alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+column(name=item_name visible="1" tag="Y" band=header.2 id=4 x="283" y="4" height="60" width="1175" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=60 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial Narrow" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+compute(name=compute_2 visible="1" band=header.2 font.charset="0" font.face="Arial Narrow" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="2793" y="4" height="60" width="411" format="	f_SetColumnFormat('Qty')" expression="sum( (packqty  *  item_packunits  +  looseqty ) for group 2)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+column(name=batch visible="1" band=header.2 id=7 x="1879" y="4" height="60" width="384" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial Narrow" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=item_packunits visible="1" tag="Y" band=header.2 id=6 x="1504" y="4" height="60" width="233" color="0" border="0" alignment="1" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial Narrow" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=expiry visible="1" band=header.2 id=8 x="2359" y="4" height="60" width="343" color="0" border="0" alignment="0" format="dd/mm/yy :hh:mm:ss" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial Narrow" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+htmltable(border="0" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" encodeSelfLinkArgs="1" generateJavaScript="1" netscapeLayers="0" pagingMethod=0 )
+xhtmlgen() cssgen(sessionSpecific="0" )
+xmlgen(inline="0" )
+xsltgen()
+jsgen()
+export.xml(headGroups="1" includewhitespace="0" metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 distill.customPostScript="0" xslfop.print="0" )
+export.xhtml()

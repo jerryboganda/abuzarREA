@@ -1,0 +1,55 @@
+release 12.5;
+datawindow ( units=0 timer_interval=0 processing=1 color=80263581 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.printername=""  print.documentname=""  print.orientation=0 print.margin.left=110 print.margin.right=110 print.margin.top=96 print.margin.bottom=96 print.paper.size=0 print.paper.source=0 print.canusedefaultprinter=yes grid.lines=0 selected.mouse=yes hidegrayline=no showbackcoloronxp=no)
+header(height=72 color="536870912" )
+summary(height=0 color="536870912" )
+footer(height=0 color="536870912" )
+detail(height=68 color="536870912" )
+table(column=(type=long key=yes update=yes updatewhereclause=yes name=groupcode dbname="GroupCode"  )
+column=(type=char(60) updatewhereclause=yes name=godown dbname="Godown"  )
+column=(type=long key=yes update=yes updatewhereclause=yes name=gcode dbname="GCode"  )
+column=(type=long updatewhereclause=yes name=allowed dbname="ALLowed" 
+ values="	1/	0"  )
+column=(type=long key=yes update=yes updatewhereclause=yes name=module dbname="Module"  )
+column=(type=long update=yes updatewhereclause=yes validation="Real(GetText()) >= 0" validationmsg="~"Godown Priority Must be Greater than Zero ~"" initial="10" name=priority dbname="Priority"  )
+ retrieve="SELECT
+	GroupCode=GroupAllowedGodown.GroupCode,
+	Godown=Godown.Name,
+	GCode=GroupAllowedGodown.GCode,
+	ALLowed=1,
+	Module=GroupAllowedGodown.Module,
+	Priority=GroupAllowedGodown.Priority
+FROM	GroupAllowedGodown, Godown
+WHERE	GroupAllowedGodown.GroupCode = :ai_GroupCode AND
+		GroupAllowedGodown.Module = :ai_Module AND
+		GroupAllowedGodown.GCode=Godown.GCode
+UNION ALL
+SELECT
+	GroupCode=:ai_GroupCode,
+	Godown=Godown.Name,
+	GCode=Godown.GCode,
+	ALLowed=0,
+	Module=:ai_Module,
+	Priority=10
+FROM	Godown
+WHERE	Godown.GCode NOT IN 
+		(SELECT DISTINCT gcode FROM GroupAllowedGodown WHERE GroupCode = :ai_GroupCode and Module = :ai_module)
+ORDER BY Godown.Name"
+  update="GroupAllowedGodown" updatewhere=0 updatekeyinplace=no
+  arguments=(("ai_GroupCode", number), ("ai_Module", number))
+)
+text(name=godown_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="2" border="6" x="9" y="8" height="56" width="663" text="Godown" html.valueishtml="0" )
+text(name=allowed_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="2" border="6" x="681" y="8" height="56" width="197" text="Allowed" html.valueishtml="0" )
+text(name=priority_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="2" border="6" x="887" y="8" height="56" width="201" text="Priority" html.valueishtml="0" )
+column(name=godown visible="1" height.autosize=yes band=detail id=2 x="9" y="4" height="56" width="663" color="0" border="5" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=60 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=allowed visible="1" height.autosize=yes band=detail id=4 x="681" y="4" height="56" width="197" color="0" border="5" alignment="2" format="[general]" html.valueishtml="0" checkbox.lefttext=no checkbox.scale=no checkbox.threed=yes checkbox.text="" checkbox.on="1" checkbox.off="0" criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" tabsequence=10 )
+column(name=priority visible="1" height.autosize=yes band=detail id=6 x="887" y="4" height="56" width="201" color="0" border="5" alignment="1" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-8" font.pitch="2" font.weight="400" tabsequence=20 )
+htmltable(border="1" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" encodeSelfLinkArgs="1" generateJavaScript="1" netscapeLayers="0" pagingMethod=0 )
+xhtmlgen() cssgen(sessionSpecific="0" )
+xmlgen(inline="0" )
+xsltgen()
+jsgen()
+export.xml(headGroups="1" includewhitespace="0" metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 distill.customPostScript="0" xslfop.print="0" )
+export.xhtml()

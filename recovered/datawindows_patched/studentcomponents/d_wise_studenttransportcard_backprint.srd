@@ -1,0 +1,94 @@
+release 12.5;
+datawindow ( units=3 timer_interval=0 processing=0 color=16777215 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 pointer="Arrow!"  print.printername=""  print.documentname=""  print.orientation=0 print.margin.left=502 print.margin.right=502 print.margin.top=502 print.margin.bottom=502 print.paper.size=10 print.paper.source=0 print.canusedefaultprinter=yes print.columns=2 print.columns.width=9200 selected.mouse=no hidegrayline=no showbackcoloronxp=no)
+header(height=0 )
+summary(height=0 color="536870912" )
+footer(height=0 color="536870912" )
+detail(height=6138 color="536870912" )
+table(column=(type=long update=yes updatewhereclause=yes name=studentcode dbname="StudentCode"  )
+column=(type=long update=yes updatewhereclause=yes initial="22" name=custcode dbname="CustCode"  )
+column=(type=char(60) update=yes updatewhereclause=yes name=regno dbname="RegNo"  )
+column=(type=char(100) update=yes updatewhereclause=yes name=name dbname="Name"  )
+column=(type=char(100) update=yes updatewhereclause=yes name=fname dbname="FName"  )
+column=(type=char(1) update=yes updatewhereclause=yes initial="M" name=gender dbname="Gender" 
+ values="Male	M/Female	F/"  )
+column=(type=datetime update=yes updatewhereclause=yes initial="today" name=birthdate dbname="BirthDate"  )
+column=(type=decimal(2) update=yes updatewhereclause=yes initial="0.00" name=discperc dbname="DiscPerc"  )
+column=(type=char(1) update=yes updatewhereclause=yes initial="R" name=status dbname="Status" 
+ values="Registered	R/Admitted	A/Rejected	J/"  )
+column=(type=char(40) updatewhereclause=yes name=rollno dbname="RollNo"  )
+column=(type=char(100) updatewhereclause=yes name=grade dbname="Grade"  )
+column=(type=char(100) updatewhereclause=yes name=class dbname="Class"  )
+column=(type=char(100) updatewhereclause=yes name=school dbname="School"  )
+column=(type=char(255) updatewhereclause=yes name=schooladdress dbname="SchoolAddress"  )
+column=(type=long updatewhereclause=yes name=transportroutecode dbname="TransportRouteCode"  )
+column=(type=long updatewhereclause=yes name=vehiclecode dbname="VehicleCode"  )
+column=(type=datetime updatewhereclause=yes name=issuedate dbname="IssueDate"  )
+column=(type=datetime updatewhereclause=yes name=expirydate dbname="ExpiryDate"  )
+column=(type=char(127) updatewhereclause=yes name=filename dbname="FileName"  )
+column=(type=char(27) updatewhereclause=yes name=signaturefile dbname="SignatureFile"  )
+ retrieve="SELECT  
+	StudentCode=Student.StudentCode,
+	CustCode=Student.CustCode,
+	RegNo=Student.RegNo,
+	Name=Student.Name,
+	FName=Student.FName,
+	Gender=Student.Gender,
+	BirthDate=Student.BirthDate,
+	DiscPerc=Student.DiscPerc,
+	Status=Student.Status,
+	RollNo = StudentClass.RollNo,
+	Grade = Grade.Name,
+	Class=Class.Name,
+	School = (SELECT School.Name FROM School WHERE School.SchoolCode = Class.SchoolCode),
+	SchoolAddress = (SELECT School.Description FROM School WHERE School.SchoolCode = Class.SchoolCode),
+	TransportRouteCode=
+		(SELECT Max(SD.TransportRouteCode) 
+		FROM StudentServiceTemplateDetail SD 
+		WHERE SD.StudentCode = Student.StudentCode AND 
+			SD.StudentServiceTemplateCode IN 
+				(SELECT Max(STD.StudentServiceTemplateCode) 
+				FROM StudentServiceTemplateDetail STD 
+				WHERE STD.StudentCode = Student.StudentCode)),
+	VehicleCode=
+		(SELECT Max(SD.VehicleCode) 
+		FROM StudentServiceTemplateDetail SD 
+		WHERE SD.StudentCode = Student.StudentCode AND 
+			SD.StudentServiceTemplateCode IN 
+				(SELECT Max(STD.StudentServiceTemplateCode) 
+				FROM StudentServiceTemplateDetail STD 
+				WHERE STD.StudentCode = Student.StudentCode)),
+	IssueDate = GETDATE(),
+	ExpiryDate = ISNULL((SELECT CAST(DBO.FN_GetPreference('DefaultExpiry') AS DATETIME)), GETDATE()+365),
+	FileName = 'c:~\waseela_temp~\'+LTRIM(RTRIM(STR(Student.StudentCode)))+'.' + ISNULL((SELECT MIN(Imagetype) FROM StudentImage SI WHERE SI.StudentCode = Student.StudentCode), 'bmp'),
+	SignatureFile = 'c:~\waseela_temp~\sigfile.jpg'
+FROM
+	Student, StudentClass, Class, Grade
+WHERE 
+	Student.StudentCode IN (:ai_code) AND
+	Student.StudentCode = StudentClass.StudentCode AND
+	StudentClass.ClassCode = Class.ClassCode AND
+	Class.Active = 'Y' AND
+	Class.GradeCode = Grade.GradeCode
+ORDER BY
+	Name"
+  arguments=(("ai_code", numberlist))
+)
+line(name=l_12 visible="1" band=detail background.mode="2" background.color="16777215" pen.style="0" pen.width="26" pen.color="8388608" x1="264" y1="291" x2="8916" y2="291" )
+line(name=l_13 visible="1" band=detail background.mode="2" background.color="16777215" pen.style="0" pen.width="26" pen.color="8388608" x1="8916" y1="291" x2="8916" y2="5742" )
+line(name=l_3 visible="1" band=detail background.mode="2" background.color="16777215" pen.style="0" pen.width="26" pen.color="8388608" x1="264" y1="5715" x2="8916" y2="5715" )
+line(name=l_14 visible="1" band=detail background.mode="2" background.color="16777215" pen.style="0" pen.width="26" pen.color="8388608" x1="264" y1="291" x2="264" y2="5742" )
+roundrectangle(name=rr_1 visible="1" band=detail pen.style="0" pen.width="26" pen.color="8388608" brush.hatch="7" brush.color="545259520" background.mode="2" background.color="8388608" x="396" y="688" height="4497" width="8387" ellipseheight="238" ellipsewidth="238" )
+text(name=t_11 visible="1" band=detail font.charset="0" font.face="Arial" font.family="2" font.height="-12" font.pitch="2" font.weight="700" background.mode="2" background.color="16777215" color="8388608" alignment="1" border="0" x="502" y="1032" height="529" width="8122" text="۱۔ گاڑی میں سو۱رہونے کیلئےبس کارڈ ضروری ہے۔" html.valueishtml="0" )
+text(name=t_12 visible="1" band=detail font.charset="0" font.face="Arial" font.family="2" font.height="-12" font.pitch="2" font.weight="700" background.mode="2" background.color="16777215" color="8388608" alignment="1" border="0" x="502" y="1800" height="1084" width="8122" text="۲۔ کارڈ گم ہونے کی صورت میں دفتر سے نیا کارڈ مناسب قیمت پر دستیاب ہوگا۔" html.valueishtml="0" )
+text(name=t_13 visible="1" band=detail font.charset="0" font.face="Arial" font.family="2" font.height="-12" font.pitch="2" font.weight="700" background.mode="2" background.color="16777215" color="8388608" alignment="1" border="0" x="502" y="3043" height="529" width="8122" text="۳۔ کسی پریشانی  کی صورت میں دفتر ہذاسے رابطہ کریں۔" html.valueishtml="0" )
+text(name=t_14 visible="1" band=detail font.charset="0" font.face="Arial" font.family="2" font.height="-12" font.pitch="2" font.weight="700" background.mode="2" background.color="16777215" color="8388608" alignment="1" border="0" x="502" y="3837" height="1190" width="8122" text="۴۔ ٹرانسپورٹ سروس ختم کرنے کیلئےکارڈ جمع کرانا ضروری ہے۔" html.valueishtml="0" )
+htmltable(border="1" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" encodeSelfLinkArgs="1" generateJavaScript="1" netscapeLayers="0" pagingMethod=0 )
+xhtmlgen() cssgen(sessionSpecific="0" )
+xmlgen(inline="0" )
+xsltgen()
+jsgen()
+export.xml(headGroups="1" includewhitespace="0" metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 distill.customPostScript="0" xslfop.print="0" )
+export.xhtml()

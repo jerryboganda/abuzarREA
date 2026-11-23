@@ -1,0 +1,65 @@
+// window w_serviceresultstamp (serviceresult)  ancestor: w_single_entry
+
+// w_serviceresultstamp.wf_duplicatename(string as_name) returns boolean
+	long ll_count
+	boolean b_flag
+	as_name = trim(as_name)
+	SQL SELECT count ( *) INTO :ll_count FROM DBO.ServiceResultStamp WHERE ServiceResultStamp.name =:as_name USING sqlca;
+	if ll_count > 0 then
+		b_flag = true
+	end if
+	return b_flag
+
+// w_serviceresultstamp.create() returns 0
+	call super::create
+
+// w_serviceresultstamp.destroy() returns 0
+	call super::destroy
+	if isvalid(this.menuid) then
+		destroy this.menuid
+	end if
+
+// w_serviceresultstamp.activate() returns long
+	long ancestorreturnvalue
+	ancestorreturnvalue = super::activate()
+	this.windowstate = maximized!
+	setredraw(true)
+	return ::message.returnvalue
+
+// w_serviceresultstamp.open() returns long
+	long ancestorreturnvalue
+	ancestorreturnvalue = super::open()
+	this.is_tablename = "ServiceResultStamp"
+	return ::message.returnvalue
+
+// dw_detail.itemchanged(long row, dwobject dwo, string data) returns long
+	long ancestorreturnvalue
+	integer rt_code
+	ancestorreturnvalue = super::itemchanged(row, dwo, data)
+	choose case dwo.name
+	case "name"
+		if parent.parent.parent.wf_duplicatename(data) then
+			messagebox("Name Validation", "Duplicate Name Error~n~rPlease Choose Some Other Name")
+			return 1
+		end if
+	end choose
+	return rt_code
+
+// dw_detail.itemerror(long row, dwobject dwo, string data) returns long
+	long ancestorreturnvalue
+	ancestorreturnvalue = super::itemerror(row, dwo, data)
+	choose case dwo.name
+	case "name"
+		if data = "" or isnull(data) then
+			messagebox("Name Validation", "Value required for " + upper(dwo.name) + " in current row")
+		end if
+	case "shortname"
+		if data = "" or isnull(data) then
+			messagebox("Short Name Validation", "Value required for " + upper(dwo.name) + " in current row")
+		end if
+	case "conversionfactor"
+		if long(data) <= 0 or isnull(data) then
+			messagebox("Conversion Factor/Rate Validation", "Value required for " + upper(dwo.name) + " in current row")
+		end if
+	end choose
+	return 1

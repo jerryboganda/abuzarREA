@@ -1,0 +1,121 @@
+release 12.5;
+datawindow ( units=2 timer_interval=0 processing=0 color=16777215 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.printername=""  print.documentname=""  print.orientation=0 print.margin.left=250 print.margin.right=250 print.margin.top=250 print.margin.bottom=250 print.paper.size=1 print.paper.source=0 print.canusedefaultprinter=yes selected.mouse=no hidegrayline=no showbackcoloronxp=no)
+header(height=0 )
+summary(height=0 color="536870912" )
+footer(height=0 color="536870912" )
+detail(height=187 color="536870912" )
+table(column=(type=long updatewhereclause=yes name=invoicelen dbname="InvoiceLen"  )
+column=(type=char(10) updatewhereclause=yes name=invoice dbname="Invoice"  )
+column=(type=long updatewhereclause=yes name=datelen dbname="DateLen"  )
+column=(type=char(10) updatewhereclause=yes name=date dbname="Date"  )
+column=(type=long updatewhereclause=yes name=custcodelen dbname="CustCodeLen"  )
+column=(type=char(10) updatewhereclause=yes name=custcode dbname="CustCode"  )
+column=(type=long updatewhereclause=yes name=prodcodelen dbname="ProdCodeLen"  )
+column=(type=char(10) updatewhereclause=yes name=prodcode dbname="ProdCode"  )
+column=(type=long updatewhereclause=yes name=batchlen dbname="BatchLen"  )
+column=(type=char(100) updatewhereclause=yes name=batch dbname="Batch"  )
+column=(type=long updatewhereclause=yes name=unitslen dbname="UnitsLen"  )
+column=(type=char(10) updatewhereclause=yes name=units dbname="Units"  )
+column=(type=long updatewhereclause=yes name=bonuslen dbname="BonusLen"  )
+column=(type=char(10) updatewhereclause=yes name=bonus dbname="Bonus"  )
+column=(type=long updatewhereclause=yes name=discountlen dbname="DiscountLen"  )
+column=(type=char(12) updatewhereclause=yes name=discount dbname="Discount"  )
+column=(type=long updatewhereclause=yes name=flaglen dbname="FlagLen"  )
+column=(type=char(2) updatewhereclause=yes name=flag dbname="Flag"  )
+column=(type=long updatewhereclause=yes name=dscodelen dbname="DsCodeLen"  )
+column=(type=char(100) updatewhereclause=yes name=dscode dbname="DsCode"  )
+ retrieve="SELECT 
+	InvoiceLen=10,
+	Invoice=STR(S.SaleInvCode, 10),
+	DateLen = 10,
+	Date = CONVERT(VARCHAR(10), S.Date, 103),
+	CustCodeLen=10,
+	CustCode=STR(S.CustCode, 10),
+	ProdCodeLen=10,
+	ProdCode=STR(SD.ICode, 10),
+	BatchLen=10,
+	Batch=SD.Batch,
+	UnitsLen=10,
+	Units=STR(SD.LooseQty, 10), 
+	BonusLen=10,
+	Bonus=STR(SD.BonusQty, 10), 
+	DiscountLen=12,
+	Discount=STR( 
+		(SD.LooseQty * SD.ItemFlatDisc) + 
+		(SD.LooseQty * SD.SalePrice * SD.DiscPerc * 0.01) + 
+		(SD.LooseQty * (SD.SalePrice - SD.ItemFlatDisc) * (1 - SD.DiscPerc * 0.01) * S.DiscPerc * 0.01), 12, 2), 
+	FlagLen=2,
+	Flag='S ',
+	DsCodeLen=100,
+	DsCode=CONVERT(VARCHAR(100), :as_dscode)
+FROM
+	SaleLedger S, SaleDetail SD, Item I
+WHERE
+	S.Date >= :ar_startdate AND S.Date <= :ar_enddate AND
+	SD.ICode = I.ICode AND I.ManfCode IN (:ai_manfcode) AND
+	S.SaleInvCode = SD.SaleInvCode
+UNION ALL
+SELECT 
+	InvoiceLen=10,
+	Invoice=STR(S.SRInvCode, 10),
+	DateLen = 10,
+	Date = CONVERT(VARCHAR(10), S.Date, 103),
+	CustCodeLen=10,
+	CustCode=STR(S.CustCode, 10),
+	ProdCodeLen=10,
+	ProdCode=STR(SD.ICode, 10),
+	BatchLen=10,
+	Batch=SD.Batch,
+	UnitsLen=10,
+	Units=STR(-SD.LooseQty, 10), 
+	BonusLen=10,
+	Bonus=STR(-SD.BonusQty, 10), 
+	DiscountLen=12,
+	Discount=STR( 
+		(SD.LooseQty * SD.SalePrice * SD.DiscPerc * 0.01) + 
+		(SD.LooseQty * SD.SalePrice * (1 - SD.DiscPerc * 0.01) * S.DiscPerc * 0.01), 12, 2), 
+	FlagLen=2,
+	Flag='SR',
+	DsCodeLen=100,
+	DsCode=CONVERT(VARCHAR(100), :as_dscode)
+FROM
+	SRLedger S, SRDetail SD, Item I
+WHERE
+	S.Date >= :ar_startdate AND S.Date <= :ar_enddate AND
+	SD.ICode = I.ICode AND I.ManfCode IN (:ai_manfcode) AND
+	S.SRInvCode = SD.SRInvCode
+ORDER BY
+	CustCode,
+	ProdCode,
+	Flag
+"
+  arguments=(("ai_manfcode", numberlist), ("ar_startdate", datetime), ("ar_enddate", datetime), ("as_dscode", string))
+)
+column(name=custcode visible="1" band=detail id=6 x="62" y="10" height="166" width="437" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=255 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=prodcode visible="1" band=detail id=8 x="583" y="10" height="166" width="489" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=255 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=invoicelen visible="1" band=detail id=1 x="1072" y="0" height="166" width="156" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=invoice visible="1" band=detail id=2 x="1229" y="0" height="166" width="520" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=datelen visible="1" band=detail id=3 x="1750" y="0" height="166" width="156" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=date visible="1" band=detail id=4 x="1906" y="0" height="166" width="520" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=batchlen visible="1" band=detail id=9 x="2427" y="0" height="166" width="156" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=batch visible="1" band=detail id=10 x="2583" y="0" height="166" width="520" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=unitslen visible="1" band=detail id=11 x="3104" y="0" height="166" width="156" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=units visible="1" band=detail id=12 x="3260" y="0" height="166" width="520" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=bonuslen visible="1" band=detail id=13 x="3781" y="0" height="166" width="156" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=bonus visible="1" band=detail id=14 x="3937" y="0" height="166" width="520" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=discountlen visible="1" band=detail id=15 x="4458" y="0" height="166" width="156" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=discount visible="1" band=detail id=16 x="4614" y="0" height="166" width="625" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=flaglen visible="1" band=detail id=17 x="5239" y="0" height="166" width="156" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=flag visible="1" band=detail id=18 x="5395" y="0" height="166" width="104" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=dscodelen visible="1" band=detail id=19 x="5500" y="0" height="166" width="156" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=dscode visible="1" band=detail id=20 x="5656" y="0" height="166" width="5197" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+htmltable(border="1" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" encodeSelfLinkArgs="1" generateJavaScript="1" netscapeLayers="0" pagingMethod=0 )
+xhtmlgen() cssgen(sessionSpecific="0" )
+xmlgen(inline="0" )
+xsltgen()
+jsgen()
+export.xml(headGroups="1" includewhitespace="0" metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 distill.customPostScript="0" xslfop.print="0" )
+export.xhtml()

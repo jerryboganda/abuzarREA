@@ -1,0 +1,67 @@
+release 12.5;
+datawindow ( units=0 timer_interval=0 processing=0 color=1073741824 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.printername=""  print.documentname=""  print.orientation=0 print.margin.left=110 print.margin.right=110 print.margin.top=96 print.margin.bottom=96 print.paper.size=0 print.paper.source=0 print.canusedefaultprinter=yes selected.mouse=no hidegrayline=no showbackcoloronxp=no)
+header(height=96 color="536870912" )
+summary(height=0 color="536870912" )
+footer(height=0 color="536870912" )
+detail(height=84 color="536870912" )
+table(column=(type=long updatewhereclause=yes name=dstbidlen dbname="DSTBIDLEN"  )
+column=(type=char(6) updatewhereclause=yes name=dstbid dbname="DSTBID"  )
+column=(type=long updatewhereclause=yes name=prdidlen dbname="PRDIDLEN"  )
+column=(type=char(9) updatewhereclause=yes name=prdid dbname="PRDID"  )
+column=(type=long updatewhereclause=yes name=productlen dbname="PRODUCTLEN"  )
+column=(type=char(40) updatewhereclause=yes name=product dbname="PRODUCT"  )
+column=(type=long updatewhereclause=yes name=cl_ballen dbname="CL_BALLEN"  )
+column=(type=char(8) updatewhereclause=yes name=cl_bal dbname="CL_BAL"  )
+column=(type=long updatewhereclause=yes name=in_transitlen dbname="IN_TRANSITLEN"  )
+column=(type=char(8) updatewhereclause=yes name=in_transit dbname="IN_TRANSIT"  )
+column=(type=long updatewhereclause=yes name=ot_outlen dbname="OT_OUTLEN"  )
+column=(type=char(8) updatewhereclause=yes name=ot_out dbname="OT_OUT"  )
+column=(type=long updatewhereclause=yes name=ot_inlen dbname="OT_INLEN"  )
+column=(type=char(8) updatewhereclause=yes name=ot_in dbname="OT_IN"  )
+ retrieve="SELECT
+	DSTBIDLEN=6, 
+	DSTBID=:as_distcode + REPLICATE(' ', 6 - LEN(:as_distcode)),
+	PRDIDLEN=9,
+	PRDID=SUBSTRING(LTRIM(RTRIM(I.Remarks)), 1, 9),
+	PRODUCTLEN=40,
+	PRODUCT=SUBSTRING(LTRIM(RTRIM(I.Name)), 1, 40),
+	CL_BALLEN=8,
+	CL_BAL=STR(SUM(ISNULL(GD.CurrQty, 0)), 8),
+	IN_TRANSITLEN=8,
+	IN_TRANSIT=STR(0, 8),
+	OT_OUTLEN=8,
+	OT_OUT=STR(0, 8),
+	OT_INLEN=8,
+	OT_IN=STR(0, 8)
+FROM
+	Item I LEFT OUTER JOIN GodownDetail AS GD ON (I.ICode = GD.ICode)
+WHERE
+	I.ManfCode = :manfcode
+GROUP BY
+	I.ICode, I.Name, I.Remarks"
+  arguments=(("manfcode", number), ("as_distcode", string))
+)
+text(name=dstbid_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="2" border="0" x="18" y="24" height="64" width="192" text="Dstbid" html.valueishtml="0" )
+text(name=prdid_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="2" border="0" x="238" y="24" height="64" width="274" text="Prdid" html.valueishtml="0" )
+text(name=product_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="2" border="0" x="539" y="24" height="64" width="1129" text="Product" html.valueishtml="0" )
+text(name=cl_bal_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="2" border="0" x="1691" y="24" height="64" width="247" text="Cl Bal" html.valueishtml="0" )
+text(name=ot_in_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="2" border="0" x="2491" y="24" height="64" width="247" text="Ot In" html.valueishtml="0" )
+text(name=ot_out_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="2" border="0" x="2226" y="24" height="64" width="247" text="Ot Out" html.valueishtml="0" )
+text(name=in_transit_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="2" border="0" x="1961" y="24" height="64" width="247" text="In Transit" html.valueishtml="0" )
+column(name=dstbid visible="1" band=detail id=2 x="18" y="4" height="76" width="192" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=6 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=prdid visible="1" band=detail id=4 x="238" y="4" height="76" width="274" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=9 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=product visible="1" band=detail id=6 x="539" y="4" height="76" width="1129" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=40 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=cl_bal visible="1" band=detail id=8 x="1691" y="4" height="76" width="247" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=8 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=ot_in visible="1" band=detail id=14 x="2491" y="4" height="76" width="247" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=8 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=ot_out visible="1" band=detail id=12 x="2226" y="4" height="76" width="247" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=8 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=in_transit visible="1" band=detail id=10 x="1961" y="4" height="76" width="247" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=8 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+htmltable(border="1" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" encodeSelfLinkArgs="1" generateJavaScript="1" netscapeLayers="0" pagingMethod=0 )
+xhtmlgen() cssgen(sessionSpecific="0" )
+xmlgen(inline="0" )
+xsltgen()
+jsgen()
+export.xml(headGroups="1" includewhitespace="0" metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 distill.customPostScript="0" xslfop.print="0" )
+export.xhtml()

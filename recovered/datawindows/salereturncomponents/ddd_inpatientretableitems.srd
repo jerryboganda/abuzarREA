@@ -1,0 +1,274 @@
+release 12.5;
+datawindow ( units=0 timer_interval=0 processing=1 color=16777215 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.printername=""  print.documentname=""  print.orientation=0 print.margin.left=110 print.margin.right=110 print.margin.top=96 print.margin.bottom=96 print.paper.size=0 print.paper.source=0 print.canusedefaultprinter=yes grid.lines=0 selected.mouse=yes hidegrayline=no showbackcoloronxp=no)
+header(height=76 color="536870912" )
+summary(height=0 color="536870912" )
+footer(height=0 color="536870912" )
+detail(height=76 color="536870912" )
+table(column=(type=char(75) updatewhereclause=yes name=fullcode dbname="customicode"  )
+column=(type=char(60) updatewhereclause=yes name=itemname dbname="name"  )
+column=(type=char(70) updatewhereclause=yes name=item dbname="item"  )
+column=(type=long updatewhereclause=yes name=icode dbname="icode"  )
+column=(type=char(50) updatewhereclause=yes name=packingdesc dbname="packingdesc"  )
+column=(type=char(60) updatewhereclause=yes name=manufacturer dbname="manufacturer"  )
+column=(type=long updatewhereclause=yes name=itemalertcode dbname="itemalertcode" 
+ values=""  )
+column=(type=long updatewhereclause=yes name=itemalerttypecode dbname="itemalerttypecode"  )
+column=(type=char(100) updatewhereclause=yes name=batch dbname="batch"  )
+column=(type=datetime updatewhereclause=yes name=expiry dbname="expiry"  )
+column=(type=decimal(2) updatewhereclause=yes name=saleprice dbname="saleprice"  )
+column=(type=decimal(2) updatewhereclause=yes name=discperc dbname="discperc"  )
+column=(type=decimal(4) updatewhereclause=yes name=looseqty dbname="LooseQty"  )
+column=(type=decimal(4) updatewhereclause=yes name=bonusqty dbname="BonusQty"  )
+column=(type=long updatewhereclause=yes name=packunits dbname="packunits"  )
+column=(type=decimal(4) updatewhereclause=yes name=returnqty dbname="ReturnQty"  )
+column=(type=decimal(4) updatewhereclause=yes name=returnbonusqty dbname="ReturnBonusQty"  )
+column=(type=decimal(2) updatewhereclause=yes name=unitsalestax dbname="unitsalestax"  )
+column=(type=decimal(2) updatewhereclause=yes name=gstperc dbname="gstperc"  )
+column=(type=decimal(4) updatewhereclause=yes name=transitstock dbname="transitstock"  )
+ retrieve="SELECT 
+	customicode, 
+	name, 
+	item,
+	icode,
+	packingdesc,
+	manufacturer=(SELECT m.Name FROM Manufacturer M WHERE M.ManfCode = TMP.ManfCode),
+	itemalertcode,
+	itemalerttypecode,
+	batch, 
+	expiry, 
+	saleprice=max(saleprice), 
+	discperc=discperc,
+	LooseQty=SUM(looseqty), 
+	BonusQty=SUM(Bonusqty), 
+	packunits, 
+	ReturnQty=SUM(ReturnQty), 
+	ReturnBonusQty=SUM(ReturnBonusQty),
+	unitsalestax,
+	gstperc,
+	transitstock
+FROM 
+	(SELECT
+		i.name, 
+		item=i.name + str(i.icode), 
+		i.icode,
+		i.customicode,
+		i.packingdesc,
+		i.manfcode,
+		i.itemalertcode,
+		itemalerttypecode = (select ia.itemalerttypecode from itemalert ia where ia.itemalertcode = i.itemalertcode),
+		i.transitstock,
+		sd.gcode,
+		sd.batch,
+		sd.expiry,
+		sd.saleprice,
+		sd.discperc,
+		looseqty=IsNull(sum(sd.looseqty), 0),
+		bonusqty=IsNull(sum(sd.bonusqty), 0),
+		sd.packunits,
+		unitsalestax=sd.unitsalestax,
+		gstperc=sd.gstperc,
+		ReturnQty = 0,
+		ReturnBonusQty = 0
+	
+	FROM
+		dbo.item i, 
+		dbo.saledetail sd,
+		dbo.saleledger sl
+	WHERE
+		( sl.admissioncode = :ar_AdmissionCode ) and
+		( sl.saleinvcode = sd.saleinvcode ) and
+		( sl.posted = 'Y' ) AND
+		( i.icode = sd.icode ) and
+		( sd.due IS NULL )
+	GROUP BY
+		i.name, 
+		i.icode,
+		i.customicode,
+		i.packingdesc,
+		i.manfcode,
+		i.itemalertcode,
+		i.transitstock,
+		sd.gcode,
+		sd.batch,
+		sd.expiry,
+		sd.saleprice,
+		sd.discperc,
+		sd.packunits,
+		sd.unitsalestax,
+		sd.gstperc
+	UNION ALL
+	SELECT
+		i.name, 
+		item=i.name + str(i.icode), 
+		i.icode,
+		i.customicode,
+		i.packingdesc,
+		i.manfcode,
+		i.itemalertcode,
+		itemalerttypecode = (select ia.itemalerttypecode from itemalert ia where ia.itemalertcode = i.itemalertcode),
+		i.transitstock,
+		sd.gcode,
+		sd.batch,
+		sd.expiry,
+		saleprice=sd.srprice,
+		sd.discperc,
+		looseqty=0,
+		bonusqty=0,
+		sd.packunits,
+		unitsalestax=sd.unitsalestax,
+		gstperc=sd.gstperc,
+		ReturnQty = IsNull(Sum(sd.looseqty), 0),
+		ReturnBonusQty = IsNull(Sum(sd.bonusqty), 0)
+	FROM
+		dbo.item i, 
+		dbo.srdetail sd,
+		dbo.srledger sl
+	WHERE
+		( sl.admissioncode = :ar_AdmissionCode ) and
+		( sl.srinvcode = sd.srinvcode ) and
+		( i.icode = sd.icode )
+	GROUP BY
+		i.name, 
+		i.icode,
+		i.customicode,
+		i.packingdesc,
+		i.manfcode,
+		i.itemalertcode,
+		i.transitstock,
+		sd.gcode,
+		sd.batch,
+		sd.expiry,
+		sd.srprice,
+		sd.discperc,
+		sd.packunits,
+		sd.unitsalestax,
+		sd.gstperc
+	UNION ALL
+	SELECT
+		i.name, 
+		item=i.name + str(i.icode), 
+		i.icode,
+		max(i.customicode),
+		i.packingdesc,
+		i.manfcode,
+		i.itemalertcode,
+		itemalerttypecode = (select ia.itemalerttypecode from itemalert ia where ia.itemalertcode = i.itemalertcode),
+		i.transitstock,
+		dsd.gcode,
+		dsd.batch,
+		dsd.expiry,
+		sd.saleprice,
+		sd.discperc,
+		looseqty = ISNULL(sum(dsd.duesatisfyqty), 0),
+		Bonusqty=0,
+		sd.packunits,
+		unitsalestax=sd.unitsalestax,
+		gstperc=sd.gstperc,
+		ReturnQty = 0,
+		ReturnBonusQty=0
+	
+	FROM 
+		dbo.item i,   
+		dbo.saleledger sl,
+		dbo.saledetail sd,
+		dbo.duesatisfydetail dsd,
+		dbo.Duesatisfyheader dsh
+	
+	WHERE
+		( sl.admissioncode = :ar_admissioncode ) and
+		( sl.saleinvcode = sd.saleinvcode ) and
+		( sd.due in ('S', 'D', 'X') ) and
+		( dsh.saleinvcode = sd.saleinvcode ) and
+		( dsh.duesatisfycode = dsd.duesatisfycode) and
+		( i.icode = dsd.icode ) and
+		( sd.icode = dsd.icode)
+	
+	GROUP BY
+		i.icode,
+		i.name,
+		dsd.icode,
+		i.packingdesc,
+		i.manfcode,
+		i.itemalertcode,
+		i.transitstock,
+		dsd.gcode,
+		dsd.batch,
+		dsd.expiry,
+		dsh.saleinvcode,
+		sd.saleprice,
+		sd.discperc,
+		sd.packunits,
+		sd.unitsalestax,
+		sd.gstperc) AS TMP
+
+GROUP BY 
+	icode, 
+	name, 
+	item,
+	customicode, 
+	packingdesc,
+	manfcode,
+	itemalertcode,
+	itemalerttypecode,
+	batch, 
+	expiry, 
+	discperc, 
+	packunits, 
+	unitsalestax,
+	gstperc,
+	transitstock
+
+HAVING 
+	SUM(looseqty) - SUM(ReturnQty) > 0 OR
+	SUM(Bonusqty) - SUM(ReturnBonusQty) > 0
+
+ORDER BY
+	name, 
+	expiry,
+	batch "
+  arguments=(("ar_AdmissionCode", number))
+)
+text(name=customicode_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80263581" color="0" alignment="2" border="6" x="9" y="8" height="60" width="407" text="Alias Name" html.valueishtml="0" )
+text(name=name_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80263581" color="0" alignment="2" border="6" x="425" y="8" height="60" width="1170" text="Item Name" html.valueishtml="0" )
+text(name=saleprice_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80263581" color="0" alignment="2" border="6" x="1605" y="8" height="60" width="357" text="SalePrice" html.valueishtml="0" )
+text(name=looseqty_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80263581" color="0" alignment="2" border="6" x="1970" y="8" height="60" width="229" text="SaleQty" html.valueishtml="0" )
+text(name=returnqty_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80263581" color="0" alignment="2" border="6" x="2208" y="8" height="60" width="197" text="Ret. Qty" html.valueishtml="0" )
+text(name=obj_22914198 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80263581" color="0" alignment="2" border="6" x="2414" y="8" height="60" width="311" text="Sold Bonus" html.valueishtml="0" )
+text(name=obj_22916462 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80263581" color="0" alignment="2" border="6" x="2734" y="8" height="60" width="293" text="Ret. Bonus" html.valueishtml="0" )
+text(name=packunits_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80263581" color="0" alignment="2" border="6" x="3035" y="8" height="60" width="329" text="Packunits" html.valueishtml="0" )
+text(name=batch_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80263581" color="0" alignment="2" border="6" x="3374" y="8" height="60" width="581" text="Batch" html.valueishtml="0" )
+text(name=expiry_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80263581" color="0" alignment="2" border="6" x="3963" y="8" height="60" width="283" text="Expiry" html.valueishtml="0" )
+text(name=t_1 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="2" background.color="79741120" color="0" alignment="2" border="6" x="6126" y="4" height="64" width="352" text="Tax Per Unit" html.valueishtml="0" )
+text(name=t_2 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="2" background.color="79741120" color="0" alignment="2" border="6" x="6487" y="4" height="64" width="302" text="GST(%)" html.valueishtml="0" )
+text(name=t_3 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="2" background.color="79741120" color="0" alignment="2" border="6" x="6798" y="4" height="64" width="1298" text="Item" html.valueishtml="0" )
+text(name=packingdesc_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="2" background.color="79741120" color="0" alignment="2" border="6" x="4256" y="4" height="64" width="475" text="Packing" html.valueishtml="0" )
+text(name=manufacturer_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="2" background.color="79741120" color="0" alignment="2" border="6" x="5353" y="4" height="64" width="763" text="Manufacturer" html.valueishtml="0" )
+text(name=t_transitstock visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="2" background.color="79741120" color="0" alignment="2" border="6" x="8105" y="4" height="64" width="375" text="Transit Stock" html.valueishtml="0" )
+text(name=itemalertcode_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="2" background.color="79741120" color="0" alignment="2" border="6" x="4741" y="4" height="64" width="603" text="Item Alert" html.valueishtml="0" )
+column(name=fullcode visible="1" band=detail id=1 x="9" y="4" height="64" width="407" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=12 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="0" background.color="536870912	f_get_itemalert_background(itemalerttypecode)" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=itemname visible="1" band=detail id=2 x="425" y="4" height="64" width="1170" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=60 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="0" background.color="536870912	f_get_itemalert_background(itemalerttypecode)" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=saleprice visible="1" band=detail id=11 x="1605" y="4" height="64" width="357" color="0" border="0" alignment="1" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="0" background.color="536870912	f_get_itemalert_background(itemalerttypecode)" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=packunits visible="1" band=detail id=15 x="3035" y="4" height="64" width="329" color="0" border="0" alignment="1" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="0" background.color="536870912	f_get_itemalert_background(itemalerttypecode)" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=batch visible="1" band=detail id=9 x="3374" y="4" height="64" width="581" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=100 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=yes edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="0" background.color="536870912	f_get_itemalert_background(itemalerttypecode)" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=expiry visible="1" band=detail id=10 x="3963" y="4" height="64" width="283" color="0" border="0" alignment="0" format="[shortdate] [time]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="0" background.color="536870912	f_get_itemalert_background(itemalerttypecode)" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=unitsalestax visible="1" band=detail id=18 x="6126" y="4" height="64" width="352" color="0" border="0" alignment="1" format="[general]" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="0" background.color="536870912	f_get_itemalert_background(itemalerttypecode)" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=gstperc visible="1" band=detail id=19 x="6487" y="4" height="64" width="302" color="0" border="0" alignment="1" format="[general]" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="0" background.color="536870912	f_get_itemalert_background(itemalerttypecode)" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=item visible="1" band=detail id=3 x="6798" y="4" height="64" width="1298" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="0" background.color="536870912	f_get_itemalert_background(itemalerttypecode)" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=returnbonusqty visible="1" band=detail id=17 x="2734" y="4" height="64" width="293" color="0" border="0" alignment="1" format="	f_SetColumnFormat('Qty')" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="0" background.color="536870912	f_get_itemalert_background(itemalerttypecode)" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=bonusqty visible="1" band=detail id=14 x="2414" y="4" height="64" width="311" color="0" border="0" alignment="1" format="	f_SetColumnFormat('Qty')" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="0" background.color="536870912	f_get_itemalert_background(itemalerttypecode)" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=returnqty visible="1" band=detail id=16 x="2208" y="4" height="64" width="197" color="0" border="0" alignment="1" format="	f_SetColumnFormat('Qty')" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="0" background.color="536870912	f_get_itemalert_background(itemalerttypecode)" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=looseqty visible="1" band=detail id=13 x="1970" y="4" height="64" width="229" color="0" border="0" alignment="1" format="	f_SetColumnFormat('Qty')" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="0" background.color="536870912	f_get_itemalert_background(itemalerttypecode)" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=packingdesc visible="1" band=detail id=5 x="4256" y="4" height="64" width="475" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="0" background.color="536870912	f_get_itemalert_background(itemalerttypecode)" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=manufacturer visible="1" band=detail id=6 x="5353" y="4" height="64" width="763" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="0" background.color="536870912	f_get_itemalert_background(itemalerttypecode)" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=transitstock visible="1" band=detail id=20 x="8105" y="4" height="64" width="375" color="0" border="0" alignment="1" format="	f_SetColumnFormat('Qty')" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="0" background.color="536870912	f_get_itemalert_background(itemalerttypecode)" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=itemalertcode visible="1" band=detail id=7 x="4741" y="4" height="64" width="603" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" dddw.allowedit=no dddw.autohscroll=no dddw.autoretrieve=yes dddw.useasborder=no dddw.datacolumn=itemalertcode dddw.displaycolumn=name dddw.hscrollbar=no dddw.hsplitscroll=no dddw.imemode=0 dddw.limit=0 dddw.name=ddd_itemalert dddw.nilisnull=no dddw.percentwidth=0 dddw.required=no dddw.showlist=no dddw.vscrollbar=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="0" background.color="536870912	f_get_itemalert_background(itemalerttypecode)" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+htmltable(border="1" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" encodeSelfLinkArgs="1" generateJavaScript="1" netscapeLayers="0" pagingMethod=0 )
+xhtmlgen() cssgen(sessionSpecific="0" )
+xmlgen(inline="0" )
+xsltgen()
+jsgen()
+export.xml(headGroups="1" includewhitespace="0" metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 distill.customPostScript="0" xslfop.print="0" )
+export.xhtml()

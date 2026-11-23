@@ -1,0 +1,89 @@
+// window w_spoteam_list (custcomponents)  ancestor: w_listview_form
+
+// w_spoteam_list.wf_openmywindow(long al_code) returns 0
+	long ll_code
+	long ll_retcode = 1
+	if this.id_list.rowcount() > 0 and this.id_list.getrow() > 0 and al_code > 0 then
+		ll_code = al_code
+		openwithparm(w_spoteam_form, ll_code)
+		return
+	end if
+	setnull(ll_code)
+	openwithparm(w_spoteam_form, ll_code)
+
+// w_spoteam_list.wf_setprintout() returns long
+	this.id_print.dataobject = "d_emp_employee"
+	return 0
+
+// w_spoteam_list.create() returns 0 [event]
+	call super::create
+
+// w_spoteam_list.destroy() returns 0 [event]
+	call super::destroy
+	if isvalid(this.menuid) then
+		destroy this.menuid
+	end if
+
+// w_spoteam_list.ue_new() returns 0 [event]
+	long ll_code
+	call super::ue_new
+	setnull(ll_code)
+	wf_openmywindow(ll_code)
+
+// w_spoteam_list.ue_list() returns 0 [event]
+	long ll_rtcode = 1
+	call super::ue_list
+	if this.id_list.rowcount() <= 0 then
+		ll_rtcode = wf_retrieve()
+	end if
+	wf_populate_ddlb(this.id_list)
+	if ll_rtcode > 0 then
+		this.im_menu.m_file.m_new.enabled = true
+		this.im_menu.m_file.m_save.enabled = false
+		this.im_menu.m_file.m_delete.enabled = false
+		this.im_menu.m_file.m_first.enabled = true
+		this.im_menu.m_file.m_next.enabled = true
+		this.im_menu.m_file.m_last.enabled = true
+		this.im_menu.m_file.m_print.enabled = true
+		this.im_menu.m_file.m_previous.enabled = true
+		this.im_menu.m_file.m_retrieve.text = "De&tail"
+		this.i_retrievemode = 2
+		this.i_editmode = 2
+		if this.il_selectedrow = 0 then
+			wf_first()
+			wf_selectunselectrow(1)
+		end if
+		this.tab_retrieve.tabpage_list.dw_find.setfocus()
+		return
+	end if
+
+// dw_list.doubleclicked(integer xpos, integer ypos, long row, dwobject dwo) returns long [event]
+	long ancestorreturnvalue
+	long ll_code
+	ancestorreturnvalue = super::doubleclicked(xpos, ypos, row, dwo)
+	if row > 0 then
+		ll_code = this.object.code[row]
+		if ll_code > 0 then
+			parent.parent.parent.wf_openmywindow(ll_code)
+		end if
+		return ::message.returnvalue
+	end if
+	return ::message.returnvalue
+
+// dw_find.keypressed(keycode key, unsignedlong keyflags) returns long [event]
+	long ancestorreturnvalue
+	long ll_code
+	long ll_found
+	string ls_regno
+	ancestorreturnvalue = super::keypressed(key, keyflags)
+	if key = keyenter! and parent.parent.parent.id_list.getselectedrow(0) > 0 then
+		ll_code = parent.parent.parent.id_list.object.code[parent.parent.parent.id_list.getselectedrow(0)]
+		parent.parent.parent.wf_openmywindow(ll_code)
+		return ::message.returnvalue
+	end if
+	if key = keyf5! and f_rightexists(5134) and parent.parent.parent.id_list.getselectedrow(0) > 0 then
+		ll_code = parent.parent.parent.id_list.object.code[parent.parent.parent.id_list.getselectedrow(0)]
+		openwithparm(w_emp_employee_fingerprint_enrollment, ll_code)
+		return ::message.returnvalue
+	end if
+	return ::message.returnvalue

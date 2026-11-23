@@ -1,0 +1,72 @@
+release 12.5;
+datawindow ( units=0 timer_interval=0 processing=1 color=80263581 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.documentname=""  print.orientation=0 print.margin.left=110 print.margin.right=110 print.margin.top=97 print.margin.bottom=97 print.paper.size=0 print.paper.source=0 grid.lines=0 selected.mouse=yes hidegrayline=no showbackcoloronxp=no)
+header(height=76 color="536870912" )
+summary(height=0 color="536870912" )
+footer(height=0 color="536870912" )
+detail(height=72 color="536870912" )
+table(column=(type=char(255) updatewhereclause=yes name=fullcode dbname="fullcode"  )
+column=(type=char(123) updatewhereclause=yes name=itemname dbname="itemname"  )
+column=(type=long updatewhereclause=yes name=currlistrow dbname="currlistrow"  )
+column=(type=decimal(0) updatewhereclause=yes name=code dbname="GodownDetail.gcode"  )
+column=(type=decimal(0) updatewhereclause=yes name=icode dbname="GodownDetail.icode"  )
+column=(type=decimal(0) updatewhereclause=yes name=stock dbname="GodownDetail.currqty"  )
+column=(type=decimal(0) updatewhereclause=yes name=qty dbname="qty"  )
+ retrieve="  SELECT fullcode=stuff('0000', 5 - datalength(ltrim(str(dbo.item.iccode))), datalength(ltrim(str(dbo.item.iccode))), ltrim(str(dbo.item.iccode))) + stuff('00', 3 - datalength(ltrim(str(dbo.item.icatcode))), datalength(ltrim(str(dbo.item.icatcode))), ltrim(str(dbo.item.icatcode)))+ stuff('000', 4 - datalength(ltrim(str(dbo.item.packcode))), datalength(ltrim(str(dbo.item.packcode))), ltrim(str(dbo.item.packcode)))+ stuff('000', 4 - datalength(ltrim(str(dbo.item.manfcode))), datalength(ltrim(str(dbo.item.manfcode))), ltrim(str(dbo.item.manfcode))),
+			itemname= itemclass.name	+' ' +itemcategory.name+' ' +itempacking.name+' '+manufacturer.name, 
+			currlistrow = 0,
+			gd1.gcode,
+			gd1.icode,   
+			gd2.currqty,
+			qty =		CASE
+							WHEN gd2.currqty - (gd1.optimumqty - gd1.currqty) >= 0 THEN  gd1.optimumqty - gd1.currqty
+							ELSE gd2.currqty
+						END
+
+    FROM item, 
+			godowndetail  gd1, 		
+			godowndetail  gd2,
+			itemclass,
+			itemcategory,
+			itempacking,
+			manufacturer
+
+   WHERE ( item.icode = gd1.icode ) AND  
+			( gd1.gcode = 3 ) and
+         ( gd1.currqty <= gd1.reorderqty ) and
+			( gd1.icode = gd2.icode ) and
+			( item.gcode = gd2.gcode) and
+			( gd2.currqty > 0) and
+			( gd1.optimumqty > 0 ) and
+			( item.iccode = itemclass.iccode ) and  
+			(( item.icatcode = itemcategory.icatcode ) and  
+         ( item.packcode = itempacking.packcode ) and  
+         ( item.manfcode = manufacturer.manfcode )) and
+			( gd2.gcode = :ar_gcode )
+
+"
+  arguments=(("ar_gcode", number))
+)
+text(name=t_1 band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80263581" color="0" alignment="2" border="0" x="9" y="8" height="60" width="594" text="Item Code" )
+text(name=icode_t band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80263581" color="0" alignment="2" border="0" x="613" y="8" height="60" width="329" text="Icode" )
+text(name=t_2 band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80263581" color="0" alignment="2" border="0" x="951" y="8" height="60" width="581" text="Godowndetail Currqty" )
+text(name=t_3 band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80263581" color="0" alignment="0" border="0" x="1541" y="8" height="60" width="224" text="Gcode" )
+text(name=t_4 band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80263581" color="0" alignment="0" border="0" x="1774" y="8" height="60" width="2176" text="Citemname" )
+text(name=t_5 band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80263581" color="0" alignment="0" border="0" x="3959" y="4" height="60" width="978" text="Cqty" )
+text(name=t_6 band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80263581" color="0" alignment="0" border="0" x="4946" y="4" height="60" width="59" text="Currlistrow" )
+column(name=fullcode band=detail id=1 x="9" y="4" height="64" width="594" color="0" border="0" alignment="1" format="[general]" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=icode band=detail id=5 x="613" y="4" height="64" width="329" color="0" border="0" alignment="1" format="[general]" edit.focusrectangle=no edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=stock band=detail id=6 x="951" y="4" height="64" width="581" color="0" border="0" alignment="1" format="[general]" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=code band=detail id=4 x="1541" y="4" height="64" width="224" color="0" border="0" alignment="1" format="[general]" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=itemname band=detail id=2 x="1774" y="4" height="64" width="2176" color="0" border="0" alignment="0" format="[general]" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=qty band=detail id=7 x="3959" y="4" height="64" width="978" color="0" border="0" alignment="0" format="[general]" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=currlistrow band=detail id=3 x="4946" y="4" height="64" width="59" color="0" border="0" alignment="0" format="[general]" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+htmltable(border="0" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" generateJavaScript="1" pagingMethod=0 )
+xhtmlgen() cssgen()
+xmlgen()
+xsltgen()
+jsgen()
+export.xml(metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 )
+export.xhtml()

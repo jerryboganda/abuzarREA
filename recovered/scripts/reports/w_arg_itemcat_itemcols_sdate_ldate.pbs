@@ -1,0 +1,101 @@
+// window w_arg_itemcat_itemcols_sdate_ldate (reports)  ancestor: w_listarguments
+
+// w_arg_itemcat_itemcols_sdate_ldate.create() returns 0 [event]
+	integer icurrent
+	call super::create
+	this.st_4 = create st_4
+	this.st_8 = create st_8
+	this.dw_control2 = create dw_control2
+	this.lb_fields = create lb_fields
+	this.gb_5 = create gb_5
+	icurrent = upperbound(this.control)
+	this.control[icurrent + 1] = this.st_4
+	this.control[icurrent + 2] = this.st_8
+	this.control[icurrent + 3] = this.dw_control2
+	this.control[icurrent + 4] = this.lb_fields
+	this.control[icurrent + 5] = this.gb_5
+
+// w_arg_itemcat_itemcols_sdate_ldate.destroy() returns 0 [event]
+	call super::destroy
+	destroy this.st_4
+	destroy this.st_8
+	destroy this.dw_control2
+	destroy this.lb_fields
+	destroy this.gb_5
+
+// w_arg_itemcat_itemcols_sdate_ldate.open() returns long [event]
+	long ancestorreturnvalue
+	long ll_counter
+	long ll_rowcount
+	long ll_colcount
+	long[] ll_list
+	integer rtncode
+	ancestorreturnvalue = super::open()
+	this.dw_control.settransobject(sqlca)
+	this.dw_control.insertrow(0)
+	this.dw_control.scrolltorow(0)
+	rtncode = this.dw_control.getchild("category", this.idc_categories)
+	if rtncode = -1 then
+		messagebox("Error", "Not a DataWindowChild")
+	end if
+	ll_rowcount = this.idc_categories.rowcount()
+	for ll_counter = 1 to ll_rowcount
+		this.lb_categories.additem(this.idc_categories.getitemstring(ll_counter, "name"))
+	next
+	ll_list[1] = -1
+	ll_list[2] = 0
+	this.dw_control2.settransobject(sqlca)
+	this.dw_control2.retrieve(ll_list, datetime(today()), datetime(today()))
+	ll_colcount = long(this.dw_control2.object.datawindow.column.count)
+	for ll_counter = 1 to ll_colcount
+		if not (upper(this.dw_control2.describe("#" + string(ll_counter) + ".Name")) = "DATE" or upper(this.dw_control2.describe("#" + string(ll_counter) + ".Name")) = "ITEM" or upper(this.dw_control2.describe("#" + string(ll_counter) + ".Name")) = "USERNAME" or upper(this.dw_control2.describe("#" + string(ll_counter) + ".Name")) = "ITEMROWID") then
+			this.lb_fields.additem(upper(this.dw_control2.describe("#" + string(ll_counter) + ".Name")))
+		end if
+	next
+	return ::message.returnvalue
+
+// cb_ok.clicked() returns long [event]
+	long ancestorreturnvalue
+	long ll_count
+	long ll_counter
+	long ll_totcolumn
+	long ll_innercounter
+	long ll_found
+	string ls_modify
+	string ls_modify2
+	ancestorreturnvalue = super::clicked()
+	if parent.cbx_all.checked = true then
+		for ll_counter = 1 to parent.idc_categories.rowcount()
+			parent.istr_arg.ia_integerlist[ll_counter] = parent.idc_categories.getitemnumber(ll_counter, "icatcode")
+		next
+	else
+		for ll_counter = 1 to parent.lb_selectedcategories.totalitems()
+			ll_found = parent.idc_categories.find("name ='" + parent.lb_selectedcategories.text(ll_counter) + "'", 1, parent.idc_categories.rowcount())
+			if ll_found > 0 then
+				parent.istr_arg.ia_integerlist[ll_counter] = parent.idc_categories.getitemnumber(ll_found, "icatcode")
+			end if
+		next
+	end if
+	parent.em_startdate.getdata(parent.istr_arg.d_sdate)
+	parent.em_enddate.getdata(parent.istr_arg.d_edate)
+	parent.istr_arg.i_supress = parent.cbx_supress.checked
+	parent.istr_arg.i_hide = parent.cbx_hide.checked
+	parent.istr_arg.i_status = 1
+	ls_modify = ls_modify + "date.visible=1 t_date.visible=1 username.visible=1 t_username.visible=1 itemname.visible=1 t_itemname.visible=1"
+	ls_modify2 = ""
+	ll_totcolumn = parent.lb_fields.totalitems()
+	for ll_counter = 1 to ll_totcolumn
+		if parent.lb_fields.state(ll_counter) = 1 then
+			ls_modify = ls_modify + " " + trim(parent.lb_fields.text(ll_counter)) + ".visible=1 t_" + trim(parent.lb_fields.text(ll_counter)) + ".visible=1"
+		else
+			ls_modify2 = ls_modify2 + " " + trim(parent.lb_fields.text(ll_counter)) + ".visible=0 t_" + trim(parent.lb_fields.text(ll_counter)) + ".visible=0"
+		end if
+	next
+	parent.istr_arg.s_name1 = ls_modify
+	parent.istr_arg.s_name2 = ls_modify2
+	parent.post event ue_close(1)
+	return ::message.returnvalue
+
+// lb_fields.ue_enterkey() returns long [event]
+	send(handle(this), 256, 9, long(90))
+	return 1

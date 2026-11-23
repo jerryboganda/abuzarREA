@@ -1,0 +1,331 @@
+release 12.5;
+datawindow ( units=2 timer_interval=0 processing=0 color=16777215 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.printername=""  print.documentname=""  print.orientation=1 print.margin.left=0 print.margin.right=0 print.margin.top=0 print.margin.bottom=250 print.paper.size=1 print.paper.source=0 print.canusedefaultprinter=yes selected.mouse=no hidegrayline=no showbackcoloronxp=no)
+header(height=489 color="536870912" )
+summary(height=239 color="536870912" )
+footer(height=0 color="536870912" )
+detail(height=218 color="536870912" )
+table(column=(type=long key=yes updatewhereclause=yes name=icode dbname="Item.Icode"  )
+column=(type=char(75) updatewhereclause=yes name=aliasname dbname="AliasName"  )
+column=(type=char(60) updatewhereclause=yes name=item dbname="Item"  )
+column=(type=decimal(4) updatewhereclause=yes name=openqty dbname="openqty"  )
+column=(type=decimal(6) updatewhereclause=yes name=openvalue dbname="openvalue"  )
+column=(type=decimal(4) updatewhereclause=yes name=purqty dbname="PurQty"  )
+column=(type=decimal(6) updatewhereclause=yes name=purvalue dbname="PurValue"  )
+column=(type=decimal(4) updatewhereclause=yes name=pretqty dbname="PRetQty"  )
+column=(type=decimal(6) updatewhereclause=yes name=pretvalue dbname="PRetValue"  )
+column=(type=decimal(4) updatewhereclause=yes name=saleqty dbname="SaleQty"  )
+column=(type=decimal(6) updatewhereclause=yes name=salevalue dbname="SaleValue"  )
+column=(type=decimal(4) updatewhereclause=yes name=sretqty dbname="SRetQty"  )
+column=(type=decimal(6) updatewhereclause=yes name=sretvalue dbname="SRetValue"  )
+column=(type=decimal(4) updatewhereclause=yes name=issueqty dbname="IssueQty"  )
+column=(type=decimal(6) updatewhereclause=yes name=issuevalue dbname="IssueValue"  )
+column=(type=decimal(4) updatewhereclause=yes name=duesatisfyqty dbname="DueSatisfyQty"  )
+column=(type=decimal(6) updatewhereclause=yes name=duesatisfyvalue dbname="DueSatisfyValue"  )
+column=(type=decimal(4) updatewhereclause=yes name=receiptqty dbname="ReceiptQty"  )
+column=(type=decimal(6) updatewhereclause=yes name=receiptvalue dbname="ReceiptValue"  )
+column=(type=decimal(4) updatewhereclause=yes name=adjqty dbname="AdjQty"  )
+column=(type=decimal(6) updatewhereclause=yes name=adjvalue dbname="AdjValue"  )
+column=(type=decimal(4) updatewhereclause=yes name=transferinqty dbname="TransferINQty"  )
+column=(type=decimal(6) updatewhereclause=yes name=transferinvalue dbname="TransferINValue"  )
+column=(type=decimal(4) updatewhereclause=yes name=transferoutqty dbname="TransferOutQty"  )
+column=(type=decimal(6) updatewhereclause=yes name=transferoutvalue dbname="TransferOutValue"  )
+ retrieve="SELECT 
+	St.Icode,
+	AliasName= i.customicode,
+	Item = i.name, 
+	openqty	  =SUM(CASE WHEN type='OP' THEN qty ELSE 0 END),
+	openvalue =SUM(CASE WHEN type='OP' THEN value ELSE 0 END),
+	PurQty 	  =SUM(CASE WHEN type='PV' THEN qty ELSE 0 END),
+	PurValue  =SUM(CASE WHEN type='PV' THEN value ELSE 0 END),
+	PRetQty	  =SUM(CASE WHEN type='PR' THEN qty ELSE 0 END),
+	PRetValue =SUM(CASE WHEN type='PR' THEN value ELSE 0 END),
+	SaleQty	  =SUM(CASE WHEN type='SV' THEN qty ELSE 0 END),
+	SaleValue =SUM(CASE WHEN type='SV' THEN value ELSE 0 END),
+	SRetQty	  =SUM(CASE WHEN type='SR' THEN qty ELSE 0 END),
+	SRetValue =SUM(CASE WHEN type='SR' THEN value ELSE 0 END),
+	IssueQty  =SUM(CASE WHEN type='IV' THEN qty ELSE 0 END),
+	IssueValue=SUM(CASE WHEN type='IV' THEN value ELSE 0 END),
+	DueSatisfyQty  =SUM(CASE WHEN type='DS' THEN qty ELSE 0 END),
+	DueSatisfyValue=SUM(CASE WHEN type='DS' THEN value ELSE 0 END),
+	ReceiptQty=SUM(CASE WHEN type='RV' THEN qty ELSE 0 END),
+	ReceiptValue=SUM(CASE WHEN type='RV' THEN value ELSE 0 END),
+	AdjQty	  =SUM(CASE WHEN type='AI' THEN qty 
+								WHEN type='AD' THEN -qty 
+								ELSE 0 END),
+	AdjValue  =SUM(CASE  WHEN type='AI' THEN value 
+								WHEN type='AD' THEN -value  
+								ELSE 0 END),
+	TransferINQty  =SUM(CASE WHEN type='TI' THEN qty ELSE 0 END),
+	TransferINValue=SUM(CASE WHEN type='TI' THEN value ELSE 0 END),
+	TransferOutQty  =SUM(CASE WHEN type='TO' THEN qty ELSE 0 END),
+	TransferOutValue=SUM(CASE WHEN type='TO' THEN value ELSE 0 END)
+FROM
+	(SELECT type='OP', icode, qty = sum(qty), value=0
+	FROM	(select	pd.icode, qty = sum(isnull(case pl.purcatcode 
+			when 1 THEN (packqty + bonusqty) * packunits
+			when 2 THEN (packqty + bonusqty) * packunits
+			else looseqty + bonusqty end, 0))
+	FROM purledger pl, purdetail pd
+	WHERE pl.posted = 'Y' AND pl.purinvcode = pd.purinvcode AND
+			pd.Gcode IN (SELECT AG.GCode FROM AccountGodown AG WHERE AG.AccCode = :ai_custcode) AND
+	      pl.postdate < CAST(CONVERT(VARCHAR(100), GETDATE(), 101) AS DATETIME)
+	Group By pd.icode
+	UNION ALL
+	select	pd.icode, qty  = - sum(pd.looseqty + pd.bonusqty + pd.packqty * pd.packunits)
+	FROM prledger pl, prdetail pd
+	WHERE pl.posted = 'Y' AND pl.prinvcode = pd.prinvcode AND
+			pd.Gcode = (SELECT AG.GCode FROM AccountGodown AG WHERE AG.AccCode = :ai_custcode) AND
+	      pl.date < CAST(CONVERT(VARCHAR(100), GETDATE(), 101) AS DATETIME)
+	Group By pd.icode
+	UNION ALL
+	select	sd.icode,
+		qty  = -sum(sd.looseqty + sd.bonusqty)
+	FROM saleledger sl, saledetail sd
+	WHERE /*sl.posted = 'Y' AND*/ sl.saleinvcode = sd.saleinvcode AND
+			sd.Gcode = (SELECT AG.GCode FROM AccountGodown AG WHERE AG.AccCode = :ai_custcode) AND
+	      sl.date < CAST(CONVERT(VARCHAR(100), GETDATE(), 101) AS DATETIME) AND sd.Due IS NULL
+	Group By sd.icode
+	UNION ALL
+	select	sd.icode,
+		qty  = sum(sd.looseqty + sd.bonusqty)
+	FROM srledger sl, srdetail sd
+	WHERE sl.posted = 'Y' AND sl.srinvcode = sd.srinvcode AND
+			sd.Gcode = (SELECT AG.GCode FROM AccountGodown AG WHERE AG.AccCode = :ai_custcode) AND
+	      sl.postdate < CAST(CONVERT(VARCHAR(100), GETDATE(), 101) AS DATETIME)
+	Group By sd.icode
+	UNION ALL
+	select	sd.icode,
+		qty  = -sum(sd.qty)
+	FROM issueheader sl, issuedetail sd
+	WHERE /*sl.posted = 'Y' AND*/ sl.issueinvcode = sd.issueinvcode AND
+			sd.Gcode = (SELECT AG.GCode FROM AccountGodown AG WHERE AG.AccCode = :ai_custcode) AND
+	      sl.date < CAST(CONVERT(VARCHAR(100), GETDATE(), 101) AS DATETIME)
+	Group By sd.icode
+	UNION ALL
+	select	sd.icode,
+		qty  = sum(sd.qty)
+	FROM receiptheader sl, receiptdetail sd
+	WHERE sl.posted = 'Y' AND sl.receiptinvcode = sd.receiptinvcode AND
+			sd.Gcode = (SELECT AG.GCode FROM AccountGodown AG WHERE AG.AccCode = :ai_custcode) AND
+	      sl.postdate < CAST(CONVERT(VARCHAR(100), GETDATE(), 101) AS DATETIME)
+	Group By sd.icode
+	UNION ALL
+	select	sd.icode,
+		qty = sum(sd.looseqty)
+	FROM Adjheader sl, Adjdetail sd
+	WHERE sl.posted = 'Y' AND sl.Adjcode = sd.Adjcode and sl.Adjcatcode = 1 AND
+			sd.Gcode = (SELECT AG.GCode FROM AccountGodown AG WHERE AG.AccCode = :ai_custcode) AND
+	      sl.posteddate < CAST(CONVERT(VARCHAR(100), GETDATE(), 101) AS DATETIME)
+	Group By sd.icode
+	UNION ALL
+	select	sd.icode,
+		qty = -sum(sd.looseqty)
+	FROM Adjheader sl, Adjdetail sd
+	WHERE sl.posted = 'Y' AND sl.Adjcode = sd.Adjcode and sl.Adjcatcode = 2 AND
+			sd.Gcode = (SELECT AG.GCode FROM AccountGodown AG WHERE AG.AccCode = :ai_custcode) AND
+	      sl.date < CAST(CONVERT(VARCHAR(100), GETDATE(), 101) AS DATETIME)
+	Group By sd.icode
+	UNION ALL
+	select	sd.icode, qty = -sum(sd.qty)
+	FROM THeader sl, TDetail sd
+	WHERE sl.posted = 'Y' AND sl.Transcode = sd.Transcode and 
+		sl.SGcode = (SELECT AG.GCode FROM AccountGodown AG WHERE AG.AccCode = :ai_custcode) AND
+		sl.postdate < CAST(CONVERT(VARCHAR(100), GETDATE(), 101) AS DATETIME)
+	Group By sd.icode
+	UNION ALL
+	select	sd.icode, qty = sum(sd.qty)
+	FROM THeader sl, TDetail sd
+	WHERE sl.posted = 'Y' AND sl.Transcode = sd.Transcode and 
+		sl.DGcode = (SELECT AG.GCode FROM AccountGodown AG WHERE AG.AccCode = :ai_custcode) AND
+		sl.postdate < CAST(CONVERT(VARCHAR(100), GETDATE(), 101) AS DATETIME)
+	Group By sd.icode
+	UNION ALL
+	select	d.icode, 	qty = -sum(d.duesatisfyqty)
+	FROM duesatisfyheader h, duesatisfydetail d
+	WHERE h.duesatisfycode=d.duesatisfycode AND
+		d.Gcode = (SELECT AG.GCode FROM AccountGodown AG WHERE AG.AccCode = :ai_custcode) AND
+		h.duesatisfydate < CAST(CONVERT(VARCHAR(100), GETDATE(), 101) AS DATETIME)
+	Group By d.icode) A
+	GROUP BY icode
+	UNION ALL
+	select	type='PV',
+		pd.icode,
+		qty = sum(case pl.purcatcode when 1 THEN (packqty + bonusqty) * packunits
+				when 2 THEN (packqty + bonusqty) * packunits
+				else (looseqty + bonusqty) end),
+		value = sum(isnull(case pl.purcatcode 
+			when 1 THEN (packqty + bonusqty)
+			when 2 THEN (packqty + bonusqty)
+			else looseqty + bonusqty 
+			end, 0) * pd.purprice * (1 - pd.discperc * 0.01) * (1 - pl.discperc * 0.01))
+	FROM purledger pl, purdetail pd
+	WHERE pl.posted = 'Y' AND pl.purinvcode = pd.purinvcode AND
+		pd.Gcode = (SELECT AG.GCode FROM AccountGodown AG WHERE AG.AccCode = :ai_custcode) AND
+		pl.postdate >= CAST(CONVERT(VARCHAR(100), GETDATE(), 101) AS DATETIME)
+	Group By pd.icode
+	UNION ALL
+	select	type='PR',
+		pd.icode,
+		qty = sum(pd.looseqty + pd.bonusqty + pd.packqty * pd.packunits),
+		value = sum((pd.looseqty + pd.bonusqty + pd.packqty * pd.packunits) *
+			pd.prprice * (1 - pd.discperc * 0.01) * (1 - pl.discperc * 0.01))
+	FROM prledger pl, prdetail pd
+	WHERE pl.posted = 'Y' AND pl.prinvcode = pd.prinvcode AND
+			pd.Gcode = (SELECT AG.GCode FROM AccountGodown AG WHERE AG.AccCode = :ai_custcode) AND
+	      pl.date >= CAST(CONVERT(VARCHAR(100), GETDATE(), 101) AS DATETIME)
+	Group By pd.icode
+	UNION ALL
+	select	type='SV',
+		sd.icode,
+		qty = sum(sd.looseqty + sd.bonusqty + sd.packqty * sd.packunits),
+		value = sum((sd.looseqty + sd.bonusqty + sd.packqty * sd.packunits) *
+			sd.saleprice * (1 - sd.discperc * 0.01) * (1 - sl.discperc * 0.01))
+	FROM saleledger sl, saledetail sd
+	WHERE /*sl.posted = 'Y' AND */ sl.saleinvcode = sd.saleinvcode AND SD.Due IS NULL AND
+			sd.Gcode = (SELECT AG.GCode FROM AccountGodown AG WHERE AG.AccCode = :ai_custcode) AND
+	      sl.date >= CAST(CONVERT(VARCHAR(100), GETDATE(), 101) AS DATETIME)
+	Group By sd.icode
+	UNION ALL
+	select	type='SR',
+		sd.icode,
+		qty = sum(sd.looseqty + sd.bonusqty + sd.packqty * sd.packunits),
+		value = sum((sd.looseqty + sd.bonusqty + sd.packqty * sd.packunits) *
+			sd.srprice * (1 - sd.discperc * 0.01) * (1 - sl.discperc * 0.01))
+	FROM srledger sl, srdetail sd
+	WHERE sl.posted = 'Y' AND sl.srinvcode = sd.srinvcode AND
+		sd.Gcode = (SELECT AG.GCode FROM AccountGodown AG WHERE AG.AccCode = :ai_custcode) AND
+		sl.postdate >= CAST(CONVERT(VARCHAR(100), GETDATE(), 101) AS DATETIME)
+	Group By sd.icode
+	UNION ALL
+	select	type='IV',
+		sd.icode,
+		qty = sum(sd.qty),
+		value = sum(sd.qty * sd.saleprice)
+	FROM issueheader sl, issuedetail sd
+	WHERE /*sl.posted = 'Y' AND */ sl.issueinvcode = sd.issueinvcode AND
+		sd.Gcode = (SELECT AG.GCode FROM AccountGodown AG WHERE AG.AccCode = :ai_custcode) AND
+		sl.date >= CAST(CONVERT(VARCHAR(100), GETDATE(), 101) AS DATETIME)
+	Group By sd.icode
+	UNION ALL
+	select	type='DS',
+		d.icode,
+		qty = sum(d.duesatisfyqty),
+		value = sum(d.duesatisfyqty * (d.packsaleprice / case d.packunits when 0 then 1 else d.packunits end))
+	FROM duesatisfyheader h, duesatisfydetail d
+	WHERE h.duesatisfycode = d.duesatisfycode AND
+		d.Gcode = (SELECT AG.GCode FROM AccountGodown AG WHERE AG.AccCode = :ai_custcode) AND
+		h.duesatisfydate >= CAST(CONVERT(VARCHAR(100), GETDATE(), 101) AS DATETIME) 
+	Group By d.icode
+	UNION ALL
+	select	type='RV',
+		sd.icode,
+		qty = sum(sd.qty),
+		value = sum(sd.qty * sd.saleprice)
+	FROM receiptheader sl, receiptdetail sd
+	WHERE sl.posted = 'Y' AND sl.receiptinvcode = sd.receiptinvcode AND
+		sd.Gcode = (SELECT AG.GCode FROM AccountGodown AG WHERE AG.AccCode = :ai_custcode) AND
+		sl.postdate >= CAST(CONVERT(VARCHAR(100), GETDATE(), 101) AS DATETIME) 
+	Group By sd.icode
+	UNION ALL
+	select	type='AI',
+		sd.icode,
+		qty = sum(sd.looseqty),
+		value = sum(sd.looseqty * sd.price)
+	FROM Adjheader sl, Adjdetail sd
+	WHERE sl.posted = 'Y' AND sl.Adjcode = sd.Adjcode and sl.Adjcatcode = 1 AND
+		sd.Gcode = (SELECT AG.GCode FROM AccountGodown AG WHERE AG.AccCode = :ai_custcode) AND
+		sl.posteddate >= CAST(CONVERT(VARCHAR(100), GETDATE(), 101) AS DATETIME)
+	Group By sd.icode
+	UNION ALL
+	select	type='AD',
+		sd.icode,
+		qty = sum(sd.looseqty),
+		value = sum(sd.looseqty * sd.price)
+	FROM Adjheader sl, Adjdetail sd
+	WHERE sl.posted = 'Y' AND sl.Adjcode = sd.Adjcode and sl.Adjcatcode = 2 AND
+		sd.Gcode = (SELECT AG.GCode FROM AccountGodown AG WHERE AG.AccCode = :ai_custcode) AND
+		sl.date >= CAST(CONVERT(VARCHAR(100), GETDATE(), 101) AS DATETIME)
+	Group By sd.icode
+	UNION ALL
+	select	type='TO',
+		sd.icode,
+		qty = sum(sd.qty),
+		value = sum(sd.qty * (sd.saleprice / CASE sd.packunits WHEN 0 THEN 1 ELSE sd.packunits END))
+	FROM THeader sl, TDetail sd
+	WHERE sl.posted = 'Y' AND sl.Transcode = sd.Transcode and 
+		sl.SGcode = (SELECT AG.GCode FROM AccountGodown AG WHERE AG.AccCode = :ai_custcode) AND
+		sl.postdate >= CAST(CONVERT(VARCHAR(100), GETDATE(), 101) AS DATETIME)
+	Group By sd.icode
+	UNION ALL
+	select	type='TI',
+		sd.icode,
+		qty = sum(sd.qty),
+		value = sum(sd.qty * (sd.saleprice / CASE sd.packunits WHEN 0 THEN 1 ELSE sd.packunits END))
+	FROM THeader sl, TDetail sd
+	WHERE sl.posted = 'Y' AND sl.Transcode = sd.Transcode and 
+		sl.DGcode = (SELECT AG.GCode FROM AccountGodown AG WHERE AG.AccCode = :ai_custcode) AND
+		sl.postdate >= CAST(CONVERT(VARCHAR(100), GETDATE(), 101) AS DATETIME)
+	Group By sd.icode
+	UNION ALL
+	SELECT type='OP', icode, qty = 0, value=0 FROM ITEM) St, 
+	Item i
+WHERE st.icode = i.icode AND i.iccode = 1
+GROUP BY St.icode, i.name, i.customicode, i.saleprice, i.packunits
+ORDER BY i.name
+"
+  update="Item" updatewhere=0 updatekeyinplace=no
+  arguments=(("ai_custcode", number))
+ sort="item A"
+)
+line(name=l_8 visible="1" band=header background.mode="2" background.color="16777215" pen.style="0" pen.width="10" pen.color="0" x1="7510" y1="260" x2="7510" y2="510" )
+line(name=l_7 visible="1" band=header background.mode="2" background.color="16777215" pen.style="0" pen.width="10" pen.color="0" x1="6729" y1="260" x2="6729" y2="510" )
+line(name=l_6 visible="1" band=header background.mode="2" background.color="16777215" pen.style="0" pen.width="10" pen.color="0" x1="5989" y1="260" x2="5989" y2="510" )
+line(name=l_5 visible="1" band=header background.mode="2" background.color="16777215" pen.style="0" pen.width="10" pen.color="0" x1="5270" y1="260" x2="5270" y2="510" )
+line(name=l_4 visible="1" band=header background.mode="2" background.color="16777215" pen.style="0" pen.width="10" pen.color="0" x1="4531" y1="260" x2="4531" y2="510" )
+text(name=item_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" alignment="2" border="0" x="562" y="291" height="156" width="1583" text="Item Name" html.valueishtml="0" )
+text(name=t_1 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" alignment="2" border="0" x="62" y="291" height="156" width="406" text="Sr. No." html.valueishtml="0" )
+text(name=openqty_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" alignment="2" border="0" x="4583" y="291" height="156" width="656" text="Opening" html.valueishtml="0" )
+text(name=saleqty_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" alignment="2" border="0" x="6041" y="291" height="156" width="656" text="Delivered" html.valueishtml="0" )
+text(name=closingstockqty_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" alignment="2" border="0" x="6770" y="291" height="156" width="708" text="Balance" html.valueishtml="0" )
+line(name=l_3 visible="1" band=header background.mode="2" background.color="16777215" pen.style="0" pen.width="10" pen.color="0" x1="510" y1="260" x2="510" y2="510" )
+line(name=l_24 visible="1" band=header background.mode="2" background.color="16777215" pen.style="0" pen.width="10" pen.color="0" x1="20" y1="260" x2="20" y2="510" )
+line(name=l_2 visible="1" band=header background.mode="2" background.color="16777215" pen.style="0" pen.width="10" pen.color="0" x1="20" y1="468" x2="7520" y2="468" )
+line(name=l_1 visible="1" band=header background.mode="2" background.color="16777215" pen.style="0" pen.width="10" pen.color="0" x1="20" y1="250" x2="7520" y2="250" )
+text(name=t_2 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-12" font.pitch="2" font.weight="700" background.mode="2" background.color="16777215" color="0" alignment="0" border="0" x="20" y="20" height="208" width="7500" text="Due Item Position Summary" html.valueishtml="0" )
+text(name=sretqty_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" alignment="1" border="0" x="5312" y="291" height="156" width="656" text="Returned" html.valueishtml="0" )
+line(name=l_20 visible="1" band=summary background.mode="2" background.color="16777215" pen.style="0" pen.width="10" pen.color="0" x1="4531" y1="0" x2="4531" y2="240" )
+line(name=l_19 visible="1" band=summary background.mode="2" background.color="16777215" pen.style="0" pen.width="10" pen.color="0" x1="5270" y1="0" x2="5270" y2="240" )
+line(name=l_18 visible="1" band=summary background.mode="2" background.color="16777215" pen.style="0" pen.width="10" pen.color="0" x1="5989" y1="0" x2="5989" y2="240" )
+line(name=l_17 visible="1" band=summary background.mode="2" background.color="16777215" pen.style="0" pen.width="10" pen.color="0" x1="6729" y1="0" x2="6729" y2="240" )
+line(name=l_16 visible="1" band=summary background.mode="2" background.color="16777215" pen.style="0" pen.width="10" pen.color="0" x1="7510" y1="0" x2="7510" y2="240" )
+compute(name=compute_39 visible="1" band=summary font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="4583" y="32" height="166" width="656" format="	f_SetColumnFormat('Qty')" expression="sum(openqty for all)" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_48 visible="1" band=summary font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="6770" y="32" height="166" width="708" format="	f_SetColumnFormat('Qty')" expression="sum(openqty + purqty - pretqty - saleqty + sretqty - duesatisfyqty - issueqty + receiptqty + adjqty + transferinqty -  transferoutqty for all)" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_5 visible="1" band=summary font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="4083" y="32" height="166" width="427" text="Total:" html.valueishtml="0" )
+compute(name=compute_1 visible="1" band=summary font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="6041" y="32" height="166" width="656" format="	f_SetColumnFormat('Qty')" expression="sum(transferinqty for all)" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+line(name=l_26 visible="1" band=summary background.mode="2" background.color="16777215" pen.style="0" pen.width="10" pen.color="0" x1="20" y1="0" x2="20" y2="240" )
+line(name=l_23 visible="1" band=summary background.mode="2" background.color="16777215" pen.style="0" pen.width="10" pen.color="0" x1="20" y1="0" x2="7520" y2="0" )
+line(name=l_22 visible="1" band=summary background.mode="2" background.color="16777215" pen.style="0" pen.width="10" pen.color="0" x1="20" y1="230" x2="7520" y2="230" )
+compute(name=compute_45 visible="1" band=summary font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="5312" y="32" height="166" width="656" format="	f_SetColumnFormat('Qty')" expression="sum(transferoutqty for all)" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+line(name=l_9 visible="1" band=detail background.mode="2" background.color="16777215" pen.style="0" pen.width="10" pen.color="0" x1="7510" y1="0" x2="7510" y2="250" )
+line(name=l_10 visible="1" band=detail background.mode="2" background.color="16777215" pen.style="0" pen.width="10" pen.color="0" x1="6729" y1="0" x2="6729" y2="250" )
+line(name=l_11 visible="1" band=detail background.mode="2" background.color="16777215" pen.style="0" pen.width="10" pen.color="0" x1="5989" y1="0" x2="5989" y2="250" )
+line(name=l_12 visible="1" band=detail background.mode="2" background.color="16777215" pen.style="0" pen.width="10" pen.color="0" x1="5270" y1="0" x2="5270" y2="250" )
+line(name=l_13 visible="1" band=detail background.mode="2" background.color="16777215" pen.style="0" pen.width="10" pen.color="0" x1="4531" y1="0" x2="4531" y2="250" )
+column(name=openqty visible="1" band=detail id=4 x="4583" y="11" height="166" width="656" color="0" border="0" alignment="2" format="	f_SetColumnFormat('Qty')" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+compute(name=closingstockqty visible="1" band=detail font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="6770" y="11" height="166" width="708" format="	f_SetColumnFormat('Qty')" expression="openqty + purqty - pretqty - saleqty + sretqty - duesatisfyqty - issueqty + receiptqty + adjqty + transferinqty -  transferoutqty" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+column(name=item visible="1" band=detail id=3 x="562" y="11" height="166" width="3947" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=60 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+line(name=l_14 visible="1" band=detail background.mode="2" background.color="16777215" pen.style="0" pen.width="10" pen.color="0" x1="510" y1="0" x2="510" y2="250" )
+line(name=l_25 visible="1" band=detail background.mode="2" background.color="16777215" pen.style="0" pen.width="10" pen.color="0" x1="20" y1="0" x2="20" y2="250" )
+line(name=l_15 visible="1" band=detail background.mode="2" background.color="16777215" pen.style="0" pen.width="10" pen.color="0" x1="20" y1="209" x2="7520" y2="209" )
+compute(name=compute_2 visible="1" band=detail font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="6041" y="11" height="166" width="708" format="	f_SetColumnFormat('Qty')" expression="transferinqty" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_3 visible="1" band=detail font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="5312" y="11" height="166" width="656" format="	f_SetColumnFormat('Qty')" expression="transferoutqty" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+htmltable(border="1" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" encodeSelfLinkArgs="1" generateJavaScript="1" netscapeLayers="0" pagingMethod=0 )
+xhtmlgen() cssgen(sessionSpecific="0" )
+xmlgen(inline="0" )
+xsltgen()
+jsgen()
+export.xml(headGroups="1" includewhitespace="0" metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 distill.customPostScript="0" xslfop.print="0" )
+export.xhtml()

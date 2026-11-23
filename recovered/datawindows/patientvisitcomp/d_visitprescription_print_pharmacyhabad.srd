@@ -1,0 +1,158 @@
+release 12.5;
+datawindow ( units=2 timer_interval=0 processing=0 color=1073741824 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.printername=""  print.documentname=""  print.orientation=0 print.margin.left=0 print.margin.right=0 print.margin.top=0 print.margin.bottom=0 print.paper.size=1 print.paper.source=0 print.canusedefaultprinter=yes selected.mouse=no hidegrayline=no showbackcoloronxp=no)
+header(height=10447 color="536870912" )
+summary(height=0 color="536870912" )
+footer(height=0 color="536870912" )
+detail(height=0 color="536870912"  height.autosize=yes)
+table(column=(type=long updatewhereclause=yes name=visitcode dbname="VisitCode"  )
+column=(type=datetime updatewhereclause=yes name=visitdate dbname="VisitDate"  )
+column=(type=char(60) updatewhereclause=yes name=visittype dbname="VisitType"  )
+column=(type=char(50) updatewhereclause=yes name=patientregno dbname="PatientRegNo"  )
+column=(type=char(113) updatewhereclause=yes name=patientname dbname="PatientName"  )
+column=(type=char(1) updatewhereclause=yes name=patientgender dbname="PatientGender" 
+ values="Male	M/Female	F/"  )
+column=(type=char(30) updatewhereclause=yes name=patientphone dbname="PatientPhone"  )
+column=(type=long updatewhereclause=yes name=age dbname="Age"  )
+column=(type=char(33) updatewhereclause=yes name=height dbname="Height"  )
+column=(type=char(33) updatewhereclause=yes name=weight dbname="Weight"  )
+column=(type=char(10) updatewhereclause=yes name=pulserate dbname="PulseRate"  )
+column=(type=char(10) updatewhereclause=yes name=respirationrate dbname="RespirationRate"  )
+column=(type=char(16) updatewhereclause=yes name=temperature dbname="Temperature"  )
+column=(type=char(21) updatewhereclause=yes name=bp dbname="BP"  )
+column=(type=char(400) updatewhereclause=yes name=previousdiagnosis dbname="PreviousDiagnosis"  )
+column=(type=char(400) updatewhereclause=yes name=diagnosis dbname="Diagnosis"  )
+column=(type=char(400) updatewhereclause=yes name=recommendations dbname="Recommendations"  )
+column=(type=char(100) updatewhereclause=yes name=remarks dbname="Remarks"  )
+column=(type=datetime updatewhereclause=yes name=followupdate dbname="FollowUpDate"  )
+column=(type=char(60) updatewhereclause=yes name=doctor dbname="Doctor"  )
+column=(type=char(100) updatewhereclause=yes name=title1 dbname="Title1"  )
+column=(type=char(100) updatewhereclause=yes name=title2 dbname="Title2"  )
+column=(type=char(100) updatewhereclause=yes name=title3 dbname="Title3"  )
+column=(type=char(100) updatewhereclause=yes name=title4 dbname="Title4"  )
+column=(type=char(100) updatewhereclause=yes name=footer1 dbname="Footer1"  )
+column=(type=char(100) updatewhereclause=yes name=footer2 dbname="Footer2"  )
+column=(type=char(100) updatewhereclause=yes name=footer3 dbname="Footer3"  )
+column=(type=char(100) updatewhereclause=yes name=footer4 dbname="Footer4"  )
+column=(type=long updatewhereclause=yes name=dm dbname="DM" 
+ values="DM	1/DM	0/"  )
+column=(type=long updatewhereclause=yes name=htn dbname="HTN" 
+ values="HTN	1/HTN	0/"  )
+column=(type=long updatewhereclause=yes name=smoking dbname="Smoking" 
+ values="Smoking	1/Smoking	0/"  )
+column=(type=long updatewhereclause=yes name=obesity dbname="Obesity" 
+ values="Obesity	1/Obesity	0/"  )
+column=(type=long updatewhereclause=yes name=familyhistory dbname="FamilyHistory" 
+ values="Family History	1/Family History	0/"  )
+column=(type=long updatewhereclause=yes name=copd dbname="COPD" 
+ values="COPD	1/COPD	0/"  )
+column=(type=long updatewhereclause=yes name=asthma dbname="ASTHMA" 
+ values="Asthma	1/Asthma	0/"  )
+column=(type=long updatewhereclause=yes name=cua dbname="CUA" 
+ values="CVA	1/CVA	0/"  )
+column=(type=long updatewhereclause=yes name=ckd dbname="CKD" 
+ values="CKD	1/CKD	0/"  )
+column=(type=long updatewhereclause=yes name=alergy dbname="Alergy" 
+ values="Alergy	1/Alergy	0/"  )
+ retrieve="SELECT 
+	VisitCode = V.VisitCode,
+	VisitDate = V.Date,
+	VisitType = (SELECT VT.Name FROM VisitType VT WHERE VT.VisitTypeCode = V.VisitTypeCode),
+	PatientRegNo = P.RegNo,
+	PatientName = CASE V.PatientCode WHEN NULL THEN V.PatientDetails ELSE LTRIM(RTRIM(P.Name)) + ' (' + LTRIM(RTRIM(P.RegNo)) + ')' END,
+	PatientGender = P.Gender,
+	PatientPhone = P.Phone,
+	Age = DATEDIFF(YYYY, P.DOB, V.Date),
+	Height = LTRIM(RTRIM(STR(VV.Height1))) + ' ' + VV.HeightUnit1 + ' ' + LTRIM(RTRIM(STR(ISNULL(VV.Height2,'0')))) + ' ' + VV.HeightUnit2,
+	Weight = LTRIM(RTRIM(STR(VV.Weight1))) + ' ' + VV.WeightUnit1 + ' ' + LTRIM(RTRIM(STR(ISNULL(VV.Weight2, '0')))) + ' ' + VV.WeightUnit2,
+	PulseRate = LTRIM(RTRIM(STR(VV.PulseRate))),
+	RespirationRate = LTRIM(RTRIM(STR(VV.Respiration))),
+	Temperature = LTRIM(RTRIM(STR(VV.TemperatureValue))) + ' ' + LTRIM(RTRIM(VV.TemperatureUnit)),
+	BP = LTRIM(RTRIM(STR(VV.BloodPressureSysTolic))) + '/' + LTRIM(RTRIM(STR(VV.BloodPressureDiaSTolic))),
+	PreviousDiagnosis = V.PreviousDiagnosis,
+	Diagnosis = V.Diagnosis,
+	Recommendations = V.Recommendations,
+	Remarks = V.Remarks,
+	FollowUpDate = V.Date + V.FollowUpDays,
+	Doctor = (SELECT D.Name FROM Doctors D WHERE D.DoctCode = V.DoctCode),
+	Title1 = (SELECT D.Title1 FROM Doctors D WHERE D.DoctCode = V.DoctCode),
+	Title2 = (SELECT D.Title2 FROM Doctors D WHERE D.DoctCode = V.DoctCode),
+	Title3 = (SELECT D.Title3 FROM Doctors D WHERE D.DoctCode = V.DoctCode),
+	Title4 = (SELECT D.Title4 FROM Doctors D WHERE D.DoctCode = V.DoctCode),
+	Footer1 = (SELECT D.Footer1 FROM Doctors D WHERE D.DoctCode = V.DoctCode),
+	Footer2 = (SELECT D.Footer2 FROM Doctors D WHERE D.DoctCode = V.DoctCode),
+	Footer3 = (SELECT D.Footer3 FROM Doctors D WHERE D.DoctCode = V.DoctCode),
+	Footer4 = (SELECT D.Footer4 FROM Doctors D WHERE D.DoctCode = V.DoctCode),
+	DM = ISNULL((SELECT 1 FROM VisitPrecaution VP WHERE VP.VisitCode = V.VisitCode AND VP.PrecautionCode = 1), 0),
+	HTN = ISNULL((SELECT 1 FROM VisitPrecaution VP WHERE VP.VisitCode = V.VisitCode AND VP.PrecautionCode = 2), 0),
+	Smoking = ISNULL((SELECT 1 FROM VisitPrecaution VP WHERE VP.VisitCode = V.VisitCode AND VP.PrecautionCode = 3), 0),
+	Obesity = ISNULL((SELECT 1 FROM VisitPrecaution VP WHERE VP.VisitCode = V.VisitCode AND VP.PrecautionCode = 4), 0),
+	FamilyHistory = ISNULL((SELECT 1 FROM VisitPrecaution VP WHERE VP.VisitCode = V.VisitCode AND VP.PrecautionCode = 5), 0),
+
+	COPD = ISNULL((SELECT 1 FROM VisitPrecaution VP WHERE VP.VisitCode = V.VisitCode AND VP.PrecautionCode = 6), 0),
+	ASTHMA = ISNULL((SELECT 1 FROM VisitPrecaution VP WHERE VP.VisitCode = V.VisitCode AND VP.PrecautionCode = 7), 0),
+	CUA = ISNULL((SELECT 1 FROM VisitPrecaution VP WHERE VP.VisitCode = V.VisitCode AND VP.PrecautionCode = 8), 0),
+	CKD = ISNULL((SELECT 1 FROM VisitPrecaution VP WHERE VP.VisitCode = V.VisitCode AND VP.PrecautionCode = 9), 0),
+	Alergy = ISNULL((SELECT 1 FROM VisitPrecaution VP WHERE VP.VisitCode = V.VisitCode AND VP.PrecautionCode = 10), 0)
+FROM
+	Visit V
+	LEFT OUTER JOIN Patient AS P ON (V.PatientCode = P.PatientCode),
+	VisitVitals VV
+WHERE
+	V.VisitCode = :ai_code AND
+	V.VisitCode = VV.VisitCode"
+  arguments=(("ai_code", number))
+)
+text(name=t_8 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="2" background.color="16777215" color="0" alignment="0" border="0" x="5750" y="2020" height="166" width="552" text="Age/Sex:" html.valueishtml="0" )
+compute(name=compute_1 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" x="6333" y="2020" height="166" width="1145" format="[GENERAL]" expression="trim( string( age ) ) + ' / ' +  if(patientgender = 'M', 'Male', 'Female')" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_3 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="2" background.color="16777215" color="0" alignment="0" border="0" x="1541" y="2020" height="166" width="447" text="Reg. #:" html.valueishtml="0" )
+column(name=patientregno visible="1" band=header id=4 x="2020" y="2020" height="166" width="729" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="700" tabsequence=0 )
+column(name=patientname visible="1" band=header id=5 x="3385" y="2020" height="166" width="2322" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" tabsequence=0 )
+text(name=t_9 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="2" background.color="16777215" color="0" alignment="0" border="0" x="2812" y="2020" height="166" width="541" text="P/Name:" html.valueishtml="0" )
+text(name=t_4 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-12" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" alignment="0" border="0" x="1541" y="2218" height="187" width="833" text="Vital Signs:" html.valueishtml="0" )
+line(name=l_9 visible="1" band=header background.mode="2" background.color="16777215" pen.style="0" pen.width="20" pen.color="0" x1="41" y1="1979" x2="7510" y2="1979" )
+report(name=dw_2 visible="1" slideleft=yes height.autosize=yes slideup=directlyabove band=header x="1520" y="7114" height="2010" width="5989" border="0" trail_footer=yes criteria="" dataobject="d_visit_precaution_print_phar_habad" nest_arguments=
+((" visitcode ")) )
+bitmap(name=p_1 visible="1" band=header filename="logo1.bmp" x="41" y="31" height="1729" width="7468" border="0"  originalsize=no )
+compute(name=compute_2 visible="0" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="5927" y="1791" height="156" width="1583" format="[general]" expression="'Page ' + page() + ' of ' + pageCount()" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=bp_t visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" alignment="0" border="0" x="2416" y="2229" height="166" width="250" text="BP:" html.valueishtml="0" )
+text(name=t_5 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" alignment="0" border="0" x="5302" y="2229" height="166" width="854" text="Temperature:" html.valueishtml="0" )
+text(name=height_t visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" alignment="0" border="0" x="2395" y="2427" height="166" width="489" text="Height:" html.valueishtml="0" )
+text(name=respirationrate_t visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" alignment="0" border="0" x="5302" y="2437" height="166" width="802" text="Respiration:" html.valueishtml="0" )
+text(name=pulserate_t visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" alignment="0" border="0" x="3854" y="2218" height="166" width="416" text="Pulse:" html.valueishtml="0" )
+text(name=weight_t visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" alignment="0" border="0" x="3854" y="2416" height="166" width="500" text="Weight:" html.valueishtml="0" )
+column(name=height visible="1" band=header id=9 x="2947" y="2427" height="166" width="843" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=33 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=bp visible="1" band=header id=14 x="2708" y="2229" height="166" width="1083" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=21 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=pulserate visible="1" band=header id=11 x="4312" y="2218" height="166" width="937" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=10 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=weight visible="1" band=header id=10 x="4406" y="2416" height="166" width="843" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=33 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+report(name=dw_1 visible="1" height.autosize=yes slideup=directlyabove band=header x="1520" y="2635" height="4447" width="5937" border="0" trail_footer=yes criteria="" dataobject="d_visitprescription_medicine_phar_habad" nest_arguments=
+((" visitcode ")) )
+column(name=respirationrate visible="1" band=header id=12 x="6187" y="2437" height="166" width="1302" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=10 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=temperature visible="1" band=header id=13 x="6187" y="2229" height="166" width="1302" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+text(name=t_11 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="2" background.color="16777215" color="0" alignment="0" border="0" x="41" y="2010" height="166" width="666" text="Visit Date:" html.valueishtml="0" )
+column(name=visitdate visible="1" band=header id=2 x="41" y="2197" height="166" width="1395" color="33554432" border="0" alignment="0" format="mmm-dd-yyyy hh:mm" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+text(name=diagnosis_t visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-12" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" alignment="0" border="0" x="41" y="2406" height="208" width="1197" text="Clinical Findings:" html.valueishtml="0" )
+column(name=previousdiagnosis visible="1" band=header id=15 x="41" y="2635" height="1072" width="1395" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=255 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+text(name=previousdiagnosis_t visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-12" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" alignment="0" border="0" x="41" y="3750" height="197" width="1177" text="Initial Diagnosis:" html.valueishtml="0" )
+text(name=recommendations_t visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" alignment="0" border="0" x="41" y="5072" height="166" width="1416" text="Test Recommendation:" html.valueishtml="0" )
+column(name=diagnosis visible="1" band=header id=16 x="41" y="3968" height="1072" width="1395" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=255 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=recommendations visible="1" band=header id=17 x="41" y="5260" height="1072" width="1395" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=255 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+text(name=t_6 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-12" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" alignment="0" border="0" x="41" y="6364" height="197" width="1010" text="History/Plans:" html.valueishtml="0" )
+column(name=remarks visible="1" band=header id=18 x="41" y="6583" height="1083" width="1395" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+text(name=t_2 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-12" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" alignment="0" border="0" x="41" y="7697" height="197" width="1010" text="Others:" html.valueishtml="0" )
+line(name=l_3 visible="1" band=header background.mode="2" background.color="16777215" pen.style="0" pen.width="20" pen.color="0" x1="1479" y1="1979" x2="1479" y2="9145" )
+line(name=l_1 visible="1" band=header background.mode="2" background.color="16777215" pen.style="0" pen.width="20" pen.color="0" x1="62" y1="9145" x2="7520" y2="9145" )
+bitmap(name=p_2 visible="1" band=header filename="footer1.bmp" x="41" y="9416" height="1020" width="7468" border="0"  originalsize=no )
+line(name=l_2 visible="1" band=header background.mode="2" background.color="16777215" pen.style="0" pen.width="20" pen.color="0" x1="62" y1="9385" x2="7520" y2="9385" )
+text(name=followupdate_t visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" alignment="0" border="0" x="62" y="9187" height="166" width="1343" text="Follow-up Visit Date:" html.valueishtml="0" )
+column(name=followupdate visible="1" band=header id=19 x="1447" y="9187" height="166" width="2989" color="33554432" border="0" alignment="0" format="dddd dd-mmmm-yyyy" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="700" tabsequence=0 )
+text(name=t_1 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" alignment="2" border="0" x="5020" y="9187" height="166" width="2510" text="Signature: _______________________" html.valueishtml="0" )
+htmltable(border="1" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" encodeSelfLinkArgs="1" generateJavaScript="1" netscapeLayers="0" pagingMethod=0 )
+xhtmlgen() cssgen(sessionSpecific="0" )
+xmlgen(inline="0" )
+xsltgen()
+jsgen()
+export.xml(headGroups="1" includewhitespace="0" metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 distill.customPostScript="0" xslfop.print="0" )
+export.xhtml()

@@ -1,0 +1,509 @@
+// window w_graph_color (graphcomponents)  ancestor: w_center
+
+// w_graph_color.open() returns long [event]
+	long ancestorreturnvalue
+	integer li_index
+	long ll_gr_color
+	string ls_series_name
+	graphicobject lgro_hold
+	string ls_backcolor
+	string ls_textcolor
+	ancestorreturnvalue = super::open()
+	lgro_hold = message.powerobjectparm
+	if lgro_hold.typeof() = graph! then
+		this.io_passed = graph!
+		this.igr_parm = message.powerobjectparm
+		this.il_seriescount = this.igr_parm.seriescount()
+		this.il_backcolor = this.igr_parm.backcolor
+		this.il_textcolor = this.igr_parm.textcolor
+		for li_index = 1 to this.il_seriescount
+			this.is_series_name = this.igr_parm.seriesname(li_index)
+			this.igr_parm.getseriesstyle(this.is_series_name, background!, this.il_serbackcolor[li_index])
+			this.igr_parm.getseriesstyle(this.is_series_name, foreground!, this.il_serforecolor[li_index])
+		next
+		this.is_series_name = this.igr_parm.seriesname(1)
+		this.igr_parm.getseriesstyle(this.is_series_name, foreground!, ll_gr_color)
+	elseif lgro_hold.typeof() = datawindow! then
+		this.io_passed = datawindow!
+		this.idw_parm = message.powerobjectparm
+		this.il_seriescount = this.idw_parm.seriescount("gr_1")
+		ls_backcolor = this.idw_parm.object.gr_1.backcolor
+		ls_textcolor = this.idw_parm.object.gr_1.color
+		this.il_backcolor = long(ls_backcolor)
+		this.il_textcolor = long(ls_textcolor)
+		for li_index = 1 to this.il_seriescount
+			this.is_series_name = this.idw_parm.seriesname("gr_1", li_index)
+			this.idw_parm.getseriesstyle("gr_1", this.is_series_name, background!, this.il_serbackcolor[li_index])
+			this.idw_parm.getseriesstyle("gr_1", this.is_series_name, foreground!, this.il_serforecolor[li_index])
+		next
+		this.is_series_name = this.idw_parm.seriesname("gr_1", 1)
+		this.idw_parm.getseriesstyle("gr_1", this.is_series_name, foreground!, ll_gr_color)
+	end if
+	if this.il_seriescount > 1 then
+		this.em_series.minmax = "1~~" + string(this.il_seriescount)
+		this.em_series.enabled = true
+	end if
+	this.uo_color_select.uf_set_rgb(ll_gr_color)
+	if not isvalid(message) then
+		return 0
+	end if
+	return message.returnvalue
+
+// w_graph_color.create() returns 0 [event]
+	integer icurrent
+	call super::create
+	this.em_series = create em_series
+	this.cb_cancel = create cb_cancel
+	this.rb_graph_textcolor = create rb_graph_textcolor
+	this.rb_graph_background = create rb_graph_background
+	this.rb_series_background = create rb_series_background
+	this.rb_series_foreground = create rb_series_foreground
+	this.uo_color_select = create uo_color_select
+	this.cb_ok = create cb_ok
+	this.gb_2 = create gb_2
+	this.gb_1 = create gb_1
+	icurrent = upperbound(this.control)
+	this.control[icurrent + 1] = this.em_series
+	this.control[icurrent + 2] = this.cb_cancel
+	this.control[icurrent + 3] = this.rb_graph_textcolor
+	this.control[icurrent + 4] = this.rb_graph_background
+	this.control[icurrent + 5] = this.rb_series_background
+	this.control[icurrent + 6] = this.rb_series_foreground
+	this.control[icurrent + 7] = this.uo_color_select
+	this.control[icurrent + 8] = this.cb_ok
+	this.control[icurrent + 9] = this.gb_2
+	this.control[icurrent + 10] = this.gb_1
+
+// w_graph_color.destroy() returns 0 [event]
+	call super::destroy
+	destroy this.em_series
+	destroy this.cb_cancel
+	destroy this.rb_graph_textcolor
+	destroy this.rb_graph_background
+	destroy this.rb_series_background
+	destroy this.rb_series_foreground
+	destroy this.uo_color_select
+	destroy this.cb_ok
+	destroy this.gb_2
+	destroy this.gb_1
+
+// em_series.ue_emchanged() returns long [event]
+	if parent.io_passed = graph! then
+		parent.is_series_name = parent.igr_parm.seriesname(integer(parent.em_series.text))
+	elseif parent.io_passed = datawindow! then
+		parent.is_series_name = parent.idw_parm.seriesname("gr_1", integer(parent.em_series.text))
+	end if
+	if parent.rb_series_background.checked then
+		parent.rb_series_background.triggerevent("clicked")
+	end if
+	if parent.rb_series_foreground.checked then
+		parent.rb_series_foreground.triggerevent("clicked")
+	end if
+	return ::message.returnvalue
+
+// cb_cancel.clicked() returns long [event]
+	integer li_index
+	if parent.io_passed = graph! then
+		parent.igr_parm.setredraw(false)
+		parent.igr_parm.backcolor = parent.il_backcolor
+		parent.igr_parm.textcolor = parent.il_textcolor
+		for li_index = 1 to parent.il_seriescount
+			parent.is_series_name = parent.igr_parm.seriesname(li_index)
+			parent.igr_parm.setseriesstyle(parent.is_series_name, background!, parent.il_serbackcolor[li_index])
+			parent.igr_parm.setseriesstyle(parent.is_series_name, foreground!, parent.il_serforecolor[li_index])
+		next
+		parent.igr_parm.setredraw(true)
+	elseif parent.io_passed = datawindow! then
+		parent.idw_parm.setredraw(false)
+		parent.idw_parm.object.gr_1.backcolor = string(parent.il_backcolor)
+		parent.idw_parm.object.gr_1.color = string(parent.il_textcolor)
+		for li_index = 1 to parent.il_seriescount
+			parent.is_series_name = parent.idw_parm.seriesname("gr_1", li_index)
+			parent.idw_parm.setseriesstyle("gr_1", parent.is_series_name, background!, parent.il_serbackcolor[li_index])
+			parent.idw_parm.setseriesstyle("gr_1", parent.is_series_name, foreground!, parent.il_serforecolor[li_index])
+		next
+		parent.idw_parm.setredraw(true)
+	end if
+	close(parent)
+	return ::message.returnvalue
+
+// rb_graph_textcolor.clicked() returns long [event]
+	string ls_color
+	if parent.io_passed = graph! then
+		parent.uo_color_select.uf_set_rgb(parent.igr_parm.textcolor)
+	elseif parent.io_passed = datawindow! then
+		ls_color = parent.idw_parm.object.gr_1.color
+		parent.uo_color_select.uf_set_rgb(long(ls_color))
+	end if
+	return ::message.returnvalue
+
+// rb_graph_background.clicked() returns long [event]
+	string ls_backcolor
+	if parent.io_passed = graph! then
+		parent.uo_color_select.uf_set_rgb(parent.igr_parm.backcolor)
+	elseif parent.io_passed = datawindow! then
+		ls_backcolor = parent.idw_parm.object.gr_1.backcolor
+		parent.uo_color_select.uf_set_rgb(long(ls_backcolor))
+	end if
+	return ::message.returnvalue
+
+// rb_series_background.clicked() returns long [event]
+	long ll_grcolor
+	if parent.io_passed = graph! then
+		parent.igr_parm.getseriesstyle(parent.is_series_name, background!, ll_grcolor)
+	elseif parent.io_passed = datawindow! then
+		parent.idw_parm.getseriesstyle("gr_1", parent.is_series_name, background!, ll_grcolor)
+	end if
+	parent.uo_color_select.uf_set_rgb(ll_grcolor)
+	return ::message.returnvalue
+
+// rb_series_foreground.clicked() returns long [event]
+	long ll_grcolor
+	if parent.io_passed = graph! then
+		parent.igr_parm.getseriesstyle(parent.is_series_name, foreground!, ll_grcolor)
+	elseif parent.io_passed = datawindow! then
+		parent.idw_parm.getseriesstyle("gr_1", parent.is_series_name, foreground!, ll_grcolor)
+	end if
+	parent.uo_color_select.uf_set_rgb(ll_grcolor)
+	return ::message.returnvalue
+
+// uo_color_select.color_changed(unsignedlong wparam, long lparam) returns long [event]
+	long ancestorreturnvalue
+	string ls_new_color
+	long ll_color_hold
+	ancestorreturnvalue = super::color_changed(wparam, lparam)
+	if parent.io_passed = graph! then
+		parent.igr_parm.setredraw(false)
+		if parent.rb_graph_background.checked then
+			parent.igr_parm.backcolor = parent.uo_color_select.uf_get_rgb()
+		elseif parent.rb_graph_textcolor.checked then
+			parent.igr_parm.textcolor = parent.uo_color_select.uf_get_rgb()
+		elseif parent.rb_series_background.checked then
+			parent.igr_parm.setseriesstyle(parent.is_series_name, background!, parent.uo_color_select.uf_get_rgb())
+		elseif parent.rb_series_foreground.checked then
+			parent.igr_parm.setseriesstyle(parent.is_series_name, foreground!, parent.uo_color_select.uf_get_rgb())
+		end if
+		parent.igr_parm.setredraw(true)
+	elseif parent.io_passed = datawindow! then
+		parent.idw_parm.setredraw(false)
+		ls_new_color = string(parent.uo_color_select.uf_get_rgb())
+		if parent.rb_graph_background.checked then
+			parent.idw_parm.object.gr_1.backcolor = ls_new_color
+		elseif parent.rb_graph_textcolor.checked then
+			parent.idw_parm.getseriesstyle("gr_1", parent.is_series_name, background!, ll_color_hold)
+			parent.idw_parm.object.gr_1.color = ls_new_color
+			parent.idw_parm.setredraw(true)
+			parent.idw_parm.setseriesstyle("gr_1", parent.is_series_name, background!, ll_color_hold)
+			parent.idw_parm.setredraw(false)
+		elseif parent.rb_series_background.checked then
+			parent.idw_parm.setseriesstyle("gr_1", parent.is_series_name, background!, parent.uo_color_select.uf_get_rgb())
+		elseif parent.rb_series_foreground.checked then
+			parent.idw_parm.setseriesstyle("gr_1", parent.is_series_name, foreground!, parent.uo_color_select.uf_get_rgb())
+		end if
+		parent.idw_parm.setredraw(true)
+	end if
+	return ::message.returnvalue
+
+// uo_color_select.destroy() returns 0 [event]
+	call super::destroy
+
+// hsb_green.ஂ() returns long
+	if parent.ii_g > 205 then
+		parent.ii_g = 255
+	else
+		parent.ii_g = parent.ii_g + 50
+	end if
+	parent.sle_green.text = string(parent.ii_g)
+	this.position = parent.ii_g
+	parent.rr_1.fillcolor = rgb(parent.ii_r, parent.ii_g, parent.ii_b)
+	parent.triggerevent("color_changed")
+	if not isvalid(::message) then
+		return 0
+	end if
+	return ::message.field6
+
+// hsb_green.鈘ஂ؀က臨ஂ       () returns long
+	if parent.ii_g < 10 then
+		parent.ii_g = 0
+	else
+		parent.ii_g = parent.ii_g - 10
+	end if
+	parent.sle_green.text = string(parent.ii_g)
+	this.position = parent.ii_g
+	parent.rr_1.fillcolor = rgb(parent.ii_r, parent.ii_g, parent.ii_b)
+	parent.triggerevent("color_changed")
+	if not isvalid(::message) then
+		return 0
+	end if
+	return ::message.field6
+
+// hsb_green.   () returns long
+	if parent.ii_g > 245 then
+		parent.ii_g = 255
+	else
+		parent.ii_g = parent.ii_g + 10
+	end if
+	parent.sle_green.text = string(parent.ii_g)
+	this.position = parent.ii_g
+	parent.rr_1.fillcolor = rgb(parent.ii_r, parent.ii_g, parent.ii_b)
+	parent.triggerevent("color_changed")
+	if not isvalid(::message) then
+		return 0
+	end if
+	return ::message.field6
+
+// hsb_green.L(integer +scrollpos) returns long
+	parent.ii_g = this.position
+	parent.sle_green.text = string(parent.ii_g)
+	parent.rr_1.fillcolor = rgb(parent.ii_r, parent.ii_g, parent.ii_b)
+	parent.triggerevent("color_changed")
+	if not isvalid(::message) then
+		return 0
+	end if
+	return ::message.field6
+
+// hsb_green.ஂ있ஂ() returns long
+	if parent.ii_g < 50 then
+		parent.ii_g = 0
+	else
+		parent.ii_g = parent.ii_g - 50
+	end if
+	parent.sle_green.text = string(parent.ii_g)
+	this.position = parent.ii_g
+	parent.rr_1.fillcolor = rgb(parent.ii_r, parent.ii_g, parent.ii_b)
+	parent.triggerevent("color_changed")
+	if not isvalid(::message) then
+		return 0
+	end if
+	return ::message.field6
+
+// hsb_red.   () returns long
+	if parent.ii_r > 245 then
+		parent.ii_r = 255
+	else
+		parent.ii_r = parent.ii_r + 10
+	end if
+	parent.sle_red.text = string(parent.ii_r)
+	this.position = parent.ii_r
+	parent.rr_1.fillcolor = rgb(parent.ii_r, parent.ii_g, parent.ii_b)
+	parent.triggerevent("color_changed")
+	if not isvalid(::message) then
+		return 0
+	end if
+	return ::message.field6
+
+// hsb_red.ஂ있ஂ() returns long
+	if parent.ii_r < 50 then
+		parent.ii_r = 0
+	else
+		parent.ii_r = parent.ii_r - 50
+	end if
+	parent.sle_red.text = string(parent.ii_r)
+	this.position = parent.ii_r
+	parent.rr_1.fillcolor = rgb(parent.ii_r, parent.ii_g, parent.ii_b)
+	parent.triggerevent("color_changed")
+	if not isvalid(::message) then
+		return 0
+	end if
+	return ::message.field6
+
+// hsb_red.鈘ஂ؀က臨ஂ       () returns long
+	if parent.ii_r < 10 then
+		parent.ii_r = 0
+	else
+		parent.ii_r = parent.ii_r - 10
+	end if
+	parent.sle_red.text = string(parent.ii_r)
+	this.position = parent.ii_r
+	parent.rr_1.fillcolor = rgb(parent.ii_r, parent.ii_g, parent.ii_b)
+	parent.triggerevent("color_changed")
+	if not isvalid(::message) then
+		return 0
+	end if
+	return ::message.field6
+
+// hsb_red.L(integer +scrollpos) returns long
+	parent.ii_r = this.position
+	parent.sle_red.text = string(parent.ii_r)
+	parent.rr_1.fillcolor = rgb(parent.ii_r, parent.ii_g, parent.ii_b)
+	parent.triggerevent("color_changed")
+	if not isvalid(::message) then
+		return 0
+	end if
+	return ::message.field6
+
+// hsb_red.ஂ() returns long
+	if parent.ii_r > 205 then
+		parent.ii_r = 255
+	else
+		parent.ii_r = parent.ii_r + 50
+	end if
+	parent.sle_red.text = string(parent.ii_r)
+	this.position = parent.ii_r
+	parent.rr_1.fillcolor = rgb(parent.ii_r, parent.ii_g, parent.ii_b)
+	parent.triggerevent("color_changed")
+	if not isvalid(::message) then
+		return 0
+	end if
+	return ::message.field6
+
+// sle_blue.() returns long
+	selecttext(1, len(this.text))
+	if not isvalid(::message) then
+		return 0
+	end if
+	return ::message.field6
+
+// sle_blue.() returns long
+	integer li_new_value
+	if isnumber(this.text) then
+		li_new_value = integer(this.text)
+		if li_new_value < 0 or li_new_value > 255 then
+			beep(1)
+			this.text = string(parent.ii_b)
+		else
+			parent.ii_b = li_new_value
+			parent.rr_1.fillcolor = rgb(parent.ii_r, parent.ii_g, parent.ii_b)
+			parent.hsb_blue.position = parent.ii_b
+			parent.triggerevent("color_changed")
+		end if
+	else
+		beep(1)
+		this.text = string(parent.ii_b)
+	end if
+	if not isvalid(::message) then
+		return 0
+	end if
+	return ::message.field6
+
+// sle_green.() returns long
+	selecttext(1, len(this.text))
+	if not isvalid(::message) then
+		return 0
+	end if
+	return ::message.field6
+
+// sle_green.() returns long
+	integer li_new_value
+	if isnumber(this.text) then
+		li_new_value = integer(this.text)
+		if li_new_value < 0 or li_new_value > 255 then
+			beep(1)
+			this.text = string(parent.ii_g)
+		else
+			parent.ii_g = li_new_value
+			parent.rr_1.fillcolor = rgb(parent.ii_r, parent.ii_g, parent.ii_b)
+			parent.hsb_green.position = parent.ii_g
+			parent.triggerevent("color_changed")
+		end if
+	else
+		beep(1)
+		this.text = string(parent.ii_g)
+	end if
+	if not isvalid(::message) then
+		return 0
+	end if
+	return ::message.field6
+
+// sle_red.() returns long
+	selecttext(1, len(this.text))
+	if not isvalid(::message) then
+		return 0
+	end if
+	return ::message.field6
+
+// sle_red.() returns long
+	integer li_new_value
+	if isnumber(this.text) then
+		li_new_value = integer(this.text)
+		if li_new_value < 0 or li_new_value > 255 then
+			beep(1)
+			this.text = string(parent.ii_r)
+		else
+			parent.ii_r = li_new_value
+			parent.rr_1.fillcolor = rgb(parent.ii_r, parent.ii_g, parent.ii_b)
+			parent.hsb_red.position = parent.ii_r
+			parent.triggerevent("color_changed")
+		end if
+	else
+		beep(1)
+		this.text = string(parent.ii_r)
+	end if
+	if not isvalid(::message) then
+		return 0
+	end if
+	return ::message.field6
+
+// hsb_blue.ஂ() returns long
+	if parent.ii_b > 205 then
+		parent.ii_b = 255
+	else
+		parent.ii_b = parent.ii_b + 50
+	end if
+	parent.sle_blue.text = string(parent.ii_b)
+	this.position = parent.ii_b
+	parent.rr_1.fillcolor = rgb(parent.ii_r, parent.ii_g, parent.ii_b)
+	parent.triggerevent("color_changed")
+	if not isvalid(::message) then
+		return 0
+	end if
+	return ::message.field6
+
+// hsb_blue.鈘ஂ؀က臨ஂ       () returns long
+	if parent.ii_b < 10 then
+		parent.ii_b = 0
+	else
+		parent.ii_b = parent.ii_b - 10
+	end if
+	parent.sle_blue.text = string(parent.ii_b)
+	this.position = parent.ii_b
+	parent.rr_1.fillcolor = rgb(parent.ii_r, parent.ii_g, parent.ii_b)
+	parent.triggerevent("color_changed")
+	if not isvalid(::message) then
+		return 0
+	end if
+	return ::message.field6
+
+// hsb_blue.   () returns long
+	if parent.ii_b > 245 then
+		parent.ii_b = 255
+	else
+		parent.ii_b = parent.ii_b + 10
+	end if
+	parent.sle_blue.text = string(parent.ii_b)
+	this.position = parent.ii_b
+	parent.rr_1.fillcolor = rgb(parent.ii_r, parent.ii_g, parent.ii_b)
+	parent.triggerevent("color_changed")
+	if not isvalid(::message) then
+		return 0
+	end if
+	return ::message.field6
+
+// hsb_blue.L(integer +scrollpos) returns long
+	parent.ii_b = this.position
+	parent.sle_blue.text = string(parent.ii_b)
+	parent.rr_1.fillcolor = rgb(parent.ii_r, parent.ii_g, parent.ii_b)
+	parent.triggerevent("color_changed")
+	if not isvalid(::message) then
+		return 0
+	end if
+	return ::message.field6
+
+// hsb_blue.ஂ있ஂ() returns long
+	if parent.ii_b < 50 then
+		parent.ii_b = 0
+	else
+		parent.ii_b = parent.ii_b - 50
+	end if
+	parent.sle_blue.text = string(parent.ii_b)
+	this.position = parent.ii_b
+	parent.rr_1.fillcolor = rgb(parent.ii_r, parent.ii_g, parent.ii_b)
+	parent.triggerevent("color_changed")
+	if not isvalid(::message) then
+		return 0
+	end if
+	return ::message.field6
+
+// cb_ok.clicked() returns long [event]
+	close(parent)
+	return ::message.returnvalue

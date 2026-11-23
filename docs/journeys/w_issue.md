@@ -1,0 +1,28 @@
+# w_issue
+
+- title: Issue Delivery Challan
+- library: issuecomponents (Sales, POS & reports)
+- ancestor: `w_multi_entry`
+- size: 3010 x 3101 PBU
+- reached from: (opened from code / other windows)
+- script size: 4411 lines; 22 events, 84 functions
+
+## Controls (3)
+
+- `tab_retrieve` (tab_retrieve)
+- `dw_saleinvrep` (u_dwstandard) dataobject `d_issueinvreport`
+- `dw_saleinvdetail` (u_dwstandard) dataobject `d_issuedetail`
+
+## Data
+
+- DataWindows: `d_IssueReqheader`, `d_SaleOrderdetail_issue_retrieve`, `d_SaleOrderheader`, `d_deliveryorder_half`, `d_forlandmotors_issueprint_dc`, `d_groupallowedmoduleheader`, `d_issuedetail`, `d_issueinvinfo`, `d_issueinvreport`, `d_issuereq_issuepopulation_rejected`, `d_issuereqdetail`, `d_issuereqdetail_retrieve_issue`, `d_issuereqheader`, `d_itemstockinfo`, `d_loosepurchasedetail`, `d_loosepurchaseheader`, `d_normalpurchasedetail`, `d_normalpurchaseheader`, `d_quotation_issuepopulation_rejected`, `d_quotationdetail_retrieve`, `d_quotationdetail_retrieve_issue`, `d_quotationheader`, `d_receiptdetail`, `d_receiptheader`, `d_recipedetail`, `ddd_receiptinvitems`
+- tables touched by embedded SQL: accounts, customer, godown, godowndetail, groupallowedgodown, into, issuecategory, issuedetail, issueheader, item, itemimage, motorvehicle, receiptheader, saleledger, serviceoheader, supplier, workorder
+- stored procedures: deleteitemstockbatch, getaliasname_withqtyprice, getallowedgroupcustomercategory, getfirstitemimagedetail, getitemavgprice, getitemstockall, getitemstockbatch, getitemstockinallowedgodown, getitemstocktotal, getitemtotalpiecesinhand, getmaxutn, postissueledger, pushissuetodropbox, saleupdateitemstockbatch, updateactivitymonitor, updateitemstockbatch, updateitemtotalpiecesinhand
+- global functions: f_drilldown_itemsearch, f_fetch_sites, f_generateheaderinvcode, f_get_colprecision, f_getgroupcode, f_groupallowedgodowncount, f_groupgodownstrategy, f_newtableid, f_numberpreferences, f_rightexists, f_setcolumnstyle, f_stringpreferences, f_validatedw, f_writeimgtofile
+- windows opened: w_arg_item_recipe_qty_sdate_ldate, w_arg_sinvcode_linvcode, w_copyissueinvoicefrom, w_dueinfo, w_editissuereqform, w_editquotationform_using_preferences, w_editsaleorder_finalized_form, w_issuereq_issuepopulation_rejected, w_itemissuehistory, w_motorvehicle, w_popup_itempriority_settings, w_popup_partialsearch_selection, w_preview_invoices, w_previnvinfo, w_quotation_issuepopulation_rejected, w_salecomments, w_salesmanpassword, w_savesaleastemplate, w_vehiclesearch, w_vehiclesearchresult, w_view_issueheader
+
+## Events and functions
+
+`w_issue.ue_printdo`, `w_issue.ue_set_requiredcolumns`, `w_issue.create`, `w_issue.destroy`, `w_issue.ue_save`, `w_issue.ue_newform`, `w_issue.ue_detail`, `w_issue.ue_newitem`, `w_issue.ue_deleteitem`, `w_issue.close`, `w_issue.ue_list`, `w_issue.ue_print`, `w_issue.ue_refreshddw`, `w_issue.ue_new`, `w_issue.ue_postopen`, `w_issue.open`, `dw_detail.itemchanged`, `dw_detail.ue_dwnkey`, `dw_itemsdetail.itemchanged`, `dw_itemsdetail.clicked`, `dw_itemsdetail.ue_dwnkey`, `dw_itemsdetail.ue_enterkey`, `w_issue.wf_customerinfo`, `w_issue.wf_visible`, `w_issue.wf_genfullcode`, `w_issue.wf_getmaxdate`, `w_issue.wf_savastemplate`, `w_issue.wf_editquotation`, `w_issue.wf_dueitem`, `w_issue.wf_grandtotal`, `w_issue.wf_selectprintreport`, `w_issue.wf_returnsaleinvoice`, `w_issue.wf_assigndatawindowobjects`, `w_issue.wf_closelist`, `w_issue.wf_getitemassociategcode`, `w_issue.wf_locksaleinvoice`, `w_issue.wf_post`, `w_issue.wf_preinvinfo`, `w_issue.wf_print`, `w_issue.wf_protectdw`, `w_issue.wf_setgodownoption`, `w_issue.wf_setiteminfo`, `w_issue.wf_setsaletype`, `w_issue.wf_setsuppinfo`, `w_issue.wf_updatesaleprice`, `w_issue.wf_validatefullcode`, `w_issue.wf_validategodown`, `w_issue.wf_retrievelist`, `w_issue.wf_retrievelistall`, `w_issue.wf_initmodify`, `w_issue.wf_copyinvoice`, `w_issue.wf_dup_refno`, `w_issue.wf_validateitemnew`, `w_issue.wf_validateitem`, `w_issue.wf_findfullcode`, `w_issue.wf_setitemprice`, `w_issue.wf_inititeminfo`, `w_issue.wf_allowissuemodification`, `w_issue.wf_populatesaledetail`, `w_issue.wf_populate_recipe`, `w_issue.wf_populate_saleorder`, `w_issue.wf_selectitembatches`, `w_issue.wf_presaleinvinfo`, `w_issue.wf_print_storesummary`, `w_issue.wf_setcomments`, `w_issue.wf_deletesaleinvoice`, `w_issue.wf_getissuestockinfo`, `w_issue.wf_populate_issue_request`, `w_issue.wf_itemissuehistory`, `w_issue.wf_apply_associatedquotation`, `w_issue.wf_get_associatedquotationcode`, `w_issue.wf_search_customer`, `w_issue.wf_fetch_customer_balance`, `w_issue.wf_viewheader`, `w_issue.wf_validateserviceorder`, `w_issue.wf_validate_pcs`, `w_issue.wf_validateworkorder`, `w_issue.wf_set_itemimage`, `w_issue.wf_item_image_setting`, `w_issue.wf_validate_receipt`, `w_issue.wf_setitemslist`, `w_issue.wf_itemslistcolvisibility`, `w_issue.wf_itemprevissueqty`, `w_issue.wf_oninvoiceitemprevqty`, `w_issue.wf_populatereceipt`, `w_issue.wf_validate_qty`, `w_issue.wf_generate_issuecategory_counter`, `w_issue.wf_locksaleinvoices`, `w_issue.wf_quotationinuse`, `w_issue.wf_motorvehicle_retrieve`, `w_issue.wf_find_motorvehiclecode`, `w_issue.wf_motorvehiclesearch`, `w_issue.wf_set_motorvehicleinfo`, `w_issue.wf_new_motorvehicle`, `w_issue.wf_supplierinfo`, `w_issue.wf_push_issue_to_dropbox`, `tab_retrieve.selectionchanged`, `dw_footer.losefocus`, `dw_footer.itemfocuschanged`, `dw_footer.itemerror`, `dw_detail.itemerror`, `dw_itemsdetail.itemfocuschanged`, `dw_itemsdetail.rowfocuschanged`, `dw_itemsdetail.losefocus`, `dw_itemsdetail.itemerror`, `dw_itemsdetail.getfocus`
+
+Source: `recovered/scripts/issuecomponents/w_issue.pbs`

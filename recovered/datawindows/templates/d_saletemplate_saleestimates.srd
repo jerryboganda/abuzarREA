@@ -1,0 +1,164 @@
+release 12.5;
+datawindow ( units=0 timer_interval=60000 processing=0 color=67108864 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.printername=""  print.documentname=""  print.orientation=0 print.margin.left=110 print.margin.right=110 print.margin.top=96 print.margin.bottom=96 print.paper.size=1 print.paper.source=0 print.canusedefaultprinter=yes selected.mouse=no hidegrayline=no showbackcoloronxp=no)
+header(height=304 color="536870912" )
+summary(height=76 color="536870912" )
+footer(height=0 color="536870912" )
+detail(height=76 color="536870912" )
+table(column=(type=long updatewhereclause=yes name=saletemplatecode dbname="SaleTemplateCode"  )
+column=(type=char(100) updatewhereclause=yes name=template dbname="Template"  )
+column=(type=long updatewhereclause=yes name=groupcode dbname="GroupCode"  )
+column=(type=char(60) updatewhereclause=yes name=groupname dbname="GroupName"  )
+column=(type=decimal(4) updatewhereclause=yes name=stockqty dbname="StockQty"  )
+column=(type=decimal(16) updatewhereclause=yes name=stockvalue dbname="StockValue"  )
+column=(type=decimal(4) updatewhereclause=yes initial="0" name=qty dbname="Qty"  )
+column=(type=decimal(6) updatewhereclause=yes initial="0" name=value dbname="Value"  )
+column=(type=decimal(6) updatewhereclause=yes validation="real(gettext()) >= 0" validationmsg="~"Required Sales Value must be Possitive.~"" initial="0" name=requiredvalue dbname="RequiredValue"  )
+ retrieve="SELECT 
+	SaleTemplateCode=H.SaleTemplateCode, 
+	Template = H.Name,
+	GroupCode = G.GroupCode,
+	GroupName = G.GroupName,
+	StockQty = ISNULL(
+		(SELECT SUM(GD.CurrQty) 
+		FROM GodownDetail GD, Item II,
+			(SELECT GroupCode = ManfCode, GroupName = Name
+			FROM Manufacturer
+			WHERE :as_group = 'M' 
+			UNION ALL
+			SELECT GroupCode = ICatCode, GroupName = Name
+			FROM ItemCategory
+			WHERE :as_group = 'C' 
+			UNION ALL
+			SELECT GroupCode = ICCode, GroupName = Name
+			FROM ItemClass
+			WHERE :as_group = 'L' 
+			UNION ALL
+			SELECT GroupCode = PackCode, GroupName = Name
+			FROM ItemPacking
+			WHERE :as_group = 'P' ) GG
+		WHERE GD.ICode = II.ICode AND 	
+			G.GroupCode = 
+			CASE :as_group 
+				WHEN 'M' THEN II.ManfCode 
+				WHEN 'C' THEN II.ICatCode 
+				WHEN 'L' THEN II.ICCode 
+				ELSE II.PackCode END AND 
+			GG.GroupCode = G.GroupCode), 0),
+	StockValue = ISNULL(
+		(SELECT SUM(GD.CurrQty * ROUND(II.SalePrice / CASE WHEN II.PackUnits > 0 THEN II.PackUnits ELSE 1 END, 2)) 
+		FROM GodownDetail GD, Item II,
+			(SELECT GroupCode = ManfCode, GroupName = Name
+			FROM Manufacturer
+			WHERE :as_group = 'M' 
+			UNION ALL
+			SELECT GroupCode = ICatCode, GroupName = Name
+			FROM ItemCategory
+			WHERE :as_group = 'C' 
+			UNION ALL
+			SELECT GroupCode = ICCode, GroupName = Name
+			FROM ItemClass
+			WHERE :as_group = 'L' 
+			UNION ALL
+			SELECT GroupCode = PackCode, GroupName = Name
+			FROM ItemPacking
+			WHERE :as_group = 'P' ) GG
+		WHERE GD.ICode = II.ICode AND 	
+			G.GroupCode = 
+			CASE :as_group 
+				WHEN 'M' THEN II.ManfCode 
+				WHEN 'C' THEN II.ICatCode 
+				WHEN 'L' THEN II.ICCode 
+				ELSE II.PackCode END AND 
+			GG.GroupCode = G.GroupCode), 0),
+	Qty = SUM(D.LooseQty),
+	Value = Round(SUM(D.LooseQty * (D.SalePrice - D.ItemFlatDisc) * (1 - D.DiscPerc * 0.01)), 2),
+	RequiredValue = Round(SUM(D.LooseQty * (D.SalePrice - D.ItemFlatDisc) * (1 - D.DiscPerc * 0.01)), 2)
+FROM 
+	SaleTemplateHeader H, 
+	(SELECT STD.SaleTemplateCode, STD.ICode, STD.LooseQty, STD.BonusQty, STD.SalePrice, STD.DiscPerc, STD.ItemFlatDisc, STD.MArked
+	FROM SaleTemplateDetail STD 
+	WHERE STD.SaleTemplateCode = :ai_templatecode
+	UNION ALL
+	SELECT SaleTemplateCode=:ai_templatecode, Item.ICode, LooseQty=0, BonusQty=0, 
+		SalePrice=Round(Item.SalePrice / CASE WHEN Item.PackUnits > 0 THEN Item.PackUnits ELSE 1 END, 2), 
+		DiscPerc=0, ItemFlatDisc=0, MArked='Y'
+	FROM Item
+	WHERE :ai_format = 2) D,
+	Item I,
+	(SELECT GroupCode = NULL, GroupName = 'NONE'
+	UNION ALL
+	SELECT GroupCode = ManfCode, GroupName = Name
+	FROM Manufacturer
+	WHERE :as_group = 'M' 
+	UNION ALL
+	SELECT GroupCode = ICatCode, GroupName = Name
+	FROM ItemCategory
+	WHERE :as_group = 'C' 
+	UNION ALL
+	SELECT GroupCode = ICCode, GroupName = Name
+	FROM ItemClass
+	WHERE :as_group = 'L' 
+	UNION ALL
+	SELECT GroupCode = PackCode, GroupName = Name
+	FROM ItemPacking
+	WHERE :as_group = 'P' ) G
+WHERE 
+	H.SaleTemplateCode = :ai_templatecode AND
+	H.SaleTemplateCode = D.SaleTemplateCode AND
+	D.Marked = 'Y' AND
+	D.ICode = I.ICode AND
+	G.GroupCode = 
+		CASE :as_group 
+			WHEN 'M' THEN I.ManfCode 
+			WHEN 'C' THEN I.ICatCode 
+			WHEN 'L' THEN I.ICCode 
+			ELSE I.PackCode END
+GROUP BY
+	H.SaleTemplateCode,
+	H.Name,
+	G.GroupCode,
+	G.GroupName
+ORDER BY 
+	GroupName"
+  arguments=(("as_group", string), ("ai_templatecode", number), ("ai_format", number))
+ sort="groupname A"
+)
+compute(name=compute_2 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="247" y="16" height="68" width="471" format="dd/mm/yyyy" expression="today()" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_13 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="41" y="16" height="80" width="165" text="Date: " html.valueishtml="0" )
+column(name=template visible="1" band=header id=2 x="407" y="108" height="80" width="2181" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-11" font.pitch="2" font.weight="700" tabsequence=0 )
+column(name=saletemplatecode visible="1" band=header id=1 x="2843" y="108" height="72" width="466" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-11" font.pitch="2" font.weight="700" tabsequence=0 )
+text(name=t_5 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" alignment="0" border="0" x="2624" y="108" height="72" width="201" text="Code:" html.valueishtml="0" )
+text(name=t_4 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="700" background.mode="2" background.color="67108864" color="0" alignment="0" border="0" x="41" y="108" height="80" width="347" text="Template:" html.valueishtml="0" )
+text(name=t_1 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" alignment="0" border="0" x="41" y="212" height="72" width="155" text="Sr. #" html.valueishtml="0" )
+text(name=packingname_t visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" alignment="2" border="0" x="219" y="212" height="72" width="576" text="Name" html.valueishtml="0" )
+text(name=t_14 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="700" background.mode="2" background.color="67108864" color="0" alignment="2" border="0" x="41" y="16" height="72" width="3278" text="	'Sales Estimates-' + if(as_group ='M', 'Manufacturer', if( as_group ='C', 'Category', if( as_group ='L', 'Class', 'Packing')))  + ' Wise'" html.valueishtml="0" )
+line(name=l_1 visible="1" band=header background.mode="2" background.color="16777215" pen.style="0" pen.width="5" pen.color="0" x1="41" y1="296" x2="3319" y2="296" )
+line(name=l_2 visible="1" band=header background.mode="2" background.color="16777215" pen.style="0" pen.width="5" pen.color="0" x1="27" y1="196" x2="3319" y2="196" )
+text(name=t_7 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" alignment="1" border="0" x="2871" y="212" height="72" width="448" text="Stock Value" html.valueishtml="0" )
+text(name=t_2 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" alignment="1" border="0" x="2350" y="212" height="72" width="507" text="Required Sales" html.valueishtml="0" )
+text(name=value_t visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" alignment="1" border="0" x="1829" y="212" height="72" width="507" text="Sales Value" html.valueishtml="0" )
+text(name=qty_t visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" alignment="1" border="0" x="1513" y="212" height="72" width="302" text="Sale Qty" html.valueishtml="0" )
+text(name=t_6 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" alignment="1" border="0" x="1202" y="212" height="72" width="297" text="Stock Qty" html.valueishtml="0" )
+text(name=t_3 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-11" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" alignment="1" border="0" x="709" y="4" height="68" width="407" text="Report Total:" html.valueishtml="0" )
+compute(name=compute_7 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" x="2871" y="4" height="68" width="448" format="###,###,##0.00" expression="sum(stockvalue for all)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_1 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" x="2350" y="4" height="68" width="507" format="###,###,##0.00" expression="sum(requiredvalue for all)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_5 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" x="1829" y="4" height="68" width="507" format="###,###,##0.00" expression="sum(value for all)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_4 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" x="1513" y="4" height="68" width="302" format="###,###,##0" expression="sum(qty for all)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_6 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" x="1193" y="4" height="68" width="306" format="[general]" expression="sum(stockqty for all)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_3 visible="1" band=detail font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" background.mode="0" background.color="536870912	if(requiredvalue <  value, RGB(100,200,100), if(requiredvalue >  value, RGB(200,100,100), RGB(220,220,220)))" color="0" x="41" y="4" height="68" width="155" format="[GENERAL]" expression="getrow()" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+column(name=groupname visible="1" band=detail id=4 x="219" y="4" height="68" width="1015" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="0" background.color="536870912	if(requiredvalue <  value, RGB(100,200,100), if(requiredvalue >  value, RGB(200,100,100), RGB(220,220,220)))" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=stockvalue visible="1" band=detail id=6 x="2871" y="4" height="68" width="448" color="33554432" border="0" alignment="1" format="###,###,##0.00" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="0" background.color="536870912	if(requiredvalue <  value, RGB(100,200,100), if(requiredvalue >  value, RGB(200,100,100), RGB(220,220,220)))" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=requiredvalue visible="1" band=detail id=9 x="2350" y="4" height="68" width="507" color="33554432" border="0" alignment="1" format="###,###,##0.00" html.valueishtml="0" editmask.focusrectangle=yes editmask.autoskip=no editmask.required=yes editmask.readonly=no editmask.codetable=no editmask.ddcalendar=no editmask.spin=no editmask.useformat=no editmask.mask="##,###,###,##0.00" editmask.imemode=0 editmask.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="0" background.color="16777215	if(requiredvalue <  value, RGB(100,200,100), if(requiredvalue >  value, RGB(200,100,100), RGB(255,255,255)))" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="700" tabsequence=10 )
+column(name=value visible="1" band=detail id=8 x="1829" y="4" height="68" width="507" color="33554432" border="0" alignment="1" format="###,###,##0.00" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="0" background.color="536870912	if(requiredvalue <  value, RGB(100,200,100), if(requiredvalue >  value, RGB(200,100,100), RGB(220,220,220)))" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=qty visible="1" band=detail id=7 x="1513" y="4" height="68" width="302" color="33554432" border="0" alignment="1" format="###,###,##0" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="0" background.color="536870912	if(requiredvalue <  value, RGB(100,200,100), if(requiredvalue >  value, RGB(200,100,100), RGB(220,220,220)))" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=stockqty visible="1" band=detail id=5 x="1257" y="4" height="68" width="242" color="33554432" border="0" alignment="1" format="	f_SetColumnFormat('Qty')" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="0" background.color="536870912	if(requiredvalue <  value, RGB(100,200,100), if(requiredvalue >  value, RGB(200,100,100), RGB(220,220,220)))" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-10" font.pitch="2" font.weight="400" tabsequence=0 )
+htmltable(border="1" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" encodeSelfLinkArgs="1" generateJavaScript="1" netscapeLayers="0" pagingMethod=0 )
+xhtmlgen() cssgen(sessionSpecific="0" )
+xmlgen(inline="0" )
+xsltgen()
+jsgen()
+export.xml(headGroups="1" includewhitespace="0" metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 distill.customPostScript="0" xslfop.print="0" )
+export.xhtml()

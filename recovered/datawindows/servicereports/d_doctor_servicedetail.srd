@@ -1,0 +1,185 @@
+release 12.5;
+datawindow ( units=2 timer_interval=60000 processing=0 color=1073741824 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.printername=""  print.documentname=""  print.orientation=0 print.margin.left=250 print.margin.right=250 print.margin.top=250 print.margin.bottom=250 print.paper.size=1 print.paper.source=0 print.canusedefaultprinter=yes selected.mouse=no hidegrayline=no showbackcoloronxp=no)
+header(height=1283 color="536870912" )
+summary(height=416 color="536870912" )
+footer(height=0 color="536870912" )
+detail(height=183 color="536870912" )
+table(column=(type=long updatewhereclause=yes name=doctcode dbname="Doctors.DoctCode"  )
+column=(type=char(60) updatewhereclause=yes name=doctor dbname="Doctor"  )
+column=(type=long updatewhereclause=yes name=servicecode dbname="Doctors.ServiceCode"  )
+column=(type=char(60) updatewhereclause=yes name=service dbname="Service"  )
+column=(type=long updatewhereclause=yes name=servicecatcode dbname="Doctors.ServiceCatCode"  )
+column=(type=char(60) updatewhereclause=yes name=servicecategory dbname="ServiceCategory"  )
+column=(type=decimal(2) updatewhereclause=yes name=svcqty dbname="SvcQTY"  )
+column=(type=decimal(6) updatewhereclause=yes name=svcvalue dbname="SvcValue"  )
+column=(type=decimal(2) updatewhereclause=yes name=svcretqty dbname="SvcRetQTY"  )
+column=(type=decimal(6) updatewhereclause=yes name=svcretvalue dbname="SvcRetValue"  )
+column=(type=decimal(2) updatewhereclause=yes name=netqty dbname="NetQTY"  )
+column=(type=decimal(6) updatewhereclause=yes name=netvalue dbname="NetValue"  )
+column=(type=decimal(6) updatewhereclause=yes name=netshare dbname="NetShare"  )
+ retrieve="SELECT
+	S.DoctCode, 
+	Doctor=D.Name,
+	S.ServiceCode, 
+	Service=Sv.Name,
+	S.ServiceCatCode, 
+	ServiceCategory=SC.Name,
+	SvcQTY = SUM(S.SvcQTY), 
+	SvcValue = SUM(S.SvcValue),
+	SvcRetQTY = SUM(S.SvcRetQTY), 
+	SvcRetValue = SUM(S.SvcRetValue),
+	NetQTY = SUM(S.QTY),  
+	NetValue = SUM(S.Value),
+	NetShare = SUM(S.commission)
+FROM
+	Doctors D,
+	Service Sv,
+	ServiceCategory SC,
+	(SELECT 
+		H.DoctCode, 
+		S.ServiceCode, 
+		SC.ServiceCatCode, 
+		SvcQty = SUM(D.QTY), 
+		SvcValue = SUM(D.QTY * (D.Price - D.ServiceFlatDisc) * (1 - D.Discperc * 0.01) * (1 - H.Discperc * 0.01)),
+		SvcRetQty = 0, 
+		SvcRetValue = 0.00,
+		QTY = SUM(D.QTY), 
+		Value = SUM(D.QTY * (D.Price - D.ServiceFlatDisc) * (1 - D.Discperc * 0.01) * (1 - H.Discperc * 0.01)),
+		commission= SUM(D.QTY * (D.Commission - D.ServiceFlatDisc) * (1 - D.Discperc * 0.01) * (1 - H.Discperc * 0.01)) + 
+			SUM(D.Qty * (D.Price - D.ServiceFlatDisc) * (1 - D.Discperc * 0.01)  * (1 - H.Discperc * 0.01) * D.SharePerc * 0.01)
+	FROM ServiceHeader H, ServiceDetail D, ServiceCategory SC, Service S
+	WHERE 
+		H.DoctCode IN (:ai_doctcode) AND 
+		H.CustCode IN (:ai_custcode) AND 
+		H.Date BETWEEN :ad_startdate AND :ad_enddate AND
+		H.ServiceInvCode = D.ServiceInvCode AND 
+		D.ServiceCode = S.ServiceCode AND
+		S.ServiceCatCode = SC.ServiceCatCode AND
+		SC.ServiceCatCode IN (:ai_servicecatcode)
+	GROUP BY
+		S.ServiceCode, 
+		SC.ServiceCatCode, 
+		H.DoctCode
+	UNION ALL
+	SELECT 
+		H.DoctCode, 
+		S.ServiceCode, 
+		SC.ServiceCatCode, 
+		SvcQty = 0, 
+		SvcValue = 0.00,
+		SvcRetQty = SUM(D.QTY), 
+		SvcRetValue = SUM(D.QTY * (D.ServicePrice - D.ServiceFlatDisc) * (1 - D.Discperc * 0.01) * (1 - H.Discperc * 0.01)),
+		QTY = -SUM(D.QTY), 
+		Value = -SUM(D.QTY * (D.ServicePrice - D.ServiceFlatDisc) * (1 - D.Discperc * 0.01) * (1 - H.Discperc * 0.01)),
+		commission= - (SUM(D.QTY * (D.Commission - D.ServiceFlatDisc) * (1 - D.Discperc * 0.01) * (1 - H.Discperc * 0.01)) + 
+			SUM(D.Qty * (D.ServicePrice - D.ServiceFlatDisc) * (1 - D.Discperc * 0.01)  * (1 - H.Discperc * 0.01) * D.SharePerc * 0.01))
+	FROM ServiceRHeader H, ServiceRDetail D, ServiceCategory SC, Service S
+	WHERE 
+		H.DoctCode IN (:ai_doctcode) AND 
+		H.CustCode IN (:ai_custcode) AND 
+		H.Date BETWEEN :ad_startdate AND :ad_enddate AND
+		H.ServiceRInvCode = D.ServiceRInvCode AND 
+		D.ServiceCode = S.ServiceCode AND
+		S.ServiceCatCode = SC.ServiceCatCode AND
+		SC.ServiceCatCode IN (:ai_servicecatcode)
+	GROUP BY
+		S.ServiceCode, 
+		SC.ServiceCatCode, 
+		H.DoctCode) S
+WHERE
+	S.ServiceCode = SV.ServiceCode AND
+	S.ServiceCatCode = SC.ServiceCatCode AND
+	S.DoctCode = D.DoctCode
+GROUP BY
+	S.DoctCode,
+	D.Name,
+	S.ServiceCode,
+	Sv.Name,
+	S.ServiceCatCode,
+	SC.Name
+ORDER BY
+	ServiceCategory,
+	Doctor,
+	Service
+"
+  arguments=(("ai_doctcode", numberlist), ("ai_servicecatcode", numberlist), ("ai_custcode", numberlist), ("ad_startdate", datetime), ("ad_enddate", datetime))
+)
+group(level=1 header.height=183 trailer.height=408 by=("servicecategory"  ) header.color="536870912" trailer.color="536870912" )
+group(level=2 header.height=183 trailer.height=241 by=("doctor"  ) header.color="536870912" trailer.color="536870912" )
+text(name=t_9 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" background.mode="2" background.color="16777215" color="0" alignment="2" border="0" x="83" y="33" height="166" width="7800" text="Doctor Wise Net Sale Services Detail" html.valueishtml="0" )
+text(name=t_15 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="0" border="0" x="225" y="50" height="166" width="308" text="Date: " html.valueishtml="0" )
+compute(name=compute_2 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="575" y="50" height="158" width="1383" format="dd/mm/yyyy hh:mm:ss" expression="today()" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_3 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" alignment="1" border="0" x="2225" y="833" height="166" width="208" text="To:" html.valueishtml="0" )
+compute(name=c_edate visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" x="2491" y="833" height="158" width="1375" format="dd/mm/yyyy hh:mm:ss" expression=" ad_EndDate " alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=c_startdate visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="16777215" color="0" x="475" y="833" height="158" width="1375" format="dd/mm/yyyy hh:mm:ss" expression=" ad_startDate " alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_2 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="553648127" color="0" alignment="0" border="0" x="83" y="833" height="166" width="366" text="From:" html.valueishtml="0" )
+text(name=t_c_sno visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="0" border="0" x="83" y="1058" height="166" width="258" text="Sr.#" html.valueishtml="0" )
+text(name=t_service visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="2" border="0" x="383" y="1058" height="166" width="1241" text="Service" html.valueishtml="0" )
+text(name=t_netqty visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="1" border="0" x="5725" y="1058" height="166" width="516" text="Net Qty" html.valueishtml="0" )
+text(name=t_netvalue visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="1" border="0" x="6291" y="1058" height="166" width="758" text="Net Value" html.valueishtml="0" )
+text(name=t_netshare visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="1" border="0" x="7100" y="1058" height="166" width="766" text="Net Share" html.valueishtml="0" )
+text(name=t_svcqty visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="1" border="0" x="3016" y="1058" height="166" width="516" text="Svc Qty" html.valueishtml="0" )
+text(name=t_svcvalue visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="1" border="0" x="3575" y="1058" height="166" width="758" text="Service Value" html.valueishtml="0" )
+text(name=t_svcretvalue visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="1" border="0" x="4925" y="1058" height="166" width="758" text="Return Value" html.valueishtml="0" )
+text(name=t_svcretqty visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" alignment="1" border="0" x="4375" y="1058" height="166" width="508" text="Ret. Qty" html.valueishtml="0" )
+compute(name=c_address2 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="83" y="641" height="158" width="7800" format="[general]" expression="f_ReportHeaderInfo('address2')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+line(name=l_2 visible="1" band=header background.mode="2" background.color="16777215" pen.style="2" pen.width="8" pen.color="0" x1="83" y1="1016" x2="7883" y2="1016" )
+line(name=l_1 visible="1" band=header background.mode="2" background.color="16777215" pen.style="2" pen.width="8" pen.color="0" x1="83" y1="1258" x2="7883" y2="1258" )
+compute(name=c_address1 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="83" y="450" height="166" width="7800" format="[general]" expression="f_ReportHeaderInfo('address1')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=c_companyname visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="0" x="83" y="250" height="166" width="7800" format="[general]" expression="f_ReportHeaderInfo('clientname')" alignment="2" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_3 visible="1" band=header font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" x="6458" y="58" height="158" width="1425" format="[general]" expression="'Page ' + page() + ' of ' + pageCount()" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_8 visible="1	if(sum(netqty for all)=0,0,1)" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" x="5125" y="8" height="166" width="1116" format="	f_setserviceqty_format()" expression="sum(netqty for all)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_18 visible="1	if(sum(svcretqty for all)=0,0,1)" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" x="3808" y="8" height="166" width="1075" format="	f_setserviceqty_format()" expression="sum(svcretqty for all)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_23 visible="1	if(sum(netshare for all)=0,0,1)" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" x="6658" y="8" height="166" width="1208" format="###,###,##0.00" expression="sum(netshare for all)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_20 visible="1	if(sum(svcqty for all)=0,0,1)" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" x="2741" y="8" height="166" width="791" format="	f_setserviceqty_format()" expression="sum(svcqty for group 1)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_19 visible="1	if(sum(svcvalue for all)=0,0,1)" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" x="3050" y="208" height="166" width="1283" format="###,###,##0.00" expression="sum(svcvalue for all)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_17 visible="1	if(sum(svcretvalue for all)=0,0,1)" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" x="4583" y="208" height="166" width="1100" format="###,###,##0.00" expression="sum(svcretvalue for all)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_9 visible="1	if(sum(netvalue for all)=0,0,1)" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" x="5966" y="208" height="166" width="1083" format="###,###,##0.00" expression="sum(netvalue for all) " alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_6 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" alignment="0" border="0" x="1808" y="117" height="166" width="891" text="Report Total:" html.valueishtml="0" )
+line(name=l_6 visible="1" band=summary background.mode="2" background.color="16777215" pen.style="2" pen.width="8" pen.color="0" x1="83" y1="392" x2="7883" y2="392" )
+compute(name=c_sno visible="1" band=detail font.charset="0" font.face="Arial Narrow" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" x="83" y="8" height="166" width="225" format="[GENERAL]" expression="cumulativeSum( 1 for group 2)" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+column(name=service visible="1" band=detail id=4 x="383" y="8" height="166" width="2550" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=60 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Arial Narrow" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=netshare visible="1	if(netshare=0,0,1)" band=detail id=13 x="7100" y="8" height="166" width="766" color="33554432" border="0" alignment="1" format="###,###,##0.00" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=netqty visible="1" band=detail id=11 x="5725" y="8" height="166" width="516" color="33554432" border="0" alignment="1" format="###,###,##0" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=netvalue visible="1" band=detail id=12 x="6291" y="8" height="166" width="758" color="33554432" border="0" alignment="1" format="###,###,##0.00" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=svcretvalue visible="1	if(svcretvalue=0,0,1)" band=detail id=10 x="4925" y="8" height="166" width="758" color="33554432" border="0" alignment="1" format="###,###,##0.00" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=svcretqty visible="1	if(svcretqty=0,0,1)" band=detail id=9 x="4375" y="8" height="166" width="508" color="33554432" border="0" alignment="1" format="	f_setserviceqty_format()" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=svcvalue visible="1	if(svcvalue=0,0,1)" band=detail id=8 x="3575" y="8" height="166" width="758" color="33554432" border="0" alignment="1" format="###,###,##0.00" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=svcqty visible="1	if(svcqty=0,0,1)" band=detail id=7 x="3016" y="8" height="166" width="516" color="33554432" border="0" alignment="1" format="	f_setserviceqty_format()" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+text(name=servicecategory_t visible="1" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" alignment="0" border="0" x="83" y="8" height="166" width="658" text="Category:" html.valueishtml="0" )
+text(name=s_servicecatcode_t visible="1" band=header.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" alignment="0" border="0" x="4883" y="8" height="166" width="408" text="Code:" html.valueishtml="0" )
+column(name=servicecatcode visible="1" band=header.1 id=5 x="5333" y="8" height="166" width="550" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-9" font.pitch="2" font.weight="700" tabsequence=0 )
+column(name=servicecategory visible="1" band=header.1 id=6 x="791" y="8" height="166" width="4008" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=60 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-9" font.pitch="2" font.weight="700" tabsequence=0 )
+compute(name=compute_6 visible="1	if(sum(netqty for group 1)=0,0,1)" band=trailer.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" x="5375" y="8" height="166" width="866" format="	f_setserviceqty_format()" expression="sum(netqty for group 1) " alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_14 visible="1	if(sum(svcretqty for group 1)=0,0,1)" band=trailer.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" x="3833" y="8" height="166" width="1050" format="	f_setserviceqty_format()" expression="sum(svcretqty for group 1)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_22 visible="1	if(sum(netshare for group 1)=0,0,1)" band=trailer.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" x="6633" y="8" height="166" width="1233" format="###,###,##0.00" expression="sum(netshare for group 1)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_13 visible="1	if(sum(svcretvalue for group 1)=0,0,1)" band=trailer.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" x="4633" y="208" height="166" width="1050" format="###,###,##0.00" expression="sum(svcretvalue for group 1)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_7 visible="1	if(sum(netvalue for group 1)=0,0,1)" band=trailer.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" x="6016" y="208" height="166" width="1033" format="###,###,##0.00" expression="sum(netvalue for group 1)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_16 visible="1	if(sum(svcqty for group 1)=0,0,1)" band=trailer.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" x="2741" y="8" height="166" width="791" format="	f_setserviceqty_format()" expression="sum(svcqty for group 1)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_15 visible="1	if(sum(svcvalue for group 1)=0,0,1)" band=trailer.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" x="3125" y="208" height="166" width="1208" format="###,###,##0.00" expression="sum(svcvalue for group 1)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_5 visible="1" band=trailer.1 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" alignment="0" border="0" x="1808" y="91" height="166" width="891" text="Category Total:" html.valueishtml="0" )
+line(name=l_5 visible="1" band=trailer.1 background.mode="2" background.color="16777215" pen.style="2" pen.width="8" pen.color="0" x1="83" y1="391" x2="7883" y2="391" )
+text(name=doctor_t visible="1" band=header.2 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" alignment="0" border="0" x="83" y="9" height="166" width="975" text="Doctor/Surgeon:" html.valueishtml="0" )
+text(name=doctcode_t visible="1" band=header.2 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" alignment="0" border="0" x="4883" y="9" height="166" width="408" text="Code:" html.valueishtml="0" )
+column(name=doctcode visible="1" band=header.2 id=1 x="5333" y="9" height="166" width="550" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-9" font.pitch="2" font.weight="700" tabsequence=0 )
+column(name=doctor visible="1" band=header.2 id=2 x="1116" y="9" height="166" width="4008" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=60 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" font.charset="0" font.face="Times New Roman" font.family="2" font.height="-9" font.pitch="2" font.weight="700" tabsequence=0 )
+line(name=l_3 visible="1" band=trailer.2 background.mode="2" background.color="16777215" pen.style="2" pen.width="8" pen.color="0" x1="83" y1="8" x2="7883" y2="8" )
+compute(name=compute_4 visible="1	if(sum(netqty for group 2)=0,0,1)" band=trailer.2 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" x="5725" y="42" height="166" width="516" format="	f_setserviceqty_format()" expression="sum(netqty for group 2)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_5 visible="1	if(sum(netvalue for group 2)=0,0,1)" band=trailer.2 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" x="6291" y="42" height="166" width="758" format="###,###,##0.00" expression="sum(netvalue for group 2)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_1 visible="1	if(sum(svcretvalue for group 2)=0,0,1)" band=trailer.2 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" x="4925" y="42" height="166" width="758" format="###,###,##0.00" expression="sum(svcretvalue for group 2)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_10 visible="1	if(sum(svcretqty for group 2)=0,0,1)" band=trailer.2 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" x="4375" y="42" height="166" width="508" format="	f_setserviceqty_format()" expression="sum(svcretqty for group 2)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_11 visible="1	if(sum(svcvalue for group 2)=0,0,1)" band=trailer.2 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" x="3575" y="42" height="166" width="758" format="###,###,##0.00" expression="sum(svcvalue for group 2)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_12 visible="1	if(sum(svcqty for group 2)=0,0,1)" band=trailer.2 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" x="2741" y="42" height="166" width="791" format="	f_setserviceqty_format()" expression="sum(svcqty for group 2)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_21 visible="1	if(sum(netshare for group 2)=0,0,1)" band=trailer.2 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" x="7100" y="42" height="166" width="766" format="###,###,##0.00" expression="sum(netshare for group 2)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_4 visible="1" band=trailer.2 font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" background.mode="1" background.color="536870912" color="33554432" alignment="0" border="0" x="1808" y="42" height="166" width="891" text="Doctor Total:" html.valueishtml="0" )
+line(name=l_4 visible="1" band=trailer.2 background.mode="2" background.color="16777215" pen.style="2" pen.width="8" pen.color="0" x1="83" y1="225" x2="7883" y2="225" )
+htmltable(border="1" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" encodeSelfLinkArgs="1" generateJavaScript="1" netscapeLayers="0" pagingMethod=0 )
+xhtmlgen() cssgen(sessionSpecific="0" )
+xmlgen(inline="0" )
+xsltgen()
+jsgen()
+export.xml(headGroups="1" includewhitespace="0" metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 distill.customPostScript="0" xslfop.print="0" )
+export.xhtml()

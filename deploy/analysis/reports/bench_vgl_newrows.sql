@@ -1,0 +1,3 @@
+SET NOCOUNT ON; SET STATISTICS IO ON; SET STATISTICS TIME ON;
+SELECT COUNT(*) FROM SaleLedger S WHERE S.Posted='Y' AND S.AccountFor='Y' AND S.SaleInvCode NOT IN (SELECT DISTINCT DocumentCode FROM VirtualGL V WHERE V.DocumentType='SV');
+SELECT COUNT(*) FROM SaleLedger S WHERE S.Posted='Y' AND S.AccountFor='Y' AND NOT EXISTS (SELECT 1 FROM VirtualGL V WHERE V.DocumentType='SV' AND V.DocumentCode=S.SaleInvCode);

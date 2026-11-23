@@ -1,0 +1,137 @@
+release 12.5;
+datawindow ( units=2 timer_interval=0 processing=4 color=16777215 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.file=""  picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.printername=""  print.documentname=""  print.orientation=1 print.margin.left=0 print.margin.right=0 print.margin.top=0 print.margin.bottom=0 print.paper.size=1 print.paper.source=0 print.canusedefaultprinter=yes grid.lines=0 grid.columnmove=no selected.mouse=no hidegrayline=no showbackcoloronxp=no crosstab.dynamic=yes)
+header[1](height=991 color="536870912" transparency="0" gradient.color="8421504" gradient.transparency="0" gradient.angle="0" brushmode="0" gradient.repetition.mode="0" gradient.repetition.length="100" gradient.repetition.count="0" gradient.focus="0" gradient.scale="100" gradient.spread="100" )
+header[2](height=350 color="536870912" transparency="0" gradient.color="8421504" gradient.transparency="0" gradient.angle="0" brushmode="0" gradient.repetition.mode="0" gradient.repetition.length="100" gradient.repetition.count="0" gradient.focus="0" gradient.scale="100" gradient.spread="100" )
+summary(height=175 color="536870912" transparency="0" gradient.color="8421504" gradient.transparency="0" gradient.angle="0" brushmode="0" gradient.repetition.mode="0" gradient.repetition.length="100" gradient.repetition.count="0" gradient.focus="0" gradient.scale="100" gradient.spread="100" )
+footer(height=0 color="536870912" transparency="0" gradient.color="8421504" gradient.transparency="0" gradient.angle="0" brushmode="0" gradient.repetition.mode="0" gradient.repetition.length="100" gradient.repetition.count="0" gradient.focus="0" gradient.scale="100" gradient.spread="100" )
+detail(height=175 color="536870912" transparency="0" gradient.color="8421504" gradient.transparency="0" gradient.angle="0" brushmode="0" gradient.repetition.mode="0" gradient.repetition.length="100" gradient.repetition.count="0" gradient.focus="0" gradient.scale="100" gradient.spread="100" )
+table(column=(type=datetime updatewhereclause=yes name=date dbname="date"  )
+column=(type=decimal(6) updatewhereclause=yes name=salevalue dbname="salevalue"  )
+ retrieve="SELECT  
+	ItemCategory=Ic.Name,
+	date=max(p.date),
+	salevalue=ROUND(SUM(CASE P.TYPE WHEN 'S' THEN +1 ELSE -1 END * P.itemvalue), 0)
+FROM 
+(
+SELECT
+	type='S',
+	saleledger.saleinvcode,
+	date=CAST(CONVERT(VARCHAR(100), saleledger.date, 101) AS DATETIME), 
+	saledetail.icode,
+	ItemValue=SUM((saledetail.looseqty*(saledetail.saleprice - saledetail.itemflatdisc)) * (1 - (.01 * saledetail.discperc))) * (1 - (.01 * saleledger.discperc)),
+	catcode=saleledger.salecatcode,
+	day_of_year=DATEPART(y, saleledger.date)
+FROM
+	saleledger,	saledetail, item
+WHERE
+	saleledger.saleinvcode = saledetail.saleinvcode AND 
+	saleledger.date between :adt_startdate AND :adt_enddate and
+	saledetail.icode = item.icode and
+	item.icatcode in (:ai_icatcode)
+GROUP BY 
+	 saleledger.saleinvcode,
+	 saleledger.salesmancode,
+	 saledetail.icode,
+	 saleledger.salecatcode,
+	 saleledger.discperc,
+	 saleledger.flatdisc,
+	 saleledger.invgstperc1,
+	 saleledger.salecatcode,
+	 DATEPART(y, saleledger.date),
+	 CAST(CONVERT(VARCHAR(100), saleledger.date, 101) AS DATETIME)
+UNION ALL
+SELECT
+	type='S',
+	saleledger.saleinvcode,
+	date=CAST(CONVERT(VARCHAR(100), saleledger.date, 101) AS DATETIME), 
+	saledetail.icode,
+	ItemValue=SUM((saledetail.looseqty*(saledetail.saleprice - saledetail.itemflatdisc)) * (1 - (.01 * saledetail.discperc))) * (1 - (.01 * saleledger.discperc)),
+	catcode=saleledger.salecatcode,
+	day_of_year=DATEPART ( y , saleledger.date )
+FROM
+	saleledger,	saleinvdetail saledetail, item
+WHERE
+	saleledger.impactinventory='N' AND
+	saleledger.saleinvcode = saledetail.saleinvcode AND 
+	saleledger.date between :adt_startdate AND :adt_enddate and
+	saledetail.icode = item.icode and
+	item.icatcode in (:ai_icatcode)
+GROUP BY 
+	 saleledger.saleinvcode,
+	 saleledger.salesmancode,
+	 saledetail.icode,
+	 saleledger.salecatcode,
+	 saleledger.discperc,
+	 saleledger.flatdisc,
+	 saleledger.invgstperc1,
+	 saleledger.salecatcode,
+	 DATEPART(y, saleledger.date),
+	 CAST(CONVERT(VARCHAR(100), saleledger.date, 101) AS DATETIME)
+UNION ALL
+SELECT
+	type='R',
+	srledger.srinvcode,
+	date=CAST(CONVERT(VARCHAR(100), srledger.date, 101) AS DATETIME), 
+	srdetail.icode,
+	ItemValue=SUM((srdetail.looseqty * srdetail.srprice * (1 - (.01 * srdetail.discperc))) * (1 - (.01 * srledger.discperc))),
+	catcode=srledger.srcatcode,
+	day_of_year=DATEPART ( y , srledger.date )
+FROM
+	srledger,	 srdetail, item
+WHERE
+	srledger.srinvcode = srdetail.srinvcode  AND 
+	srledger.date between :adt_startdate AND :adt_enddate and
+	srdetail.icode = item.icode and
+	item.icatcode in (:ai_icatcode)
+GROUP BY
+	 srledger.srinvcode,
+	 srledger.salesmancode,
+	 srdetail.icode,
+	 srledger.srcatcode,
+	 srledger.discperc,
+	 srledger.flatdisc,
+	 srledger.invgstperc1,
+	 srledger.srcatcode,
+	 DATEPART(y, srledger.date),
+	 CAST(CONVERT(VARCHAR(100), srledger.date, 101) AS DATETIME)) P, ItemCategory IC, Item I
+WHERE
+	P.Icode = I.Icode AND 
+	I.ICatCode = IC.ICatCode
+GROUP BY 
+	Ic.Name,
+	day_of_year
+ORDER BY 
+	Ic.Name,
+	day_of_year
+
+"
+  arguments=(("ai_icatcode", numberlist), ("adt_startdate", datetime), ("adt_enddate", datetime))
+ sort="date A"
+)
+compute(name=compute_9 visible="1" resizeable=1 band=background font.charset="0" font.face="Times New Roman" font.family="1" font.height="-8" font.pitch="2" font.weight="700" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="2" background.color="16777215" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" x="7808" y="25" height="150" width="1791" format="[General]" expression="'Page ' + page() + ':' + pageAcross() + ' of ' + pageCount() + ':' + pageCountAcross()" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_4 visible="1" resizeable=1 band=background font.charset="0" font.face="Times New Roman" font.family="1" font.height="-12" font.pitch="2" font.weight="700" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="2" background.color="16777215" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" x="33" y="16" height="200" width="9800" format="[General]" expression="~"Category Wise Day Sale Summary Report~"" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_5 visible="1" resizeable=1 band=background font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="2" background.color="16777215" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" x="33" y="241" height="166" width="9808" format="[General]" expression="f_ReportHeaderInfo('clientname')" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_6 visible="1" resizeable=1 band=background font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="2" background.color="16777215" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" x="33" y="433" height="166" width="9808" format="[General]" expression="f_ReportHeaderInfo('address1')" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_7 visible="1" resizeable=1 band=background font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="400" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="2" background.color="16777215" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" x="33" y="625" height="166" width="9808" format="[General]" expression="f_ReportHeaderInfo('address2')" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_8 visible="1" resizeable=1 band=background font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="2" background.color="16777215" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="0" x="50" y="816" height="166" width="9808" format="[General]" expression="~"Report Date:~" + STRING(day( today() )) + '/' + STRING(month( today() )) + '/' + STRING(year( today() )) + SPACE(10) + SPACE(5) + ~"From :~" +  STRING(day(adt_startdate )) + '/' + STRING(month(adt_startdate )) + '/' + STRING(year(adt_startdate )) + SPACE(10) + ~"To :~" +  STRING(day(adt_enddate)) + '/' + STRING(month(adt_enddate)) + '/' + STRING(year(adt_enddate))" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=grand_sum_salevalue_t visible="1" band=header[2] font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="33554432" alignment="2" border="0" x="2250" y="9" height="333" width="1052" text="Grand
+ Total " html.valueishtml="0" )
+text(name=salevalue_t visible="1" band=header[2] font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="33554432" alignment="2" border="0" x="1093" y="9" height="333" width="1135" text="@itemcategory" html.valueishtml="0" )
+text(name=date_t visible="1" band=header[2] font.charset="0" font.face="Times New Roman" font.family="1" font.height="-10" font.pitch="2" font.weight="700" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="33554432" alignment="2" border="0" x="20" y="9" height="333" width="1052" text="Date" html.valueishtml="0" )
+compute(name=compute_1 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="33554432" x="20" y="9" height="158" width="1052" format="[general]" expression="~"Grand Total:~"" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_2 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="33554432" x="1093" y="9" height="158" width="1135" format="##,###,##0.00" expression="sum(salevalue for all )" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_3 visible="1" band=summary font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="33554432" x="2250" y="9" height="158" width="1052" format="##,###,##0.00" expression="sum(grand_sum_salevalue for all )" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+column(name=salevalue visible="1" band=detail id=2 x="1093" y="9" height="158" width="1133" color="33554432" border="0" alignment="1" format="##,###,##0.00" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=yes edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=yes background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" transparency="0" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+compute(name=grand_sum_salevalue visible="1" band=detail font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="700" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" transparency="0" background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" color="33554432" x="2250" y="9" height="158" width="1050" format="##,###,##0.00" expression="crosstabsum(1)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+column(name=date visible="1" band=detail id=1 x="20" y="9" height="158" width="1050" color="33554432" border="0" alignment="0" format="dd-mmm-yyyy ddd" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=yes edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=yes criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="1" background.color="536870912" background.transparency="0" background.gradient.color="8421504" background.gradient.transparency="0" background.gradient.angle="0" background.brushmode="0" background.gradient.repetition.mode="0" background.gradient.repetition.length="100" background.gradient.repetition.count="0" background.gradient.focus="0" background.gradient.scale="100" background.gradient.spread="100" transparency="0" tooltip.enabled="0" tooltip.isbubble="0" tooltip.textcolor="134217751" tooltip.backcolor="134217752" tooltip.icon="0" tooltip.maxwidth="0" tooltip.transparency="0" tooltip.delay.visible="32000" tooltip.delay.initial="0" tooltip.hasclosebutton="0" font.charset="0" font.face="Times New Roman" font.family="1" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+crosstab(columns="itemcategory" rows="date" values="sum(salevalue for crosstab)" sourcenames = "itemcategory, date, salevalue" crosstabonly=yes  band=foreground )
+htmltable(border="0" cellPadding="1" cellSpacing="1" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" encodeSelfLinkArgs="1" generateDDDWFrames="1" generateJavaScript="1" netscapeLayers="0" pagingMethod=0 )
+xhtmlgen() cssgen(sessionSpecific="0" )
+xmlgen(inline="0" )
+xsltgen()
+jsgen()
+export.xml(headGroups="1" includewhitespace="0" metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 distill.customPostScript="0" xslfop.print="0" )
+export.xhtml()

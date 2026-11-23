@@ -1,0 +1,864 @@
+# Navigation: the application menu
+
+The MDI frame `w_main` uses menu `m_entry`, which inherits `m_mainmenu` (718 items). Visibility/enabled state of every item comes from the `d_security` DataWindow (rows of `levelindex`, `indicesstring` = index path of the item, `status`) filtered by the logged-in user; right codes below are from the migration seed (`rights` table, object `A`). Items marked `sheet:` open an MDI sheet, `open:` a modal window, `call:` run a helper (`mf_openvoucher` ... ).
+
+- **File** (`m_file`)
+  - **Change User** (`m_logoffadministrator`)
+  - **Exit  [Ctrl+X]** (`m_exit`) _(shortcut 344)_
+- **Purchase** (`m_purchase`)
+  - **Purchase Order** (`m_purchaseorder`)
+    - **Reorder Levels** (`m_reorderlevels`) - `sheet:w_purchaseorder`
+    - **Projection Period** (`m_projectionperiod`) - `sheet:w_purchaseorder`
+  - **Purchases** (`m_normalpurchase`) - `sheet:w_purchase`
+  - **Purchase Return** (`m_purchasereturn1`) - `sheet:w_purchasereturn`
+  - **Opening Purchase** (`m_openingpurchase`) - `sheet:w_purchase`
+  - **Purchases (Loose)** (`m_loosepurchase`) - `sheet:w_purchase`
+  - **Purchase Return** (`m_purchasereturn`)
+    - **Normal Purchase** (`m_normalpurchasereturn`) - `sheet:w_purchasereturn`
+    - **Opening Purchase** (`m_openingpurchasereturn`) - `sheet:w_purchasereturn`
+  - **Goods Receiving Note** (`m_goodsrecieveablenote`) _(right 330)_
+    - **Pack** (`m_goodsrecievepack`) - `sheet:w_goods_recieveable_note` _(right 331)_
+    - **Loose** (`m_goodsrecieveloose`) - `sheet:w_goods_recieveable_note` _(right 332)_
+  - **Purchase Orders** (`m_purchaseorders`) - `sheet:w_purchaseorder`
+  - **Purchase Return Allocation** (`m_purchasereturnallocation`) - `sheet:w_preturnallocation` _(right 467)_
+  - **Purchase Invoice Marking** (`m_purchaseinvoicemarking`) - `sheet:w_invoicemarking` _(right 468)_
+  - **Purchase Return Marking** (`m_purchasereturnmarking`) - `sheet:w_invoicemarking` _(right 469)_
+- **Sales** (`m_sales`)
+  - **CashSale** (`m_retailsale`) - `sheet:w_sale`
+  - **Credit Sale** (`m_wholesale`) - `sheet:w_sale`
+  - **Sale Return** (`m_salereturn`)
+    - **Cash Sale Return** (`m_retailsalereturn`) - `sheet:w_salereturn`
+    - **Credit Sale Return** (`m_wholesalereturn`) - `sheet:w_salereturn`
+  - **Open Sale Return** (`m_opensalereturn`)
+    - **Cash Sale Return** (`m_openretailsalereturn`) - `sheet:w_salereturn`
+    - **Credit Sale Return** (`m_openwholesalereturn`) - `sheet:w_salereturn`
+  - **Satisfy Sale Due items** (`m_satisfysaledueitems`) - `sheet:w_duesatisfy`
+  - **Delete Due** (`m_deletedue`) - `sheet:w_duesatisfy`
+  - **Quotation** (`m_quotation`) - `sheet:w_quotation`
+  - **Service** (`m_service1`)
+    - **Cash** (`m_cash`) - `sheet:w_service`
+    - **Credit** (`m_credit`) - `sheet:w_service`
+  - **Service Return** (`m_servicereturn`)
+    - **Cash** (`m_cashreturn`) - `sheet:w_servicereturn`
+    - **Credit** (`m_creditreturn`) - `sheet:w_servicereturn`
+  - **POS Sale** (`m_possale`) - `sheet:w_postsale`
+  - **Service Order** (`m_serviceorder`) - `sheet:w_serviceorder` _(right 328)_
+  - **m_in-patient** (`m_in-patient`) _(right 380)_
+    - **m_in-patientsale** (`m_in-patientsale`) _(right 390)_
+    - **m_in-patientsalereturn** (`m_in-patientsalereturn`) _(right 391)_
+    - **m_in-patientservice** (`m_in-patientservice`) _(right 392)_
+    - **m_in-patientservicereturn** (`m_in-patientservicereturn`) _(right 393)_
+  - **Sale Return Allocation** (`m_salereturnallocation`) - `sheet:w_sreturnallocation` _(right 470)_
+  - **Sale Invoice Marking** (`m_saleinvoicemarking`) - `sheet:w_invoicemarking` _(right 471)_
+  - **Sale Return Marking** (`m_salereturnmarking`) - `sheet:w_invoicemarking` _(right 472)_
+  - **Satisfy Sale Due DateWise** (`m_satisfysaleduedatewise`) - `sheet:w_dueadj` _(right 849)_
+  - **Proforma Sale Invoice** (`m_proformasaleinvoice`) - `sheet:w_proforma_saleinvoice` _(right 879)_
+  - **Sale Order** (`m_saleorder`) - `sheet:w_salesorder`, `open:w_select_postedsaleordercategory`
+  - **Cash On Invoices (Unposted)** (`m_cashonsalesinvoicesunposted`)
+    - **Cash On Sale Invoice** (`m_cashonsaleinvoice`) - `sheet:w_cashonsales_headerwise`
+    - **Cash On Sale Invoices** (`m_cashonsaleinvoices`) - `sheet:w_cashonsales`
+- **Transactions** (`m_transactions`)
+  - **Cash Payment** (`m_cashpayment`) - `call:mf_openvoucher(1, "Cash Payment Voucher", "GT_CashSub", "CreditorsSub")`
+  - **Cash Receipt** (`m_cashreceipt`) - `call:mf_openvoucher(2, "Cash Receipt Voucher", "GT_CashSub", "DebitorsSub")`
+  - **BankPayment** (`m_bankpayment`) - `call:mf_openvoucher(3, "Bank Payment Voucher", "GT_BankSub", "CreditorsSub")`
+  - **Bank Receipt** (`m_bankreceipt`) - `call:mf_openvoucher(4, "Bank Receipt Voucher", "GT_BankSub", "DebitorsSub")`
+  - **Journal Voucher** (`m_journalvoucher`) - `sheet:w_journalvoucher`
+  - **Post Dated Cheques Receivables** (`m_billsreceivables`) - `sheet:w_notesform`
+  - **Post Dated Cheques Payables** (`m_billspayables`) - `sheet:w_notesform`
+  - **Invoice Base Vouchers** (`m_invoicebasevouchers`)
+    - **Sale** (`m_salevouchers`)
+      - **Cash Receipt** (`m_invcashreceipt1`) - `call:mf_openvoucher(12, "Invoice Cash Receipt Voucher", "GT_CashSub", "DebitorsS)`
+      - **Bank Receipt** (`m_invbankreceipt1`) - `call:mf_openvoucher(13, "Invoice Bank Receipt Voucher", "GT_BankSub", "DebitorsS)`
+      - **Journal Voucher** (`m_invjournalvoucher`) - `sheet:w_journalvoucher`
+    - **Purchase** (`m_purchasevouchers`)
+      - **Cash Payment** (`m_invcashpayment1`) - `call:mf_openvoucher(15, "Invoice Cash Payment Voucher", "GT_CashSub", "Creditors)`
+      - **Bank Payment** (`m_invbankpayment1`) - `call:mf_openvoucher(16, "Invoice Bank Payment Voucher", "GT_BankSub", "Creditors)`
+      - **Journal Voucher** (`m_invjournalvoucher2`) - `sheet:w_journalvoucher`
+  - **Accounting Vouchers** (`m_accountingvouchers`) - `sheet:w_voucher`, `open:w_select_postedvouchercategory`
+  - **Item Price Adjustment** (`m_itempriceadjustment`) _(right 857)_
+    - **Item Price/Supplier Liability Adjustment** (`m_itempricesupplierliabilityadjustment`) - `sheet:w_avgpriceadj_form` _(right 858)_
+    - **Item Price/Account Adjustment** (`m_itempriceaccountadjustment`) - `sheet:w_avgpriceadj_form` _(right 859)_
+- **Reports** (`m_reports`)
+  - **Daily Reports** (`m_dailyreports`)
+    - **Sale** (`m_dailysale`)
+      - **Sale detail** (`m_saledetail`) - `call:mf_displayreport("Daily Sales Detail", "d_dailysalesdetail")`
+      - **Sale summary** (`m_salesummary`) - `call:mf_displayreport("Daily Sales Summary", "d_dailysalessummery")`
+      - **Sale Summary Inv. Wise** (`m_salesummaryinvwise`) - `call:mf_displayreport("Daily Sales Summary Inv. Wise", "d_comp_dailysummery_invwis)`
+      - **Sale Summary Inv. Type Wise** (`m_salesummaryinvtypewise`) - `call:mf_displayreport("Daily Sales Summary Inv. Wise Type Wise", "d_dailysalessumm)`
+      - **Sale Summary Inv. Cust Wise** (`m_salesummaryinvcustwise`) - `call:mf_displayreport("Daily Sales Summary Inv. Wise Customer Wise", "d_dailysales)` _(right 387)_
+      - **Sale Detail Inv. Wise** (`m_saledetailinvwise`) - `call:mf_displayreport("Daily Sales Detail Inv. Wise ", "d_dailysalesdetail_invwise)` _(right 440)_
+      - **Sale Detail Inv. Wise (Delivery Challan)** (`m_saledetailinvwisedeliverychallan`) - `call:mf_displayreport("Daily Sales Detail Inv. Wise (Delivery Challan)` _(right 473)_
+      - **Sale Detail Type Wise** (`m_9`) - `call:mf_displayreport("Daily Sales Detail Type Wise", "d_saledetail_crosstab")` _(right 824)_
+      - **Sale Summary Customer Category Wise** (`m_salesummarycustomercategorywise`) - `call:mf_displayreport("Daily Sales Summary Customer Category Wise", "d_dailysaless)` _(right 905)_
+    - **Sales Return** (`m_dailysalesreturn`)
+      - **Sales Return detail** (`m_salesreturndetail`) - `call:mf_displayreport("Daily Sales Return Detail", "d_dailysalesretdetail")`
+      - **Sales Return summary** (`m_salesreturnsummary`) - `call:mf_displayreport("Daily Sales Return Summary", "d_dailysalesreturnsummery")`
+      - **Sales Return Summary Inv.wise** (`m_salesreturnsummaryinvwise`) - `call:mf_displayreport("Daily Sales Return Summary Inv. Wise", "d_comp_retdailysumm)`
+      - **Sales Return Detail Inv.wise** (`m_salesreturndetailinvwise`) - `call:mf_displayreport("Daily Sales Return Detail(Invoice Wise)` _(right 344)_
+      - **Sales Return Header wise Inv. wise** (`m_salesreturnheaderwiseinvwise`) - `call:mf_displayreport("Daily Sales Return Summary Inv. Wise Header Wise", "d_comp_)` _(right 374)_
+    - **Purchase** (`m_dailypurchase`)
+      - **Purchase detail** (`m_purchasedetail`) - `call:mf_displayreport("Daily Purchase Detail", "d_purchase_detail")`
+      - **Purchase summary** (`m_purchasesummary`) - `call:mf_displayreport("Daily Purchase Summary", "d_purchase_summary")`
+      - **Purchase Summary2** (`m_purchasesummary2`) - `call:mf_displayreport("Daily Purchase Summary", "d_purchase_summary_format2")` _(right 329)_
+      - **Type Wise Detail** (`m_typewisedetail`) - `call:mf_displayreport("Daily Purchase Detail", "d_purdetail_crosstab")` _(right 825)_
+    - **Purchase Return** (`m_dailypurchasereturn`)
+      - **Purchase Return detail** (`m_purchasereturndetail`) - `call:mf_displayreport("Daily Purchase Return Detail", "d_purret_detail")`
+      - **Purchase Return summary** (`m_purchasereturnsummary`) - `call:mf_displayreport("Daily Purchase Return Summary", "d_purret_summary")`
+    - **Bills** (`m_billsunposted`)
+      - **Receivalbles** (`m_receivalblesunposted`) - `call:mf_displayreport("Unposted Bills Receivables", "d_unpostedreceivable")`
+      - **Payables** (`m_payablesunposted`) - `call:mf_displayreport("Unposted Bills Payables", "d_unpostedpayable")`
+    - **Bills Posted** (`m_billsposted`) - `call:mf_displayreport("Bills Posted", "d_billsposted")`
+    - **Service** (`m_service_report`)
+      - **Service Detail** (`m_0`) - `call:mf_displayreport("Daily Service Detail", "d_svc_dailydetail")`
+      - **Service Summary** (`m_serivicesummary`) - `call:mf_displayreport("Daily Service Summary", "d_svc_dailysummery")`
+    - **Service Return** (`m_servicereturn_rep`)
+      - **Service Return Detail** (`m_servicereturndetail`) - `call:mf_displayreport("Daily Service Return Detail", "d_serviceret_dailydetail_rep)`
+      - **Service Return Summary** (`m_servicereturnsummary`) - `call:mf_displayreport("Daily Service Return Summary", "d_serviceret_dailysummary_r)`
+    - **Issue Detail** (`m_issue_rep`) - `call:mf_displayreport("Issue Detail", "d_issue_detail_rep")`
+    - **Transfer Detail** (`m_transferdetail`) - `call:mf_displayreport("Transfer Detail", "d_transfer_dailydetail_rep")`
+    - **Dispatch** (`m_dailydispatch`)
+      - **Dispatch Detail** (`m_dispatchdetail`) - `call:mf_displayreport("Dispatch Detail", "d_daily_dispatchdetail")`
+      - **Dispatch Summary** (`m_dispatchsummary`) - `call:mf_displayreport("Dispatch Summary", "d_daily_dispatchsummary")`
+    - **Adjustment** (`m_adjustments`) _(right 266)_
+      - **Adjustment Summary** (`m_summary`) - `call:mf_displayreport("Daily Stock Adjustment Summary", "d_adjustmentsummary")` _(right 267)_
+      - **Adjustment Detail** (`m_adjustmentdetail`) - `call:mf_displayreport("Daily Stock Adjustment Detail", "d_adjustmentdetail")` _(right 268)_
+      - **Godown Wise Item Adjustment Detail** (`m_godownwiseitemadjustmentdetail`) - `call:mf_displayreport("Godown Wise Item Adjustment Detail", "d_godownwiseitemadjus)` _(right 426)_
+      - **Adjustment Summary Inv. Wise** (`m_adjustmentsummaryinvwise`) - `call:mf_displayreport("Daily Stock Adjustment Summary Inv. Wise", "d_adjustmentsum)` _(right 444)_
+      - **Adjustment Detail Inv. wise** (`m_adjustmentdetailinvwise`) - `call:mf_displayreport("Daily Stock Adjustment Detail Inv. Wise", "d_adjustmentdeta)` _(right 445)_
+    - **Quotation** (`m_quotation0`) _(right 307)_
+      - **Detail** (`m_detail0`) - `call:mf_displayreport("Daily Quotation Detail", "d_dailyquotationdetail")` _(right 308)_
+      - **Summary** (`m_summary0`) - `call:mf_displayreport("Daily Quotation Summary", "d_dailyquotationsummery")` _(right 309)_
+      - **Quotation Wise Detail** (`m_quotationwisedetail`) - `call:mf_displayreport("Quotation Wise Detail", "d_quotationwisedetail")` _(right 403)_
+    - **Transaction** (`m_transaction`) - `call:mf_displayreport("Daily Transaction(s)` _(right 311)_
+    - **Cash/Bank Voucher Summary** (`m_cashbankvouchersummary`) - `call:mf_displayreport("Daily Cash/Bank Voucher Summary Report", "d_vouchersummary")` _(right 316)_
+    - **ServiceOrder** (`m_serviceorder0`) _(right 338)_
+      - **ServiceOrder Detail** (`m_detail1`) - `call:mf_displayreport("Daily ServiceOrder Detail", "d_serviceorder_dailydetail")` _(right 339)_
+      - **ServiceOrder Summary** (`m_summary1`) - `call:mf_displayreport("Daily ServiceOrder Summary", "d_serviceorder_dailysummary")` _(right 340)_
+    - **Transfer Godown Wise** (`m_7`) - `open:w_selection_transfer_1tomany`, `call:mf_displayreport("Transfer Godown Wise", ls_report)` _(right 400)_
+    - **Transfer** (`m_transferdailyreport`) _(right 416)_
+      - **Transfer Inv. Wise** (`m_transferinvwise`) - `call:mf_displayreport("Transfer Detail Invoice Wise", "d_transfer_invoicewise")` _(right 417)_
+      - **Transfer Godown Wise** (`m_transfergodownwisereport`) - `open:w_selection_transfer_1tomany`, `call:mf_displayreport("Transfer Godown Wise", ls_report)`
+      - **Transfer Detail** (`m_transferdetailreport`) - `call:mf_displayreport("Transfer Detail", "d_transfer_dailydetail_rep")`
+      - **Transfer Inv. Wise Format2** (`m_transferinvwiseformat2`) - `call:mf_displayreport("Transfer Detail Invoice Wise(Format2)` _(right 428)_
+    - **Transactions Detail** (`m_transactionsdetail`) - `call:mf_displayreport("Daily Transactions Detail Report", "d_dailytransactiondetai)` _(right 801)_
+  - **Stock Reports** (`m_stockreports`)
+    - **Stock In hand** (`m_stockinhand`)
+      - **Manufacturer wise** (`m_manufacturerwise`) - `call:mf_displayreport("Stock in Hand (Manufacturer wise)`
+      - **Category wise** (`m_categorywise`) - `call:mf_displayreport("Stock in Hand(Category wise)`
+      - **Others** (`m_godownwise`) - `open:w_stock_filter`, `call:mf_displayreport(ls_reportname, ls_reportname)`
+      - **Class Wise** (`m_classwise`) - `call:mf_displayreport("Stock in Hand (Class wise)` _(right 242)_
+      - **Batch, Priority Wise** (`m_batchprioritywise`) - `call:mf_displayreport("Stock Batch, Priority Wise", "d_stockbatchprioritywise")`
+      - **Manufacturer Wise(sales tax)** (`m_manufacturerwisesalestax`) - `call:mf_displayreport("Stock in Hand (Manufacturer wise and sales tax)` _(right 265)_
+      - **Back Date** (`m_backdate`) - `call:mf_displayreport("Stock in Hand (Back Date)` _(right 326)_
+      - **Godown Wise Stock in Hand** (`m_godownwisestockinhand`) - `call:mf_displayreport("Godown Wise Stock in Hand Report", "d_stockinhand_allgodown)` _(right 410)_
+      - **Item Stock In Hand Godown Wise** (`m_itemstockinhandgodownwise`) - `call:mf_displayreport("Item Stock in Hand Godown Wise", "d_itemstockinhand_godownw)` _(right 418)_
+      - **Supplier Wise** (`m_supplierwise`) - `call:mf_displayreport("Item Stock in Hand Supplier Wise", "d_stockinhand_suppwise")` _(right 463)_
+      - **Manufacturer, Category, Class and Packing Filtered** (`m_manufacturercategoryclassandpackingfilt`) - `call:mf_displayreport("Stock in Hand-Manufacturer, Category, Class and Packing Fil)` _(right 805)_
+      - **Manufacturer Wise (Format2)** (`m_manufacturerwiseformat2`) - `call:mf_displayreport("Stock in Hand (Manufacturer wise)` _(right 896)_
+      - **Manufacturer, Category, Class and Packing Wise** (`m_manufacturercategoryclass`) - `call:mf_displayreport("Stock in Hand-Manufacturer, Category, Class and Packing Fil)`
+      - **Packing Wise** (`m_packingwise`) - `call:mf_displayreport("Stock in Hand (packing wise)` _(right 935)_
+    - **Expiry Report** (`m_expiryreport1`) - `call:mf_displayreport("Expiry Report", "d_expiryreport")`
+    - **Reorder Level Report** (`m_reorderlevelreport`) - `call:mf_displayreport("Items Reorder Levels Report", "d_reorderlevelreport")`
+    - **Stock Register** (`m_stockregister`) - `call:mf_displayreport("Stock Register", "d_itemstockregister_byazhar")`
+    - **Inventory Level Forecast** (`m_inventorylevelforecast`) - `call:mf_displayreport("Inventory Level Forecast", "d_inventorylevelforecast_sh")`
+    - **Inventory Forcast (Packs)** (`m_iventoryforcastpacks`) - `call:mf_displayreport("Inventory Level Forecast", "d_inventoryforcast")`
+    - **ItemList Price wise** (`m_itemlistpricewise`) - `call:mf_displayreport("Item List Price wise", "d_itemlistpricewise")`
+    - **Item Stock Register Summary** (`m_itemstockregistersummary`) - `call:mf_displayreport("Stock Register Summary", "d_itemstockregister_summary")`
+    - **Possibe Expiry Report** (`m_possibeexpiryreport`) - `call:mf_displayreport("Stock Register Summary", "d_possible_expiryreport")`
+    - **m_stockregisterforanti-narcotics** (`m_stockregisterforanti-narcotics`)
+    - **Stock Movement Manufacturer Wise** (`m_stockmovementmanufacturerwise`) - `call:mf_displayreport("Stock Stock Movement Manufacturer Wise", "d_stockmovement_m)`
+    - **Stock Movement Category Wise** (`m_stockmovementcategorywise`) - `call:mf_displayreport("Stock Stock Movement Category Wise", "d_stockmovement_catwi)`
+    - **Store Keeper Summary** (`m_storekeepersummary`) - `call:mf_displayreport("Store Keeper Summary Report", "d_storekeepersummary")` _(right 243)_
+    - **Stock Register with Moving Average** (`m_stockregisterwithmovingaverage`) - `call:mf_displayreport("Stock Register with Moving Average", "d_stockregistermoving)` _(right 254)_
+    - **Stock and Sales** (`m_stockandsales`) - `open:w_stockandsale_orientation`, `call:mf_displayreport("Stock and Sales Report", ls_reportname)` _(right 255)_
+    - **Stock Position (in Back Date)** (`m_stockpositioninbackdate`) - `call:mf_displayreport("Stock Position (in Back Date)` _(right 270)_
+    - **Optimum Level Report** (`m_4`) - `call:mf_displayreport("Items Optimum Levels Report", "d_optimumlevelreport")` _(right 272)_
+    - **Stock Movement Class Wise** (`m_stockmovementclasswise`) - `call:mf_displayreport("Stock Stock Movement Class Wise", "d_stockmovement_classwis)`
+    - **Item Activity** (`m_itemactivity`) - `call:mf_displayreport("Item Activity Report", "d_itemactivity")` _(right 303)_
+    - **Area Wise Store Keeper Summary** (`m_areawisestorekeepersummary`) - `call:mf_displayreport("Area Wise Store Keeper Summary Report", "d_storekeepersumma)` _(right 366)_
+    - **Stock Register(Narcotics Format2)** (`m_stockregisternarcoticsformat2`) - `call:mf_displayreport("Stock Register(Narcotics Format 2)` _(right 379)_
+    - **Expiry Report(Class Wise)** (`m_expiryreportclasswise`) - `call:mf_displayreport("Expiry Report Class Wise", "d_expiryreport_classwise")` _(right 388)_
+    - **Minimum Level Report** (`m_minimumlevelreport`) - `call:mf_displayreport("Minimum Level Report", "d_minlevelreport")` _(right 464)_
+    - **Stock and Sales2** (`m_stockandsales2`) - `call:mf_displayreport("Stock And Sale Report", "d_catwise_salestock")` _(right 498)_
+    - **Reorder/Optimum Level Report** (`m_reorderoptimumlevelreport`) - `call:mf_displayreport("Reorder/Optimum Level Report", "d_reorderoptimumlevelreport)` _(right 826)_
+  - **Sales Reports** (`m_salesreports`)
+    - **Customer Sales** (`m_customersales`)
+      - **Detail** (`m_customerwisesalesdetail`) - `call:mf_displayreport("Customer Sales Detail", "d_customerwisesalesdetail")`
+      - **Detail(Format2)** (`m_detailformat2`) - `call:mf_displayreport("Customer Sales Detail", "d_customerwisesalesdetailcmh")`
+      - **Summary** (`m_customerwisesalessummary`) - `call:mf_displayreport("Customer Sales Summary", "d_customerwisesalessummery")`
+      - **Days Summary** (`m_dayssummary`) - `call:mf_displayreport("Customer Sales Summary days wise", "d_customerwisesalebills)`
+      - **Net Sale Graph** (`m_netsale`) - `call:mf_displayreport("Customer Wise Net Sale Graph", "d_monthly_customerwisesale_)`
+      - **Customer  Manufacturer Wise Net Sale** (`m_customerwisemanufacture`) - `call:mf_displayreport("Customer Manufacturer Wise Net Sale Report", "d_customer_ma)`
+      - **Invoice Wise Profit Margin Detail** (`m_detailformat3`) - `call:mf_displayreport("Invoice Wise Profit Margin Detail Report", "d_netsale_custo)`
+      - **Items Summary** (`m_itemssummary`) - `call:mf_displayreport("Customer Wise Items Summary", "d_custwise_itemsummary")`
+      - **Class Wise Net Sale** (`m_classwisenetsale`) - `call:mf_displayreport("Customer Class Wise Net Sale", "d_custclasswise")`
+      - **summary(format4)** (`m_summaryforma4`) - `call:mf_displayreport("Customer Summary (Format4)` _(right 247)_
+      - **summary(fomat5)** (`m_summaryfomat5`) - `call:mf_displayreport("Customer Summary (Format5)` _(right 248)_
+      - **Summary(format6)** (`m_summaryformat6`) - `call:mf_displayreport("Customer Summary (Format5)` _(right 251)_
+      - **Items sale** (`m_itemsale`) - `call:mf_displayreport("Customer Wise Items Sale", "d_custwiseitemsale")` _(right 280)_
+      - **Invoice Summary** (`m_monthlysales`) - `call:mf_displayreport("Customer Invoices Summary", "d_customerinvoicessummary")`
+      - **Hourly Graph** (`m_hourlygraph`) - `call:mf_displayreport("Hourly Customers Graph", "d_hourlycustsales_graph")`
+      - **Item Sale and Return (with Profit)** (`m_itemsaleandreturnwithprofit`) - `call:mf_displayreport("Customer Sales-Item Sale and Return (with Profit)` _(right 312)_
+      - **Customer Category Wise** (`m_customercategorywise`) - `call:mf_displayreport("Customer Category Wise Summary", "d_custcatwise_summary")` _(right 337)_
+      - **Claimable** (`m_claimable`) - `call:mf_displayreport("Customer Manufacturer Wise Claimable", "d_claimable_custwis)` _(right 343)_
+      - **Supply Order** (`m_supplyorder`) - `call:mf_displayreport("Supply Order", "d_supplyorder_cmh")` _(right 381)_
+      - **Customer Wise Invoice** (`m_customerwiseinvoice`) - `call:mf_displayreport("Customer Wise Invoice", "d_customerwise_invoice_cmh")` _(right 382)_
+      - **Credit Receipt Voucher** (`m_creditreceiptvoucher`) - `call:mf_displayreport("Credit Receipt Voucher", "d_creditreceiptvoucher_cmh")` _(right 383)_
+      - **LP Ledger** (`m_lpledger`) - `call:mf_displayreport("LP Ledger", "d_lpledger_cmh")` _(right 384)_
+      - **Patient SaleDetail** (`m_patientsaledetail`) - `call:mf_displayreport("Customer Wise Patient SaleDetail", "d_customerwise_patients)` _(right 385)_
+      - **Summary (Patient)** (`m_summarypatient`) - `call:mf_displayreport("Customer Sales Summary Patient Wise", "d_customerwisesaless)` _(right 401)_
+      - **Customer Wise Invoice Detail** (`m_customerwiseinvoicedetail`) - `call:mf_displayreport("Customer Wise Invoice Detail", "d_customerwise_invoicedetai)` _(right 404)_
+      - **m_customerwiseinvoice-discrange** (`m_customerwiseinvoice-discrange`) _(right 452)_
+      - **Customer Category Wise Net Sales** (`m_customercategorywisenetsales`) - `call:mf_displayreport("Customer Category Wise Net Sales", "d_custcat_manf_wisenets)` _(right 802)_
+      - **Detail(Format 3)** (`m_8`) - `call:mf_displayreport("Customer Daily Sale Detail", "d_custwisedailysalesdetail_2")` _(right 818)_
+      - **Customer Category Wise Sales** (`m_customercategorywisesales0`) _(right 820)_
+        - **Customer Category Wise Sales Summary Report** (`m_customercategorywisesalessummaryreport`) - `call:mf_displayreport("Customer Category Wise Sales Summary Report", "d_custcatwis)`
+        - **Customer Category Wise Sales Detail Report** (`m_customercategorywisesalesdetailreport`) - `call:mf_displayreport("Customer Category Wise Sales Detail Report", "d_custcatsale)`
+      - **m_summaryformat-7** (`m_summaryformat-7`) _(right 821)_
+      - **Summary (Patient Foramt 2)** (`m_summarypatientforamt2`) - `call:mf_displayreport("Customer Sales Summary Patient Wise", "d_customerwisesaless)` _(right 852)_
+      - **Recent Sale/Return Activity** (`m_customerlist`) - `call:mf_displayreport("Customer List (Recent Sale/Return Activity)` _(right 854)_
+      - **Summary(Format8)** (`m_11`) - `call:mf_displayreport("Customer Wise Sales Summary", "d_customerwise_salessummaryd)` _(right 869)_
+      - **Items Summary(Format 2)** (`m_itemssummaryformat2`) - `call:mf_displayreport("Customer Wise Items Summary", "d_customerwise_medicinesumma)` _(right 870)_
+      - **Summary (Patient Format3)** (`m_summarypatientformat3`) - `call:mf_displayreport("Customer Wise Patient Summary", "d_customerwise_summary_pat)` _(right 871)_
+      - **Summary (Patient Format4)** (`m_summarypatientformat4`) - `call:mf_displayreport("Customer Wise Patient Summary", "d_custwise_patientsummary_)` _(right 888)_
+      - **Summary (Patient Format5)** (`m_summarypatientformat5`) - `call:mf_displayreport("Customer Wise Patient Summary", "d_custwisesalessummery_pat)` _(right 890)_
+      - **Detail(Format4)** (`m_detailformat4`) - `call:mf_displayreport("Customer Sales Detail", "d_customerwisesalesdetailcmh_forma)` _(right 894)_
+      - **Patient SaleDetail (Format 2)** (`m_patientsaledetailformat2`) - `call:mf_displayreport("Customer Wise Patient SaleDetail", "d_customerwise_patients)` _(right 895)_
+    - **Category Wise** (`m_categorywise0`) _(right 285)_
+      - **Sale And Return (One Category)** (`m_saleandreturnonecategory`) - `call:mf_displayreport("Category wise Sales", "d_itemcategorywisesales")`
+      - **Sales** (`m_sale0`) - `call:mf_displayreport("Category Summary", "d_comp_catwisesummary")`
+      - **Due Items** (`m_dueitems0`) - `call:mf_displayreport("Due Items", "d_dueinfo")`
+      - **Deviated Items** (`m_deviateditems0`) - `call:mf_displayreport("Deviated Items", "d_changedsalepriceinfo")`
+      - **Monthly Sale** (`m_monthlysale`) - `call:mf_displayreport("Monthly Sales Report", "d_monthlysalesreport")`
+      - **Net Sale** (`m_netsale2`) - `call:mf_displayreport("Category Wise Net Sale Report", "d_categorywisenetsale")`
+      - **Gross Profit** (`m_grossprofit`) - `call:mf_displayreport("Category Wise Gross Profit Report", "d_categorywisegrosspro)`
+      - **Due Satisfy Info.** (`m_duesatisfyinfo`) - `call:mf_displayreport("Due Satisfy Info.", "d_duesatisfyinfo")` _(right 292)_
+      - **Bonus Sales/Return** (`m_3`) - `call:mf_displayreport("Bonus Sales/Returns Report", "d_bonussalesreturnsreport")`
+      - **Machine Wise** (`m_machinewise`) - `call:mf_displayreport("MachineWise CategoryWise ", "d_comp_machine_catwisesummary")` _(right 304)_
+      - **Sale (with profit)** (`m_salewithprofit`) - `call:mf_displayreport("Item Category Wise Sale (with profit)` _(right 405)_
+      - **Item Wise Sale Discounts Detail** (`m_itemwisesalediscountsdetail`) - `call:mf_displayreport("Item Wise Sale Discounts Detail Report", "d_itemwisesalesdi)` _(right 415)_
+      - **Quarterly Sales Statement** (`m_quarterlysalesstatement`) - `call:mf_displayreport("Category Wise Quarterly Sales Statement", "d_quarterlysales)` _(right 447)_
+      - **Customer Category Wise Sales** (`m_zonalnetsalescategorywise`) _(right 494)_
+      - **Net Sale Allowed Categories** (`m_netsaleallowedcategory`) - `call:mf_displayreport("Allowed Category Wise Net Sale", "d_allowedcategorywisenets)` _(right 830)_
+    - **Manufacturer Wise** (`m_manufacturerwise0`) _(right 286)_
+      - **Sales** (`m_sales0`) - `call:mf_displayreport("Manufacturer wise Sales", "d_itemmanufacturerwisesales")`
+      - **Sales(with Profit)** (`m_saleswithprofit`) - `call:mf_displayreport("All Manufacturer Wise Sale Report", "d_itemmanufacturerwise)`
+      - **Net Sale Graph** (`m_netsalegraph`) - `call:mf_displayreport("Monthly Manufacturer Wise Net Sale Graph", "d_monthly_manf_)`
+      - **Monthly Sales** (`m_monthlysales_manfwise`) - `call:mf_displayreport("Manufacturer Wise Monthly Sales Report", "d_monthlysalesrep)` _(right 302)_
+      - **Sales Detail And Summary** (`m_salesdetail`) - `call:mf_displayreport("Manufacturer Wise Sales Detail/Summary", "d_givedata_sales")` _(right 395)_
+      - **Net Sales** (`m_netsales`) - `call:mf_displayreport("Manufacturer Wise Net Sale Report", "d_manfwisenetsale")` _(right 448)_
+      - **Items Not Sold** (`m_itemsnotsold`) - `call:mf_displayreport("Items Not Sold", "d_sale_itemsnotsold")` _(right 872)_
+      - **Item Sales/Discount** (`m_itemsalesdiscount`) - `call:mf_displayreport("Items Sales/Discount Report", "d_item_sales_and_discount")` _(right 897)_
+      - **Discount and Rate Difference Claim** (`m_discountandratedifferenceclaim`) - `call:mf_displayreport("Discount and Rate Difference Claim Report", "d_claimablesal)`
+      - **Day Wise Sale** (`m_daywisesale`) - `call:mf_displayreport("Day Wise Sale", "d_manf_wise_saleqty")` _(right 940)_
+    - **Class Wise** (`m_classwise0`) _(right 287)_
+      - **Net Sale** (`m_netsale0`) - `call:mf_displayreport("Net Sale Class Wise", "d_netsaleclasswise")`
+      - **Sales And Return(One Class)** (`m_salesandreturnoneclass`) - `call:mf_displayreport("Class wise Sales", "d_itemclasswisesales")` _(right 458)_
+      - **Gross Profit** (`m_grossprofit_class`) - `call:mf_displayreport("Class Wise Gross Profit Report", "d_classwisegrossprofit")` _(right 459)_
+      - **Monthly Sale** (`m_monthlysaleclass`) - `call:mf_displayreport("Monthly Sales Report", "d_monthlysalesreportclasswise")` _(right 460)_
+      - **Sales** (`m_salesclasswise`) - `call:mf_displayreport("Class Summary", "d_comp_classwisesummary")` _(right 461)_
+      - **Gross Profit Detail** (`m_grossprofitdetail`) - `call:mf_displayreport("Class Wise Gross Profit Report Detail", "d_classwisegrosspr)` _(right 916)_
+    - **Header Wise** (`m_headerwise`) _(right 288)_
+      - **Sales Summary** (`m_salessummary0`) - `call:mf_displayreport("Sale Summary Header Wise ", "d_dailysalessummery_headerwise)`
+      - **Invoice Wise** (`m_invoicewise`) - `call:mf_displayreport("Sale Summary Header Wise Invoice Wise ", "d_comp_dailysumme)` _(right 373)_
+      - **Customer Wise Summary** (`m_customerwisesummary`) - `call:mf_displayreport("Customer Sales Summary Header Wise", "d_customerwisesalessu)` _(right 454)_
+      - **Reprint Sale Invoices** (`m_reprintsaleinvoices`) - `call:mf_displayreport("Reprint Sale Invoice Header Wise", "d_wholesaleinvreport_re)` _(right 486)_
+      - **Print Delivery Order** (`m_printdeliveryorder`) - `call:mf_displayreport("Header Wise Delivery Order", "d_headerwise_deliveryorder")` _(right 489)_
+      - **Sales Summary(format2)** (`m_salessummaryformat2`) - `call:mf_displayreport("Sale Summary Header Wise ", "d_dailysalessummery_headerwise)` _(right 491)_
+    - **User Wise** (`m_userwise`) _(right 289)_
+      - **Invoice Graph** (`m_invoicegraph`) - `call:mf_displayreport("Salesman Inovices Graph", "d_comp_userwiseinvoices_graph")`
+      - **Sales** (`m_sales1`) - `call:mf_displayreport("User wise Sales", "d_userwisesales")`
+      - **Category Summary** (`m_categorysummary`) - `call:mf_displayreport("User Wise Category Summary", "d_comp_userwise_catwise")`
+      - **Discount Report** (`m_discountreport`) - `call:mf_displayreport("User Wise Discount Report", "d_userwisediscount")`
+    - **Area/Region/Zone ... Wise** (`m_areawise`) _(right 290)_
+      - **Sales** (`m_sales2`) - `call:mf_displayreport("Area Wise Sales Report", "d_areawisesales")`
+      - **Manufacturer Items Sale and Return** (`m_manufactureritemssaleandreturn`) - `call:mf_displayreport("Area Wise Manufacturer Items Sale and Return Report", "d_ma)` _(right 313)_
+      - **m_itemsalesandreturns-areawise** (`m_itemsalesandreturns-areawise`) _(right 414)_
+      - **Area Wise UnPaid Invoices** (`m_areawiseunpaidinvoices`) - `call:mf_displayreport("Area Wise UnPaid Invoices Report", "d_areawiseunpaidinvoice)` _(right 425)_
+      - **Zonal Sales Area Wise** (`m_zonalsalesareawise`) - `open:w_select_orientation`, `call:mf_displayreport("Zonal Sales Area Wise Report", "d_zonalareasales_crosstab")`, `call:mf_displayreport("Zonal Sales Area Wise Report", "d_zonalareasales_landscape_)` _(right 438)_
+      - **Zonal Sales Area Wise (Format2)** (`m_zonalsalesareawiseformat2`) - `call:mf_displayreport("Zonal Sales Area Wise Report", "d_zonalareasales2")` _(right 443)_
+      - **Zonal  Area Manufacturer Wise Net Sale** (`m_zonalsales`) - `call:mf_displayreport("Zonal  Area Manufacturer Wise Net Sale Report", "d_areamanf)` _(right 492)_
+      - **Region Sales Area Wise** (`m_regionsalesareawise`) - `call:mf_displayreport("Region Sales Area Wise Report", "d_regionareasales")` _(right 815)_
+      - **Sub. Area Wise Sales** (`m_subareawisesales`) - `open:w_select_orientation`, `call:mf_displayreport("Sub. Area Wise Sales Report", "d_subareasales_crosstab")`, `call:mf_displayreport("Sub. Area Wise Sales Report", "d_subareasales_landscape_cro)` _(right 816)_
+      - **Region Wise Sales** (`m_regionwisesales`) - `call:mf_displayreport("Region Wise Sales Report", "d_regionwisesales")` _(right 819)_
+      - **Zonal Net Sales Category Wise** (`m_customercategorywisesales`) - `call:mf_displayreport("Zonal Net Sales Category ", "d_zonesale_categorywise")`
+    - **Sales Man Wise** (`m_salesmanwise`) _(right 291)_
+      - **Sale Summary** (`m_salesummary0`) - `call:mf_displayreport("Salesman Sales Summary", "d_salesmansalesummary")`
+      - **Net Sale** (`m_netsale1`) - `call:mf_displayreport("Salesman wise Net Sales Report", "d_salesmanwisenetsales")`
+      - **Bonus Sale/Return** (`m_bonussalereturn`) - `call:mf_displayreport("Bonus Sale/Return Report", "d_smanwise_bonussales")` _(right 300)_
+      - **Monthly Sales** (`m_monthlysales_smanwise`) - `call:mf_displayreport("Salesman Wise Monthly Sales Report", "d_monthlysales_smanwi)` _(right 301)_
+      - **Manufacturer Net Sale Summary** (`m_manufacturernetsalesummary`) - `call:mf_displayreport("Salesman Wise-Manufacturer Net Sales Summary Report", "d_sm)` _(right 314)_
+      - **Item Sale and Return Detail** (`m_itemsaleandreturndetail`) - `call:mf_displayreport("Salesman Wise-Item Sale and Return Detail Report", "d_smanw)` _(right 315)_
+      - **m_itemnetsale-salepersonwisebreakup** (`m_itemnetsale-salepersonwisebreakup`) _(right 321)_
+      - **Sales/Returns** (`m_salesandreturns`) - `call:mf_displayreport("Area Wise Sales Person Sales and Return Report", "d_salesma)` _(right 884)_
+      - **Area Wise Sales Person Sales** (`m_areawisesalespersonsales`) - `open:w_select_orientation`, `call:mf_displayreport("Area Wise Sales Person Sales Report", "d_salesman_areasales)` _(right 889)_
+      - **Invoice Summary** (`m_12`) - `call:mf_displayreport("Salesman Sale Invoice Summary", "d_salesmanwisesale")` _(right 939)_
+    - **Sales Summary** (`m_salessummary1`) - `call:mf_displayreport("Sales Summary", "d_salessummary")`
+    - **Hourly Sales Graph** (`m_hourlysalesgraph0`) - `call:mf_displayreport("Hourly Sales Graph", "d_comp_hourlysales_graph")`
+    - **Slow/Fast moving Items** (`m_slowfastmoving0`) - `call:mf_displayreport("Slow/Fast Moving Items", "d_slowmovitems")`
+    - **Full Page Invoice** (`m_fullpageinvoice0`) - `call:mf_displayreport("Full Page Invoice", "d_test_fullpage")`
+    - **Doctors Sale Summary** (`m_doctorssalesummary`) - `call:mf_displayreport("Doctors Sale Report", "d_doctor_salesummary")`
+    - **Monthly Sale Graph** (`m_monthlysalegraph`) - `call:mf_displayreport("Date Wise Sale Graph", "d_comp_sale_datewise_graph")`
+    - **Net Sale Summary** (`m_netsalesummary0`) - `call:mf_displayreport("Net Sale Summary Report", "d_netsale_summary")`
+    - **Periodic Sale** (`m_periodicsale`) - `call:mf_displayreport("Periodic Sale", "d_periodicsales")`
+    - **Bonus Sale/Return Activity** (`m_bonussalereturnactivity`) - `call:mf_displayreport("Bonus Sale/Return Activity Report", "d_bonussaleandreturnac)` _(right 299)_
+    - **Item Wise** (`m_itemwise`) _(right 322)_
+      - **Graphs** (`m_graphs`) _(right 323)_
+        - **Monthly Sales and Closing Stock** (`m_monthlysalesandclosingstock`) - `call:mf_displayreport("Monthly Sales and Closing Stock Report", "d_comp_monthlysal)` _(right 324)_
+      - **Item Sale and Return Activity** (`m_itemsaleandreturnactivity`) - `call:mf_displayreport("Item Sale and Return Activity Report", "d_itemsaleandreturn)` _(right 817)_
+      - **m_itemssalesreturns-areawise** (`m_itemssalesreturns-areawise`) _(right 891)_
+    - **Net Sale Invoice** (`m_netsaleinvoice`) - `call:mf_displayreport("Net Sale Invoice Report", "d_netsaleinv")` _(right 409)_
+    - **Sale Invoice History** (`m_saleinvoicehistory`) _(right 420)_
+      - **Sale Invoice Version(s) Detail** (`m_saleinvoiceversionsdetail`) - `call:mf_displayreport("Sale Invoice Version(s)` _(right 421)_
+    - **Delivery Challan Inv. Wise** (`m_deliverychallan`) - `call:mf_displayreport("Delivery Challan Inv. Wise ", "d_deliverychallan_invwise_cu)` _(right 474)_
+    - **Sales Summary Reports** (`m_salessummaryreports`)
+      - **Monthly Sales Summary** (`m_monthlysalessummary`) - `call:mf_displayreport("Monthly Sales Summary Report", "d_monthlysalessummary")`
+      - **Yearly Sales Summary** (`m_yearlysalessummary`) - `call:mf_displayreport("Yearly Sales Summary Report", "d_yearlysalessummary")`
+    - **Proforma Invoice Report** (`m_proformainvoiceprint`) - `call:mf_displayreport("Proforma Invoice Report", "d_proformainvoice_full")` _(right 880)_
+    - **Doctor Wise Sale** (`m_doctorwisesale`) - `call:mf_displayreport("Doctor Wise Sale", "d_doctorwise_saledetail_cmh")` _(right 892)_
+    - **Ward Wise Sale** (`m_wardwisesale`) - `call:mf_displayreport("Ward Wise Sale", "d_wardwise_saledetail_cmh")` _(right 893)_
+    - **Sale/Return Summary Inv. Type Wise** (`m_saleandreturnsummaryinvtypewise`) - `call:mf_displayreport("Sale And SaleReturn Summary Inv. Type Wise", "d_comp_daily_)` _(right 914)_
+  - **Purchase Reports** (`m_purchasereports`)
+    - **Periodic Purchases** (`m_periodicpurchases`) - `call:mf_displayreport("Periodic Purchases", "d_periodic_purchases")`
+    - **Item Purchase Report** (`m_itempurchasereport`) - `call:mf_displayreport("Item wise Purchase", "d_itemwisepurchases")`
+    - **Purchase Order** (`m_purchaseorder0`) - `call:mf_displayreport("Purchase Order", "d_purchase_order")`
+    - **Supplier Wise** (`m_purchase_supplierwise`)
+      - **Detail** (`m_purchase_supplierwise_detail`) - `call:mf_displayreport("SupplierWise Purchase Detail", "d_purchase_supplierwisedeta)`
+      - **Purchase Detail** (`m_netpurchasedetail`) - `call:mf_displayreport("Supplier Wise Net Purchase", "d_netpurchase_supplierwisedet)`
+      - **Sale/Return Purchase** (`m_salereturnpurchase`) - `call:mf_displayreport("Sale/Return Purchase", "d_salereturntyp_itemregister")`
+      - **Manufacturer Summary** (`m_manufacturersummary`) - `call:mf_displayreport("Supplier Wise Manufacturer Summary", "d_pur_suppliersummary)` _(right 398)_
+    - **Manufacturer Wise** (`m_manufacturerwisepur`)
+      - **Detail** (`m_manfwisepurdetail`) - `call:mf_displayreport("ManufacturerWise Purchase Detail", "d_purchase_manfwisedeta)`
+    - **Monthly Purchase Graph** (`m_datewisepurchasegraph`) - `call:mf_displayreport("Date Wise Purchase Graph", "d_purchase_datewise_graph")`
+    - **Category Wise Purchase** (`m_categorywisepurchase`) - `call:mf_displayreport(" Category  Wise Purchase Summary", "d_pur_categorywise")`
+    - **Type Wise Purchase** (`m_typewisepurchase`) - `call:mf_displayreport("Type Wise Purchase Summary", "d_pur_typewise")`
+    - **Purchase Header Wise** (`m_purchasesummaryheaderwise`) - `call:mf_displayreport("Header Wise Purchase", "d_purchasesummary_headerwise")`
+    - **Item List (From Purchase Invoices)** (`m_itemlistfrompurchaseinvoices`) - `call:mf_displayreport("Item List (From Purchase Invoices)` _(right 252)_
+    - **Days Summary** (`m_dayssummary0`) - `call:mf_displayreport("Purchase Days Summary", "d_purdaysummery")`
+    - **Purchase Rate Comparison** (`m_purchaseratecomparison`) - `call:mf_displayreport("Purchase Rate Comparison Report", "d_purchase_rate_comparis)` _(right 310)_
+    - **Purchase Invoice Wise Stock Movement** (`m_purchaseinvoicewisestockmovement`) - `call:mf_displayreport("Purchase Invoice Wise Stock Movement", "d_purinvoicewisesto)` _(right 336)_
+    - **Deviated Items Categorywise** (`m_deviateditemscategorywise`) - `call:mf_displayreport("Deviated Items", "d_changedpurpriceinfo")` _(right 462)_
+    - **Items Not Purchased** (`m_itemsnotpurchased`) - `call:mf_displayreport("Items Not Purchased", "d_purchase_notpurchased_items")` _(right 482)_
+    - **Class Wise Purchase** (`m_classwisepurchase`) - `call:mf_displayreport("Class Wise Purchase", "d_pur_classwise")` _(right 831)_
+    - **Loose Purchase Vs Sale** (`m_loosepurchasevssale`) - `call:mf_displayreport("Items Not Purchased", "d_loosepur_butnotsale")` _(right 885)_
+    - **Purchase NetRate Comparison** (`m_purchasenetratecomparison`) - `call:mf_displayreport("Purchase NetRate Comparison", "d_purchase_netrate_compariso)` _(right 901)_
+    - **Item List(From Purchase Invoice Format2)** (`m_itemlistfrompurchaseinvoiceformat2`) - `call:mf_displayreport("Item List (From Purchase Invoices)` _(right 915)_
+  - **Accounts Reports** (`m_accountsreports`)
+    - **Balance Reports** (`m_balancereports`) _(right 357)_
+      - **Accounts Balances** (`m_accountsbalancereport`) - `call:mf_displayreport("Accounts Balance", "d_accounts_balance_list")`
+      - **Customers Balances** (`m_customerbalances`) - `call:mf_displayreport("Customers Balance", "d_customers_balance_list")`
+      - **Suppliers Balances** (`m_supplierbalances`) - `call:mf_displayreport("Suppliers Balance", "d_suppliers_balance_list")`
+      - **Sub Area Wise Customer Balances** (`m_customerbalancessubareawise`) - `call:mf_displayreport("Customer Balance Sub Area Wise Report", "d_customerbalance_)`
+      - **Customers Balances (Format 2)** (`m_customersbalancescolumnwise`) - `call:mf_displayreport("Customers Balance", "d_customers_balance_list_colwise")` _(right 856)_
+    - **Ledger Reports** (`m_ledgerreports`) _(right 358)_
+      - **Accounts Ledger** (`m_accountsledger`) - `call:mf_displayreport("Accounts Ledger", "d_account_status_detail_test")`
+      - **Supplier Ledger** (`m_supplierledger`) - `open:w_select_ledgertype`, `call:mf_displayreport("Supplier Ledger", ls_reportname)`
+      - **Customer Ledger** (`m_customerledger`)
+        - **Specific Customer** (`m_specificcustomer`) - `call:mf_displayreport("Customer Ledger", "d_customerledger")`
+        - **Specific Area** (`m_specificarea`) - `open:w_select_page`, `call:mf_displayreport("Area Wise Customer Ledger", ls_reportname)`
+      - **Supplier/Customer Ledger** (`m_suppliercustomerledger`) - `call:mf_displayreport("Supplier/Customer Ledger", "d_suppliercustomerledger")`
+      - **Group Account Ledger** (`m_groupaccountledger`) - `call:mf_displayreport("Group Accounts Ledger", "d_group_accountledger")` _(right 406)_
+    - **Activity Reports** (`m_activityreports`) _(right 359)_
+      - **Cash Activity** (`m_cashflow`) - `call:mf_displayreport("Cash Activity", "d_cashflow")`
+      - **A/R Activity Report** (`m_aractivityreport`) - `call:mf_displayreport("A/R Activity Report", "d_accountreceiveableactivity")`
+      - **A/P Activity Report** (`m_apactivityreport`) - `call:mf_displayreport("A/P Activity Report", "d_accountpayableactivity")`
+      - **Cash Activity Detail** (`m_cashactivitydetail`) - `call:mf_displayreport("Cash Activity Detail Report", "d_cashflow_crosstab")` _(right 399)_
+    - **Transaction Status** (`m_transactionstatus`) _(right 360)_
+      - **Customer Transaction Status** (`m_customertransaction`) - `call:mf_displayreport("Customer Transaction Status", "d_customer_transaction_statu)`
+      - **Supplier Transaction Status** (`m_suppliertransactionstatus`) - `call:mf_displayreport("Supplier Transaction Status", "d_supplier_transaction_statu)`
+      - **Salesman Transaction Status** (`m_salesmantransactionstatus`) - `call:mf_displayreport("SalesMan Transaction Status", "d_salesman_transaction_statu)`
+    - **Financial Reports** (`m_financialreports`) _(right 361)_
+      - **Trial Balance** (`m_trialbalance`) - `call:mf_displayreport("Trial Balance", "d_trialbalance")`
+      - **Income Statement** (`m_incomestatement`) - `call:mf_displayreport("Income Statement", "d_incomstatement")`
+      - **Balance Sheet** (`m_balancesheet`) - `call:mf_displayreport("Balance Sheet", "d_balancesheet")` _(right 362)_
+    - **Summary Reports** (`m_summaryreports`) _(right 363)_
+      - **Group Accounts Summary** (`m_subsidiaryaccount`) - `call:mf_displayreport("Group Accounts Summary", "d_subsidiaryaccountsummary")` _(right 293)_
+      - **Area Wise A/R Summary** (`m_areawisearsummary`) - `call:mf_displayreport("Area Wise A/R Summary", "d_areawisereceivable")` _(right 294)_
+      - **Bill Summary Report** (`m_billsummaryreport`) - `call:mf_displayreport("Bill Summary Report", "d_billsummaryreport")`
+      - **Support Bill Summary** (`m_supportbillsummary`) - `call:mf_displayreport("Support Bill Summary Statement", "d_supportbillsummary")` _(right 364)_
+      - **Comprehensive Bill Summary** (`m_comprehensivebillsummary`) - `call:mf_displayreport("Comprehensive Bill Summary Report", "d_billsummaryreport_ar)` _(right 367)_
+      - **Area Wise Bill Summary** (`m_areawisebillsummary`) - `call:mf_displayreport("Area Wise Bill Summary Report", "d_billsummaryreport_bulk_a)` _(right 499)_
+      - **Customer Transaction Summaries** (`m_customertransactionsummaries`)
+        - **Area Wise Transaction Summary** (`m_areawisetransactionsummary`) - `call:mf_displayreport("Area Wise Transaction Summary Report", "d_areawise_transact)`
+        - **Date Wise Transaction Summary** (`m_datewisetransactionsummary`) - `call:mf_displayreport("Date Wise Transaction Summary Report", "d_datewise_transact)`
+        - **Month Wise Transaction Summary** (`m_monthwisetransactionsummary`) - `call:mf_displayreport("Month Wise Transaction Summary Report", "d_monthwise_transa)`
+      - **Sales Person Wise Customer Receipts Summary** (`m_salesmanwisecustomerreceiptssummary`) - `call:mf_displayreport("Salesman Wise Customer Receipts Summary Report", "d_salesma)`
+    - **Detail Reports** (`m_detailreports`) _(right 365)_
+      - **Payments** (`m_payment`) - `call:mf_displayreport("Total Payments", "d_payments")`
+      - **Receipts** (`m_reciepts`) - `call:mf_displayreport("Total Receipts", "d_receipts")`
+      - **Sales and Accounts Information** (`m_salesandaccountsinformation`) - `call:mf_displayreport("Sales And Account Information", "d_sales_accounts_info")`
+      - **Vouchers Detail Report** (`m_vouchersdetailreport`) - `call:mf_displayreport("Voucher Detail Report", "d_vocherdetails")`
+      - **Purchase and Accounts Information** (`m_purchaseandaccountsinformation`) - `call:mf_displayreport("Purchase And Account Information", "d_purchase_accounts_inf)`
+      - **Vouchers Detail Date/Range Wise** (`m_vouchersdetaildaterangewise`) - `call:mf_displayreport("Voucher Detail Date/Range Wise Report", "d_voucherdetails_d)`
+      - **Sales Person Wise Receipts** (`m_salespersonwisereceipts`) - `call:mf_displayreport("Sale Person Wise Receipts", "d_salesmanwise_receipts")`
+    - **Item Category Wise Liability** (`m_itemcategorywiseliability`) - `call:mf_displayreport("Item Category Wise Liability", "d_itemcategorywiseliability)`
+    - **Cash/Bank Receipt Printing** (`m_cashbankreceiptprinting`) - `call:mf_displayreport("Cash/Bank Receipt Printing", "d_selectaccountsfromvoucher_p)`
+    - **Collection Receipt** (`m_collectionreceipt`) - `call:mf_displayreport("Collection Receipt", "d_collectionreceipt")` _(right 386)_
+    - **Aging Analysis** (`m_aginganalysis`) _(right 422)_
+      - **Aging Analysis Summary** (`m_aginganalysissummary`) - `call:mf_displayreport("Aging Analysis Summary Report", "d_aging")` _(right 423)_
+      - **Aging Analysis Detail** (`m_aginganalysisdetail`) - `call:mf_displayreport("Aging Analysis Detail Report", "d_agingdetail")` _(right 424)_
+    - **Sale Invoice Based Accounting** (`m_saleinvoicebasedaccounting`)
+      - **Summary Reports** (`m_summaryreports0`)
+        - **Customer Wise Sale Invoice Status** (`m_customerwisesaleinvoicestatus`) - `call:mf_displayreport("Customer Wise Sale Invoice Status Report", "d_customerwise_)`
+    - **Purchase Invoice Based Accounting** (`m_purchaseinvoicebasedaccounting`)
+      - **Summary Reports** (`m_summaryreports1`)
+        - **Supplier Wise Purchase Invoice Status** (`m_supplierwisepurchaseinvoicestatus`) - `call:mf_displayreport("Supplier Wise Sale Invoice Status Report", "d_supplierwise_)`
+  - **Listing** (`m_listing`)
+    - **Accounts List** (`m_accountslist`) - `call:mf_displayreport("Accounts List", "d_accountslist")`
+    - **Customers List** (`m_partieslist`)
+      - **Area Wise Customer List** (`m_areawisecustomerlist`) - `call:mf_displayreport("Customers List", "d_customerlist_area_custcat")`
+      - **Sales Person Wise Customer List** (`m_salesmanwisecustomerlist`) - `call:mf_displayreport("Customers List", "d_customerlist_smanwise")`
+    - **Supplier List** (`m_supplierlist`) - `call:mf_displayreport("Supplier List", "d_supplierlist")`
+    - **Items List** (`m_itemslist`) - `open:w_filter_for_itemlist_rep`, `call:mf_displayreport(ls_reporttitle, ls_reportobject)`
+    - **Packing List** (`m_packinglist`) - `call:mf_displayreport("Packing List", "d_packinglist")`
+    - **Category List** (`m_powerlist`) - `call:mf_displayreport("Power List", "d_powerlist")`
+    - **Manufacturer List** (`m_companylist`) - `call:mf_displayreport("Manufacturers List", "d_manufacturerlist")`
+    - **Item Class List** (`m_itemclasslist`) - `call:mf_displayreport("Item Classes List", "d_itemclasslist")`
+    - **Area List** (`m_arealist`) - `call:mf_displayreport("Areas List", "d_areaslist")`
+    - **Zone List** (`m_zonelist`) - `call:mf_displayreport("Zones List", "d_zonelist1")`
+    - **Zone Areas List** (`m_zoneareaslist`) - `call:mf_displayreport("Zone Areas", "d_zonearealist")`
+    - **Zone Manufacturers** (`m_zonemanufacturers`) - `call:mf_displayreport("Zone Manufacturers", "d_zonemanflist")`
+    - **Chart Of Accounts** (`m_chartofaccounts`) - `call:mf_displayreport("Chart Of Accounts", "d_chart_of_account")` _(right 402)_
+    - **Item List(Supplier Priority Wise)** (`m_itemlistsupplierprioritywise`) - `call:mf_displayreport("Item List", "d_itemlist_manf_supp_priority")` _(right 481)_
+  - **Labels** (`m_labels`)
+    - **Customers Labels** (`m_partieslabels`) - `call:mf_displayreport("Parties Labels", "d_customerlabels")`
+    - **Suppliers Labels** (`m_supplierlabels`) - `call:mf_displayreport("Supplier Labels", "d_supplierlabels")`
+    - **Items Labels** (`m_itemslabels`) - `call:mf_displayreport("Items Labels", "d_itemslabel")`
+  - **RePrinting** (`m_reprinting`)
+    - **Sale** (`m_sale`) - `call:mf_displayreport("Sale", "d_wholesaleinvreport_reprint")`
+    - **Purchase** (`m_purchasereport`) - `call:mf_displayreport("Purchase", "d_pp_purchaseinvreport_report")`, `call:mf_displayreport("Purchase", "d_purchaseinvreport_report")`
+    - **Sale (with summary reports)** (`m_salewithsummaryreports`) - `call:mf_displayreport("Sale Reprint (with summaries)`
+    - **Sale Format(2)** (`m_saleformat2`) - `call:mf_displayreport("Sale Reprint ", "d_medicamp_wholesaleinvreport_reprint")` _(right 487)_
+    - **Prereceipted Bill Report** (`m_prereceiptedbillreport`) - `call:mf_displayreport("Sale Reprint ", "d_seico_prereceiptedbill_report")` _(right 493)_
+    - **Delivery Order** (`m_deliveryorder`) - `call:mf_displayreport("Delivery Order Reprint ", "d_marshal_deliveryorder_reprint")` _(right 822)_
+    - **Sale Format(3)** (`m_saleformat3`) - `call:mf_displayreport("Sale Invoice Reprint ", "d_invwisesaledetail")` _(right 860)_
+    - **Bank Document No. 1** (`m_ondemandnote`) - `call:mf_displayreport("Bank Document No. 1", "d_ondemandnote")` _(right 861)_
+    - **Bank Document No. 2** (`m_collectionreport`) - `call:mf_displayreport("Bank Document No. 2", "d_collection_report")` _(right 862)_
+    - **Prereceipted Bill(Format2)** (`m_prereceiptedbillformat2`) - `call:mf_displayreport("Sale Reprint ", "d_seico_prereceiptedbill_report2")` _(right 906)_
+    - **Sale Format(4)** (`m_saleformat30`) - `call:mf_displayreport("Sale Reprint ", "d_wholesaleinvreport_reprint2")` _(right 913)_
+    - **Sale (with header wise summaries)** (`m_salewithheaderwisesummaries`) - `call:mf_displayreport("Sale Reprint (with summaries)`
+  - **Sale Return Reports** (`m_salereturnreports`)
+    - **Customer Sales Return** (`m_1`)
+      - **Detail** (`m_detail`) - `call:mf_displayreport("Customer Sales Return Detail", "d_salereturn_customerwisede)`
+      - **Summary** (`m_customerwise_salereturnsummary`) - `call:mf_displayreport("Customer Sales Return Summary", "d_salereturn_customerwises)`
+    - **Manufacturer Wise** (`m_manufacturerwise1`) _(right 396)_
+      - **Sale Return Detail** (`m_salereturndetail`) - `call:mf_displayreport("Manufacturer Wise Sales Return Detail", "d_givedata_salesre)` _(right 397)_
+  - **Patient Reports** (`m_patientreports`)
+    - **Patient Medicine History** (`m_patientmedicinehistory`) - `call:mf_displayreport("Patient Wise Medicine History", "d_comp_dailysalesdetail_pa)`
+    - **Patient Wise Items Summary** (`m_patientwisesaledetail`) - `call:mf_displayreport("Patient Wise Items Summary", "d_patientsummary")`
+    - **Patient Wise Sales Summary** (`m_patientwisesalessummary`) - `call:mf_displayreport("Patient Wise Sales Summary", "d_comp_salessummary_patientwi)`
+    - **m_in-patientbill** (`m_in-patientbill`) _(right 394)_
+    - **Patient Wise Inv. Reprint** (`m_patientwiseinvreprint`) - `call:mf_displayreport("Patient Wise Inv. Reprint", "d_patientwiseinvoice_reprint_q)` _(right 804)_
+    - **Patient Wise Sale/Return Summary** (`m_patientwisesalereturnsummary`) - `call:mf_displayreport("Patient Wise Sale/Return Summary", "d_patientsaleandreturns)` _(right 853)_
+    - **Patient Wise Items Summary(Format 2)** (`m_patientwiseitemssummaryformat2`) - `call:mf_displayreport("Patient Wise Items Summary", "d_patientwise_itemsummary_for)` _(right 868)_
+  - **BarCode Printing** (`m_printbarcodeprinting`)
+    - **Print BarCode Labels** (`m_printbarcodelabels`) - `sheet:w_barcodelabels`
+    - **Using BarCode Printer** (`m_usingbarcodeprinter`) - `sheet:w_purlabel`
+  - **Item Reports** (`m_itemreports`) _(right 275)_
+    - **History** (`m_history`) _(right 276)_
+      - **Sale Price Difference** (`m_salepricedifference`) - `call:mf_displayreport("Item Sale Price Differnce Report", "d_itemsalepricedifferen)` _(right 277)_
+      - **Item Basic Data Changes** (`m_itembasicdatachanges`) - `call:mf_displayreport("Item Basic Data Changes Report", "d_itembasicdatachanges")` _(right 419)_
+      - **Item Sale Price Changes** (`m_itemsalepricechanges`) - `call:mf_displayreport("Item Basic Data Changes Report", "d_itemsalepricechanges")` _(right 485)_
+    - **Stock Adjustments** (`m_stockadjustments`) _(right 411)_
+      - **Stock Adjustments Detail** (`m_stockadjustmentsdetail`) - `call:mf_displayreport("Item Wise Stock Adjustment Detail Report", "d_itemwiseadjus)` _(right 412)_
+  - **Godown Reports** (`m_godownreports`) _(right 282)_
+    - **Godown Detail** (`m_godowndetail`) - `call:mf_displayreport("Godown Detail Report", "d_godowndetailreport")` _(right 283)_
+    - **Godown Item Stock Register** (`m_godownitemstockregister`) - `call:mf_displayreport("Godown Item Stock Register Report", "d_godownitemstockregis)` _(right 284)_
+    - **Godown Wise Stock and Sale** (`m_godownwisestockandsale`) - `call:mf_displayreport("Godown Wise Stock and Sales Report", "d_stockandsale_godown)` _(right 407)_
+    - **Godown Wise Net Sale (with profit)** (`m_godownwisenetsalewithprofit`) - `call:mf_displayreport("Godown Wise Net Sales (with profit)` _(right 408)_
+    - **Godown Wise Stock and Sale (Format2)** (`m_godownwisestockandsaleformat2`) - `call:mf_displayreport("Godown Wise Stock and Sales Report", "d_stockandsale_godown)` _(right 427)_
+  - **Purchase Return Reports** (`m_purchasereturnreports`) _(right 295)_
+    - **Supplier Purchase Returns** (`m_supplierpurchasereturns`) _(right 296)_
+      - **Detail** (`m_supplierpurchasereturndetail`) - `call:mf_displayreport("Supplier Purchase Return Detail Report", "d_purreturn_suppl)` _(right 297)_
+      - **Summary** (`m_supplierpurchasereturnsummary`) - `call:mf_displayreport("Supplier Purchase Return Detail Report", "d_purreturn_suppl)` _(right 298)_
+  - **Service Reports** (`m_servicereports`) _(right 317)_
+    - **Net Services Summary** (`m_netservicessummary`) - `call:mf_displayreport("Net Services Summary", "d_net_servicessummary")` _(right 318)_
+    - **Sales Person Wise** (`m_salespersonwise`) _(right 319)_
+      - **Net Services** (`m_netservices`) - `call:mf_displayreport("Sales Person Wise Net Services", "d_svc_salespersonwise")` _(right 320)_
+    - **Service Order Detail** (`m_serviceorderdetail`) - `call:mf_displayreport("Service Order Detail", "d_serviceorder_datewise")` _(right 333)_
+    - **User Wise** (`m_userwiseservicereports`) _(right 886)_
+      - **Service Order And Service Advances/Balance Received** (`m_serviceorderandserviceadvancesbalancere`) - `call:mf_displayreport("User Wise Service Order And Service Advances/Balance Receiv)` _(right 887)_
+    - **Customer Wise** (`m_customerwise`) _(right 898)_
+      - **Service Detail** (`m_servicedetail`) - `call:mf_displayreport("Customer Wise Service Detail", "d_custwise_servicedetail")` _(right 899)_
+  - **Special Reports** (`m_specialreports`) _(right 446)_
+    - **Distinct Dates** (`m_distinctdates`)
+    - **Items Basic Data** (`m_itemsbasicdata`)
+    - **Customers Basic Data** (`m_customersbasicdata`) _(right 449)_
+    - **Company Wise Item Sales Data** (`m_companywiseitemsalesdata`) _(right 450)_
+    - **IMS-FixedFieldFormat Text Data** (`m_companytotalsalesdata`) - `open:w_arg_manufacturers_ims` _(right 451)_
+    - **m_merck-fixedfieldformattextdata** (`m_merck-fixedfieldformattextdata`) _(right 483)_
+    - **Remington Data** (`m_remingtondata`) _(right 845)_
+      - **Manufacturer Sales and Returns Detail** (`m_manufacturersalesandreturnsdetail`) - `call:mf_displayreport("Manufacturer Sales and Returns Detail", "d_saleandreturn_re)` _(right 846)_
+      - **Manufacturer Sales Returns Detail** (`m_manufacturersalesreturnsdetail`) - `call:mf_displayreport("Manufacturer Sales Returns Detail", "d_salereturn_remington)` _(right 847)_
+      - **Items Sales and Returns** (`m_itemssalesandreturns`) - `call:mf_displayreport("Manufacturer Sales Returns Detail", "d_saleandreturn_itemsu)` _(right 848)_
+    - **Purchase Register** (`m_purchaseregister`) - `call:mf_displayreport("Purchase Register", "d_purchaseregister")`
+    - **Supply Register** (`m_supplyregister`) - `call:mf_displayreport("Supply Register", "d_supplyregister")`
+    - **Packing Wise Trading and Profit/Loss** (`m_packingwisetradingprofitloss`) - `call:mf_displayreport("Packing Wise Trading and Profit/Loss", "d_packingwise_tradi)`
+  - **Customer Site Reports** (`m_customersitereports`) _(right 476)_
+    - **Customer Site Medicine History** (`m_customersitemedicinehistory`) - `call:mf_displayreport("Customer Site Wise Medicine History", "d_comp_dailysalesdet)` _(right 477)_
+    - **Customer Site Wise Items Summary** (`m_customersitewiseitemssummary`) - `call:mf_displayreport("Customer Site Wise Items Summary", "d_itemsummary_custsitew)` _(right 478)_
+    - **Customer Site Sales Summary** (`m_customersitesalessummary`) - `call:mf_displayreport("Customer Site Wise Sales Summary", "d_comp_dailysalessummar)` _(right 479)_
+  - **Issue Reports** (`m_issuereports`) _(right 806)_
+    - **Issue Summary** (`m_issuesummary`) _(right 807)_
+      - **Class Summary** (`m_issuetypeandreferencewise`) - `call:mf_displayreport("Class Summary Report ", "d_issuesummary_ref_typewise")` _(right 808)_
+    - **Issue Detail** (`m_issuedetailreferencewise`) _(right 809)_
+      - **Issue Type and Reference Wise Detail** (`m_issuetypeandreferencewisedetail`) - `call:mf_displayreport("Issue Detail-Type and Reference Wise", "d_issuedetail_ref_t)` _(right 810)_
+      - **FORM L 34-A** (`m_issuedetail_format2`) - `call:mf_displayreport("FORM L 34-A", "d_issuedetail_ref_typewise_lawformat")` _(right 811)_
+    - **Area/Region/Zone Wise** (`m_arearegionzonewise`) _(right 881)_
+      - **Area Wise Issues/Receipts** (`m_issuesreceiptsareawise`) - `call:mf_displayreport("Issue/Receipt Area Wise Report", "d_issue_receipt_area_regi)` _(right 882)_
+      - **Area Wise Sales Person Issues/Receipts** (`m_areawisesalespersonissuesreceipts`) - `call:mf_displayreport("Area Wise Sales Person Issue/Receipt Report", "d_issue_rece)` _(right 883)_
+  - **Receipt Reports** (`m_receiptreports`) _(right 812)_
+    - **Receipt Detail** (`m_receiptdetail`) _(right 813)_
+      - **Receipt Detail Reference Wise** (`m_receiptdetailreferencewise`) - `call:mf_displayreport("Receipt Detail Reference Wise Report ", "d_receiptdetail_re)` _(right 814)_
+  - **Sale Order Reports** (`m_saleorderreports`)
+    - **Detail** (`m_detail2`) - `call:mf_displayreport("Sale Order Detail-Status Wise Report ", "d_saleorderdetail_)`
+- **Basic Data** (`m_basicdata`)
+  - **Account ..........** (`m_account`)
+    - **Account** (`m_account0`) - `sheet:w_accounts_form` _(right 354)_
+    - **Account Group** (`m_accountgroup`) - `sheet:w_subaccounts_form`
+    - **Account Category** (`m_accountcategory`) - `sheet:w_cataccounts_form`
+    - **Voucher Category** (`m_vouchercategory`) - `sheet:w_vouchercategory` _(right 465)_
+  - **Account Group** (`m_subaccount`)
+  - **Account Category** (`m_categoryaccounts`)
+  - **Customer ..........** (`m_customer`)
+    - **Customer** (`m_customerbasicdata`) - `sheet:w_customer_form` _(right 353)_
+    - **Customer Category** (`m_customercategory0`) - `sheet:w_custcategory_form`
+    - **Sales Person** (`m_salesperson`) - `sheet:w_salesman_form`
+    - **Area** (`m_area0`) - `sheet:w_area_form`
+    - **Zone** (`m_zone0`) - `sheet:w_zone`
+    - **Region** (`m_region0`) - `sheet:w_region_form`
+    - **Customer Site** (`m_customersite`) - `sheet:w_customersite_form` _(right 475)_
+    - **Sales Team** (`m_salesteam`) - `sheet:w_salesteam` _(right 480)_
+    - **Sub Area** (`m_subarea`) - `sheet:w_subarea_form` _(right 803)_
+    - **Prospective Customer** (`m_prospectivecustomer`) - `sheet:w_prospectivecustomer_form` _(right 855)_
+  - **Supplier ..........** (`m_supplier`)
+    - **Supplier** (`m_supplierbasicdata`) - `sheet:w_supplier_manf` _(right 355)_
+    - **Supplier Category** (`m_6`) - `sheet:w_suppliercategory_form`
+  - **Customer Category** (`m_customercategory`)
+  - **Item ..........** (`m_items`)
+    - **Item** (`m_itembasicdata`) - `sheet:w_item_form` _(right 345)_
+    - **Manufacturer** (`m_manufacturer`) - `sheet:w_manufacturer_form`
+    - **Item Class** (`m_itemclass`) - `sheet:w_class_form`
+    - **Item Category** (`m_itemcategory`) - `sheet:w_itemcategory_form`
+    - **Item Packing** (`m_itempacking0`) - `sheet:w_itempacking_form`
+    - **Item Size** (`m_5`) - `sheet:w_itemsize_form` _(right 346)_
+    - **Item Style** (`m_itemstyle`) - `sheet:w_itemstyle_form` _(right 347)_
+    - **Item Colour** (`m_itemcolour`) - `sheet:w_itemcolour_form` _(right 348)_
+    - **Item Sleeve** (`m_itemsleeve`) - `sheet:w_itemsleeve_form` _(right 349)_
+    - **Item Yarn** (`m_itemyarn`) - `sheet:w_itemyarn_form` _(right 350)_
+    - **Item Fabric** (`m_itemfabric`) - `sheet:w_itemfabric_form` _(right 351)_
+    - **Item Brand** (`m_itembrand`) - `sheet:w_itembrand_form` _(right 352)_
+    - **Item Part** (`m_itempart`) - `sheet:w_item_part_form` _(right 496)_
+    - **Model** (`m_model`) - `sheet:w_model_form` _(right 497)_
+    - **Item Description** (`m_itemdescription`) - `sheet:w_item_form2` _(right 827)_
+  - **Item Class** (`m_class`)
+  - **Item Packing** (`m_itempacking`)
+  - **Item Category** (`m_itempower`)
+  - **Manaufacturer** (`m_manaufacturer`)
+  - **Priority Setting** (`m_itempriority1`)
+  - **Area** (`m_area`)
+  - **Zone** (`m_zone`)
+  - **Sale Template** (`m_saletemplate`) - `sheet:w_saletemplate`
+  - **Godown** (`m_godown`) - `sheet:w_godown_form`
+  - **InterGodown Transfer** (`m_intergodowntransfer`) - `sheet:w_transfer`
+  - **Service** (`m_service`)
+  - **Department** (`m_department`) - `sheet:w_department`
+  - **Patient** (`m_patient`)
+    - **Registration** (`m_patientregistration`) - `sheet:w_patient_form1` _(right 368)_
+    - **Admission** (`m_patientadmission`) - `sheet:w_patientadmission_form` _(right 369)_
+    - **Transfer** (`m_patienttransfer`) - `sheet:w_patienttransfer_form` _(right 370)_
+    - **Location** (`m_patientlocation`) - `sheet:w_patientlocation_form` _(right 371)_
+    - **Ward** (`m_patientward`) - `sheet:w_ward_form` _(right 372)_
+    - **Disease** (`m_disease`) - `sheet:w_disease_form` _(right 375)_
+    - **Relation** (`m_relation`) - `sheet:w_relation_form` _(right 376)_
+    - **Rank** (`m_rank`) - `sheet:w_rank_form` _(right 377)_
+    - **Unit** (`m_unit`) - `sheet:w_unit_form` _(right 378)_
+    - **Discharge** (`m_discharge`) - `sheet:w_patientdischarge_form` _(right 389)_
+    - **Prescription** (`m_prescription`) - `sheet:w_prescription_form`
+    - **Dosage** (`m_10`) - `sheet:w_dosage_form`
+    - **Route** (`m_route`) - `sheet:w_route_form`
+    - **Instruction** (`m_instruction`) - `sheet:w_instruction_form`
+  - **Doctors** (`m_doctors`)
+  - **Agency** (`m_agency`) - `sheet:w_goodscompany_form`
+  - **SalesMan** (`m_salesman`)
+  - **Region** (`m_region`)
+  - **Purchase Type** (`m_purchasetype`) - `sheet:w_purchasetype_form`
+  - **Supplier Category** (`c`)
+  - **Message** (`m_message`) - `sheet:w_message_form` _(right 241)_
+  - **TimeSlot** (`m_timeslot`) - `sheet:w_timeslot_form` _(right 334)_
+  - **Shift** (`m_shift`) - `sheet:w_shift_form` _(right 335)_
+  - **Section** (`m_section`) - `sheet:w_section_form` _(right 457)_
+  - **Issue Type** (`m_issuetype`) - `sheet:w_issuetype_form` _(right 495)_
+  - **Sale Type** (`m_saletype`) - `sheet:w_saletype_form` _(right 823)_
+  - **Sale Order Item Status** (`m_saleorderitemstatus`) - `sheet:w_saleorderitemstatus_form`
+- **Maintenance** (`m_maintenance`)
+  - **Change Password** (`m_changepassword`) - `open:w_changepassword`
+  - **Preferences** (`m_preferences`) - `open:w_preferences`
+  - **Opening Vouchers** (`m_openingvouchers`)
+    - **Cash in Hand** (`m_openingcashinhand`) - `call:mf_openvoucher(6, "Opening Cash In Hand", "GT_EquitySub", "CashSub")`
+    - **Bank Balances** (`m_bankbalances`) - `call:mf_openvoucher(7, "Opening Bank Balances", "GT_EquitySub", "BankSub")`
+    - **A/c Receivables** (`m_acreceivables`) - `call:mf_openvoucher(8, "Opening A/c Receivables", "GT_EquitySub", "DebitorsSub")`
+    - **A/c Payables** (`m_acpayables`) - `call:mf_openvoucher(9, "Opening A/c Payables", "GT_EquitySub", "CreditorsSub")`
+    - **Other Receivables** (`m_otherreceivables`) - `call:mf_openvoucher(10, "Opening Other Receivables", "GT_EquitySub", "Others")`
+    - **Other Payables** (`m_otherpayables`) - `call:mf_openvoucher(11, "Opening Other Payables", "GT_EquitySub", "Others")`
+  - **Change Items Price** (`m_changeitempsprice`) - `sheet:w_changeitem_price`, `sheet:w_change_item_prices`, `sheet:w_change_item_prices2`, `open:w_filter_changeitem_price`
+  - **Database Utilities** (`m_backupdatabase`)
+    - **Backup Database** (`m_backupdatabasenow`) - `open:w_dbbackup1`
+    - **Check Database Integrity** (`m_checkdatabaseintegrity`) - `open:w_checkdb`
+  - **Adjustment** (`m_adjustment`)
+    - **Increase** (`m_increase`) - `sheet:w_adjincrease`
+    - **Decrease** (`m_decrease`) - `sheet:w_adjwindow`
+    - **Stock Adjustment** (`m_stockadjustment`) - `sheet:w_adjbuffer` _(right 490)_
+  - **Issue** (`m_issue`)
+    - **Issue** (`m_issue_form`) - `call:mf_open_issue(1)` _(right 455)_
+    - **Issue Request** (`m_issuerequest`) - `sheet:w_issue_request` _(right 456)_
+    - **Issue Category** (`m_issuecategory`) - `sheet:w_issuecategory`
+  - **Receipt** (`m_receipt`)
+    - **Receipt Category** (`m_receiptcategory`) - `sheet:w_receiptcategory`
+    - **Receipt** (`m_receiptform`) - `call:mf_open_receipt(1)`
+  - **Priority Setting** (`m_perioritysetting`) - `sheet:w_itempriority_form`
+  - **Dispatch** (`m_dispatch`) - `sheet:w_dispatch`
+  - **InterGodown Transfer** (`m_intergodowntransfer0`) - `sheet:w_transfer`
+  - **Set Customer Wise Price  Disc** (`m_setcustomerwisepricedisc`) - `sheet:w_set_priceanddiscfor_cust`
+  - **Modify Purchase Invoices** (`m_modifypurchaseinvoices`) - `sheet:w_modify_purinvces`, `open:w_arg_suppliers_sdate_ldate`
+  - **Attendance Slip** (`m_attendanceslip`) - `open:w_attendenceslip`
+  - **Change Item Discount** (`m_changeitemdiscount`) - `sheet:w_change_itemdisc_catwise`, `sheet:w_change_itemdisc_manf_cat_packwise`, `open:w_select_changediscmethod`, `open:w_selection_manf_cat_class_packing`
+  - **Modify Sale Invoices** (`m_2`) - `sheet:w_modify_saleinvces`, `open:w_selectformat_period_invrange`, `open:w_arg_cust_sdate_ldate_withalloption2`, `open:w_arg_customers_sinvcode_linvcode_v2`
+  - **Modify Last Transaction Date** (`m_modifylasttransactiondate`) - `open:w_set_lasttransdate`
+  - **Problem Fixer** (`m_problemfixer`) - `open:w_sale_primarykeyfixer`
+  - **Godown Preferences** (`m_godownpreferences`)
+    - **Godown Settings** (`m_godownsettings`) - `open:w_godownsettings`
+    - **Godown** (`m_godown0`) - `sheet:w_godown_form`
+    - **InterGodown Transfer** (`m_intergodowntransfer1`) - `sheet:w_transfer`
+    - **Group Wise Godown Setting** (`m_groupwisegodownsetting`) - `sheet:w_groupwisegodownsetting`, `open:w_arg_group` _(right 341)_
+    - **Godown Wise Item Setting** (`m_godownwiseitemsetting`) - `sheet:w_godownitem_setting` _(right 555)_
+  - **Point Of Sale Preferences** (`m_pointofsale`) _(right 278)_
+    - **POS Preferences** (`m_pospreferences`) - `open:w_pointofsalepreferences` _(right 441)_
+    - **POS Settings** (`m_possettings`) - `open:w_pointofsalesettings` _(right 442)_
+  - **Interface Setting** (`m_interfacesetting`) - `open:w_interfacesetting` _(right 356)_
+  - **Auto Pricing Setting** (`m_autopricingsettings`) - `open:w_autopricingsettings`
+  - **Copied Sale Invoices** (`m_copiedsaleinvoices`)
+    - **Reports** (`m_reportsforcopiedsaleinvoices`)
+      - **Patient Reports** (`m_patientreportsforcopiedsaleinvoices`)
+        - **Patient Wise Item Summary** (`m_patientwiseitemsummary`) - `call:mf_displayreport("Patient Wise Items Summary", "d_patientsummary_salmod")`
+        - **Patient Wise Sales Summary** (`m_patientwisesalessummaryforcopiedsaleinvoices`) - `call:mf_displayreport("Patient Wise Items Summary", "d_dailysalessummary_patientwi)`
+        - **Patient Medicine History** (`m_patientmedicinehistorysalemodified`) - `call:mf_displayreport("Patient Wise Medicine History", "d_dailysalesdetail_patient)`
+        - **Patient Wise Items Summary (Format 2)** (`m_patientwiseitemsummary0`) - `call:mf_displayreport("Patient Wise Items Summary", "d_patientwise_itemsummary_for)`
+      - **Sale Reports** (`m_salereports_salmod`)
+        - **Customer Sales** (`m_customersales_salmod`)
+          - **Detail** (`m_detail_salemod`) - `call:mf_displayreport("Customer Sales Detail", "d_customerwisesalesdetail_salemod")`
+          - **Summary** (`m_summary_salmod`) - `call:mf_displayreport("Customer Sales Summary", "d_customerwisesalessummery_salmod)`
+          - **Customer Wise Invoice** (`m_customerwiseinvoice0`) - `call:mf_displayreport("Customer Wise Invoice", "d_customerwise_invoice_cmh_salmod")`
+          - **Customer Wise Invoice Detail** (`m_customerwiseinvoicedetail0`) - `call:mf_displayreport("Customer Wise Invoice Detail", "d_customerwise_invoicedetai)`
+          - **Detail Format(2)** (`m_detailformat20`) - `call:mf_displayreport("Customer Sales Detail", "d_customerwisesalesdetailcmh_salmo)`
+          - **Item Summary Format(2)** (`m_itemsummaryformat2`) - `call:mf_displayreport("Customer Wise Items Summary", "d_custwise_medicinesummary_c)`
+          - **Summary (Patient)** (`m_summarypatient0`) - `call:mf_displayreport("Customer Sales Summary Patient Wise", "d_custwisesalessumma)`
+          - **Summary (Patient Format3)** (`m_summarypatientformat30`) - `call:mf_displayreport("Customer Wise Patient Summary", "d_custwise_summarypatient_)`
+          - **Summary (Patient Format4)** (`m_summarypatientformat40`) - `call:mf_displayreport("Customer Wise Patient Summary", "d_custwise_patientsummary_)`
+          - **Summary (Paitient Format5)** (`m_summarypaitientformat5`) - `call:mf_displayreport("Customer Wise Patient Summary", "d_custwise_summarypatient_)`
+          - **Patient Sale Detail** (`m_patientsaledetail0`) - `call:mf_displayreport("Customer Wise Patient SaleDetail", "d_custwise_patientsaled)`
+          - **Patient SaleDetail (Format 2)** (`m_patientsaledetailformat20`) - `call:mf_displayreport("Customer Wise Patient SaleDetail", "d_custwise_patientsaled)`
+        - **Doctor Wise Sale** (`m_doctorwisesale0`) - `call:mf_displayreport("Doctor Wise Sale", "d_doctorwise_saledetail_cmh_salmod")`
+        - **Ward Wise Sale** (`m_wardwisesale0`) - `call:mf_displayreport("Ward Wise Sale", "d_wardwise_saledetail_cmh_salmod")`
+      - **Reprinting** (`m_reprinting0`)
+        - **Sales** (`m_sales3`) - `call:mf_displayreport("Reprint Sale Invoices", "d_wholesaleinvreport_reprint_salmo)`
+    - **Copy Sale Invoices** (`m_copysaleinvoices`) - `open:w_copyinvoicestosledgermodified`
+    - **Edit Copied Credit Sale Invoices** (`m_editcopiedsale`) - `sheet:w_sale_modified`
+    - **Edit Copied Cash Sale Invoices** (`m_editcopiedcashsaleinvoices`) - `sheet:w_sale_modified`
+  - **Change Item PurPrice** (`m_changeitempurprice`) - `sheet:w_change_itempurprice_manfwise` _(right 439)_
+  - **Upgrade Accounting Repository** (`m_upgradeaccountingrepository`) - `open:w_virtualgl_repair` _(right 484)_
+  - **Report Titles** (`m_reporttitles`) - `sheet:w_modify_reporttitles` _(right 488)_
+  - **Update Customer Basic Data** (`m_updatecustomerbasicdata`) - `open:w_arg_area_custcategory`, `open:w_customer_update` _(right 828)_
+  - **Update Item Basic Data** (`m_updateitembasicdata`) - `open:w_select_manf_cat_class_pack_saleorder`, `open:w_arg_saleorder`, `open:w_arg_manfs_cats_classes_packs`, `open:w_item_update` _(right 829)_
+  - **Discount Policy** (`m_discountpolicy`)
+    - **Customer Category/Item Category Wise** (`m_customercategoryitemcategorywise`) - `sheet:w_custitemcat_disc_setting`, `open:w_select_categorycriteria`
+  - **Survey** (`m_survey`) - `sheet:w_survey_form`
+- **Manage** (`m_manage`)
+  - **Groups** (`m_groups`) - `sheet:w_groups`
+  - **Users** (`m_users`) - `sheet:w_users`
+  - **User Permissions** (`m_userpermissions`) - `sheet:w_userspermission`
+  - **Group Item Category** (`m_groupitemcategory`) - `sheet:w_groupitemscategory`
+  - **Group Wise Header Setting** (`m_groupwiseheadersetting`) - `sheet:w_groupwiseheadersetting`, `open:w_arg_group` _(right 342)_
+  - **Group Customer Category** (`m_groupcustomercategory`) - `sheet:w_groupcustomercategory` _(right 453)_
+  - **Group Voucher Category** (`m_groupvouchercategory`) - `sheet:w_groupvouchercategory` _(right 466)_
+- **m_e-prescription** (`m_e-prescription`)
+  - **Patient Profile** (`m_patientprofile`) - `sheet:w_patient_form1`
+  - **Visit Appointment** (`m_visitappointment`) - `sheet:w_visit_appointment_form`
+  - **Visit Details** (`m_visitdetails`) - `sheet:w_patientvisit_list`
+  - **Basics** (`m_basics`)
+    - **Severity Level** (`m_severitylevel`) - `sheet:w_severitylevel_form`
+    - **Symptom Type** (`m_symptomtype`) - `sheet:w_symptomtype_form`
+    - **Symptom** (`m_symptom`) - `sheet:w_symptom_form`
+    - **Organ** (`m_organ`) - `sheet:w_organ_form`
+    - **Physical Exam** (`m_physicalexam`) - `sheet:w_physicalexam_form`
+    - **Diagnostic Unit** (`m_diagnosticunit`) - `sheet:w_diagnosticunit_form`
+    - **Diagnostic Item Type** (`m_diagnosticitemtype`) - `sheet:w_diagnosticitemtype_form`
+    - **Diagnostic Item** (`m_diagnosticitem`) - `sheet:w_diagnosticitem_form`
+    - **Visit Type** (`m_visittype`) - `sheet:w_visittype_form`
+    - **Visit Status** (`m_visitstatus`) - `sheet:w_visitstatus_form`
+    - **Dosage Unit** (`m_dosageunit`) - `sheet:w_dosageunit_form`
+- **Patient Management** (`m_patientmanagement`)
+- **Activities** (`m_activities`)
+- **Window** (`m_window`)
+  - **Arrange Icons** (`m_arrangeicons`)
+  - **Maximize** (`m_maximize`)
+- **Help** (`m_help`)
+  - **About** (`m_about`) - `open:w_about`
+
+## Other menus (per-window sheet menus and legacy `m_main`)
+
+- `m_accountmenu` (singleentry): 1 own top-level items; ancestor `m_single_entry`; used by 2 windows
+- `m_activitymonitor` (graphcomponents): 1 own top-level items; ancestor `menu`; used by 1 windows
+- `m_adjbuffermenu` (adjustment): 1 own top-level items; ancestor `m_multi_entry`; used by 1 windows
+- `m_adjustmentmenu` (adjustment): 1 own top-level items; ancestor `m_multi_entry`; used by 2 windows
+- `m_admissionmenu` (patientcomponents): 1 own top-level items; ancestor `m_multi_entry`; used by 2 windows
+- `m_advpurchasemenu` (advancedpurchase): 1 own top-level items; ancestor `m_multi_entry`; used by 1 windows
+- `m_advsalemenu` (advancedsale): 1 own top-level items; ancestor `m_multi_entry`; used by 1 windows
+- `m_avgpriceadj` (multientry): 1 own top-level items; ancestor `m_multi_entry`; used by 1 windows
+- `m_barcodelabelmenu` (barcodecomponents): 1 own top-level items; ancestor `m_multi_entry`; used by 2 windows
+- `m_batchserviceresultmenu` (serviceresult): 3 own top-level items; ancestor `m_entry`; used by 1 windows
+- `m_billsummarymenu` (billsummary): 1 own top-level items; ancestor `m_multi_entry`; used by 1 windows
+- `m_cashieractivitymenu` (cashierjob): 1 own top-level items; ancestor `menu`; used by 1 windows
+- `m_cashierjobmenu` (cashierjob): 1 own top-level items; ancestor `m_multi_entry`; used by 1 windows
+- `m_cashiershiftmenu` (cashierjob): 1 own top-level items; ancestor `m_multi_entry`; used by 1 windows
+- `m_changeitem_price` (changeitemprice): 0 own top-level items; ancestor `m_multi_entry`; used by 0 windows
+- `m_changeitem_reorderqty` (changeitemprice): 1 own top-level items; ancestor `m_multi_entry`; used by 1 windows
+- `m_changeitemprice` (changeitemprice): 1 own top-level items; ancestor `m_multi_entry`; used by 1 windows
+- `m_changeitempurprice_manfwise` (singleentryitem): 0 own top-level items; ancestor `m_single_entry`; used by 1 windows
+- `m_changeitemsdisc_catwise` (singleentryitem): 0 own top-level items; ancestor `m_single_entry`; used by 2 windows
+- `m_changeitemsprice` (singleentryitem): 0 own top-level items; ancestor `m_single_entry`; used by 2 windows
+- `m_changeservicepricemenu` (servicemodules): 0 own top-level items; ancestor `m_multi_entry`; used by 1 windows
+- `m_connectionmonitor` (graphcomponents): 1 own top-level items; ancestor `menu`; used by 1 windows
+- `m_contactgroupmenu` (contactmanagement): 3 own top-level items; ancestor `m_entry`; used by 1 windows
+- `m_crs_reports` (popupmenus): 5 own top-level items; ancestor `m_popupmenu`; used by 0 windows
+- `m_custgroupmenu` (custcomponents): 1 own top-level items; ancestor `m_multi_entry`; used by 1 windows
+- `m_custitemcat_disc_setting` (multientry): 1 own top-level items; ancestor `m_multi_entry`; used by 1 windows
+- `m_customer_form` (custcomponents): 1 own top-level items; ancestor `m_single_entry`; used by 1 windows
+- `m_custservicetemp` (custcomponents): 1 own top-level items; ancestor `m_multi_entry`; used by 1 windows
+- `m_custstudentservicetemp` (studentcomponents): 1 own top-level items; ancestor `m_multi_entry`; used by 1 windows
+- `m_dataimport_reports` (popupmenus): 1 own top-level items; ancestor `m_popupmenu`; used by 0 windows
+- `m_deletedue1` (duecomponents): 0 own top-level items; ancestor `m_multi_entry`; used by 1 windows
+- `m_discchargepatient` (patientcomponents): 1 own top-level items; ancestor `m_entry`; used by 1 windows
+- `m_dispatchmenu` (multientry): 1 own top-level items; ancestor `m_multi_entry`; used by 1 windows
+- `m_dueadjustment` (duecomponents): 1 own top-level items; ancestor `m_multi_entry`; used by 1 windows
+- `m_employee_reports` (popupmenus): 2 own top-level items; ancestor `m_popupmenu`; used by 0 windows
+- `m_employeecard` (employee): 0 own top-level items; ancestor `m_multi_entry`; used by 1 windows
+- `m_entry` (components): 10 own top-level items; ancestor `m_mainmenu`; used by 1 windows
+- `m_expiryintimation` (expiryintimation): 1 own top-level items; ancestor `m_multi_entry`; used by 1 windows
+- `m_feevoucher` (accounts): 1 own top-level items; ancestor `m_multi_entry`; used by 1 windows
+- `m_godownitem_setting` (multientryitem): 1 own top-level items; ancestor `m_multi_entry`; used by 2 windows
+- `m_graphviewer` (graphcomponents): 1 own top-level items; ancestor `m_entry`; used by 1 windows
+- `m_groupgodownsetting` (templates): 0 own top-level items; ancestor `m_single_entry`; used by 1 windows
+- `m_groupheadersetting` (templates): 0 own top-level items; ancestor `m_single_entry`; used by 2 windows
+- `m_guest_reports` (popupmenus): 3 own top-level items; ancestor `m_popupmenu`; used by 0 windows
+- `m_guestcheckinmenu` (guestcomponents): 1 own top-level items; ancestor `m_multi_entry`; used by 1 windows
+- `m_guesttransfermenu` (guestcomponents): 1 own top-level items; ancestor `m_entry`; used by 1 windows
+- `m_imppurchasemenu` (advancedpurchase): 1 own top-level items; ancestor `m_multi_entry`; used by 1 windows
+- `m_incentivessheet` (incentivesheet): 1 own top-level items; ancestor `m_multi_entry`; used by 1 windows
+- `m_inpatientsalemenu` (ipsale): 1 own top-level items; ancestor `m_multi_entry`; used by 1 windows
+- `m_inpatientsalereturnmenu` (salereturncomponents): 1 own top-level items; ancestor `m_multi_entry`; used by 1 windows
+- `m_inpatientservicemenu` (ipservices): 1 own top-level items; ancestor `m_multi_entry`; used by 1 windows
+- `m_inpatientservretmenu` (ipservices): 0 own top-level items; ancestor `m_multi_entry`; used by 1 windows
+- `m_installment_reports` (popupmenus): 2 own top-level items; ancestor `m_popupmenu`; used by 0 windows
+- `m_installmentsale` (salewin): 1 own top-level items; ancestor `m_multi_entry`; used by 1 windows
+- `m_invoicemarking` (accounts): 1 own top-level items; ancestor `m_multi_entry`; used by 1 windows
+- `m_ipserviceordermenu` (ipservices): 1 own top-level items; ancestor `m_multi_entry`; used by 1 windows
+- `m_issuecatmenu` (issuecomponents): 0 own top-level items; ancestor `m_multi_entry`; used by 1 windows
+- `m_issuemenu` (issuecomponents): 1 own top-level items; ancestor `m_multi_entry`; used by 1 windows
+- `m_issuereqmenu` (issuereq): 1 own top-level items; ancestor `m_multi_entry`; used by 1 windows
+- `m_item_basicdata_form` (multientryitem): 1 own top-level items; ancestor `m_multi_entry`; used by 1 windows
+- `m_item_cost_history` (multientryitem): 3 own top-level items; ancestor `m_entry`; used by 1 windows
+- `m_item_form` (multientryitem): 1 own top-level items; ancestor `m_multi_entry`; used by 2 windows
+- `m_itembatchpricing` (multientryitem): 1 own top-level items; ancestor `m_multi_entry`; used by 1 windows
+- `m_itemconversionmenu` (adjustment): 1 own top-level items; ancestor `m_multi_entry`; used by 1 windows
+- `m_itempriority` (multientryitem): 0 own top-level items; ancestor `m_multi_entry`; used by 3 windows
+- `m_itemregreq_form` (multientryitem): 1 own top-level items; ancestor `m_multi_entry`; used by 1 windows
+- `m_itemsuppliers` (multientryitem): 1 own top-level items; ancestor `m_multi_entry`; used by 2 windows
+- `m_loyalty_reports` (popupmenus): 1 own top-level items; ancestor `m_popupmenu`; used by 0 windows
+- `m_main` (abuzarapp): 8 own top-level items; ancestor `menu`; used by 0 windows
+- `m_masteritempart` (multientryitem): 1 own top-level items; ancestor `m_multi_entry`; used by 2 windows
+- `m_modify_saleinvoices` (salerespwin): 1 own top-level items; ancestor `m_single_entry`; used by 1 windows
+- `m_multi_entry` (components): 3 own top-level items; ancestor `m_entry`; used by 67 windows
+- `m_notes` (notescomponents): 0 own top-level items; ancestor `m_single_entry`; used by 1 windows
+- `m_notesmenu` (notescomponents): 1 own top-level items; ancestor `m_multi_entry`; used by 1 windows
+- `m_packingoption` (packingmodule): 5 own top-level items; ancestor `menu`; used by 0 windows
+- `m_packjob` (packingmodule): 1 own top-level items; ancestor `m_multi_entry`; used by 1 windows
+- `m_passport_form` (multientryitem): 1 own top-level items; ancestor `m_multi_entry`; used by 2 windows
+- `m_passport_reports` (popupmenus): 1 own top-level items; ancestor `m_popupmenu`; used by 0 windows
+- `m_patientcard` (patientcomponents): 0 own top-level items; ancestor `m_multi_entry`; used by 1 windows
+- `m_patientmenu` (patientcomponents): 1 own top-level items; ancestor `m_single_entry`; used by 1 windows
+- `m_patientvisitmenu` (patientvisitcomp): 1 own top-level items; ancestor `m_single_entry`; used by 1 windows
+- `m_payroll_menu` (employee): 1 own top-level items; ancestor `m_multi_entry`; used by 1 windows
+- `m_popupmenu` (popupmenus): 0 own top-level items; ancestor `menu`; used by 0 windows
+- `m_posmenu` (poscomponents): 1 own top-level items; ancestor `m_multi_entry`; used by 1 windows
+- `m_presale` (quotation): 1 own top-level items; ancestor `m_multi_entry`; used by 1 windows
+- `m_prescriptionmenu` (patientcomponents): 1 own top-level items; ancestor `m_multi_entry`; used by 1 windows
+- `m_preturnallocation` (prcomponents): 0 own top-level items; ancestor `m_multi_entry`; used by 2 windows
+- `m_prodnote_menu` (issuereq): 1 own top-level items; ancestor `m_entry`; used by 1 windows
+- `m_product_reports` (popupmenus): 1 own top-level items; ancestor `m_popupmenu`; used by 0 windows
+- `m_production_reports` (popupmenus): 1 own top-level items; ancestor `m_popupmenu`; used by 0 windows
+- `m_productionmenu` (issuereq): 1 own top-level items; ancestor `m_multi_entry`; used by 1 windows
+- `m_productmenu` (multientry): 1 own top-level items; ancestor `m_multi_entry`; used by 1 windows
+- `m_proforma_salemenu` (proformasales): 1 own top-level items; ancestor `m_multi_entry`; used by 1 windows
+- `m_proformapurmenu` (proformapurchase): 1 own top-level items; ancestor `m_multi_entry`; used by 1 windows
+- `m_psrviewer` (psrviewer): 1 own top-level items; ancestor `m_entry`; used by 1 windows
+- `m_purchasemenu` (purchasecomponents): 1 own top-level items; ancestor `m_multi_entry`; used by 2 windows
+- `m_purchaseordermenu` (pocomponents): 1 own top-level items; ancestor `m_multi_entry`; used by 1 windows
+- `m_purlabelmenu` (barcodecomponents): 1 own top-level items; ancestor `m_multi_entry`; used by 1 windows
+- `m_purpayment_menu` (accounts): 1 own top-level items; ancestor `m_entry`; used by 1 windows
+- `m_purquotationmenu` (quotation): 1 own top-level items; ancestor `m_multi_entry`; used by 1 windows
+- `m_purregistermenu` (advancedpurchase): 1 own top-level items; ancestor `m_multi_entry`; used by 1 windows
+- `m_purreturn` (prcomponents): 1 own top-level items; ancestor `m_multi_entry`; used by 1 windows
+- `m_qpersonmenu` (custcomponents): 0 own top-level items; ancestor `m_single_entry`; used by 1 windows
+- `m_quotationmenu` (quotation): 1 own top-level items; ancestor `m_multi_entry`; used by 1 windows
+- `m_receiptcatmenu` (receiptcomponents): 0 own top-level items; ancestor `m_multi_entry`; used by 1 windows
+- `m_receiptmenu` (receiptcomponents): 1 own top-level items; ancestor `m_multi_entry`; used by 1 windows
+- `m_recipemenu` (multientry): 1 own top-level items; ancestor `m_multi_entry`; used by 1 windows
+- `m_reportsmenu` (reportviewer): 1 own top-level items; ancestor `m_entry`; used by 0 windows
+- `m_reviewreport` (reportviewer): 1 own top-level items; ancestor `m_entry`; used by 4 windows
+- `m_saleinvgroup` (salewin): 1 own top-level items; ancestor `m_multi_entry`; used by 1 windows
+- `m_salemenu` (salewin): 2 own top-level items; ancestor `m_multi_entry`; used by 2 windows
+- `m_salemodifiedmenu` (salemodified): 1 own top-level items; ancestor `m_multi_entry`; used by 1 windows
+- `m_saleorderlabelsmenu` (saleorder): 1 own top-level items; ancestor `m_multi_entry`; used by 1 windows
+- `m_saleordermenu` (saleorder): 1 own top-level items; ancestor `m_multi_entry`; used by 1 windows
+- `m_salereturnmenu` (salereturncomponents): 1 own top-level items; ancestor `m_multi_entry`; used by 3 windows
+- `m_saletemplatemenu` (templates): 1 own top-level items; ancestor `m_multi_entry`; used by 1 windows
+- `m_samplesmenu` (servicecomponents): 3 own top-level items; ancestor `m_entry`; used by 1 windows
+- `m_satisfydue` (duecomponents): 0 own top-level items; ancestor `m_multi_entry`; used by 0 windows
+- `m_schoolleavingmenu` (studentcomponents): 0 own top-level items; ancestor `m_single_entry`; used by 1 windows
+- `m_serviceinvpurtemplatemenu` (servicepurcomponents): 1 own top-level items; ancestor `m_multi_entry`; used by 2 windows
+- `m_serviceissuereqmenu` (servicemodules): 0 own top-level items; ancestor `m_multi_entry`; used by 1 windows
+- `m_servicemenu` (servicesalescomp): 2 own top-level items; ancestor `m_multi_entry`; used by 1 windows
+- `m_serviceorder_menu` (servicemodules): 1 own top-level items; ancestor `m_entry`; used by 1 windows
+- `m_serviceordermenu` (servicemodules): 1 own top-level items; ancestor `m_multi_entry`; used by 1 windows
+- `m_servicepreturnmenu` (servicepurcomponents): 0 own top-level items; ancestor `m_multi_entry`; used by 1 windows
+- `m_servicepurtemplatemenu` (servicepurcomponents): 1 own top-level items; ancestor `m_multi_entry`; used by 1 windows
+- `m_serviceresultmenu` (serviceresult): 3 own top-level items; ancestor `m_entry`; used by 1 windows
+- `m_servicereturnmenu` (servicesalesreturn): 0 own top-level items; ancestor `m_multi_entry`; used by 1 windows
+- `m_servicetemplatemenu` (servicecomponents): 1 own top-level items; ancestor `m_multi_entry`; used by 1 windows
+- `m_single_entry` (components): 1 own top-level items; ancestor `m_entry`; used by 170 windows
+- `m_smscentermenu` (smscomponents): 1 own top-level items; ancestor `menu`; used by 1 windows
+- `m_smstemplatemenu` (smscomponents): 0 own top-level items; ancestor `m_multi_entry`; used by 1 windows
+- `m_sreturnallocation` (salereturncomponents): 0 own top-level items; ancestor `m_multi_entry`; used by 2 windows
+- `m_srvmenu` (servicecomponents): 1 own top-level items; ancestor `m_multi_entry`; used by 1 windows
+- `m_student_reports` (popupmenus): 14 own top-level items; ancestor `m_popupmenu`; used by 0 windows
+- `m_studentcardmenu` (studentcomponents): 1 own top-level items; ancestor `m_multi_entry`; used by 1 windows
+- `m_studentfeesheet_menu` (studentcomponents): 1 own top-level items; ancestor `m_entry`; used by 1 windows
+- `m_studentmenu` (studentcomponents): 1 own top-level items; ancestor `m_single_entry`; used by 2 windows
+- `m_studentservicetemp` (studentcomponents): 1 own top-level items; ancestor `m_multi_entry`; used by 1 windows
+- `m_studenttransfermenu` (studentcomponents): 1 own top-level items; ancestor `m_single_entry`; used by 1 windows
+- `m_summaccmenu` (accounts): 0 own top-level items; ancestor `m_multi_entry`; used by 1 windows
+- `m_supplier_manf` (multientry): 1 own top-level items; ancestor `m_multi_entry`; used by 1 windows
+- `m_survey_form` (multientry): 1 own top-level items; ancestor `m_multi_entry`; used by 1 windows
+- `m_transfer` (transfer): 1 own top-level items; ancestor `m_multi_entry`; used by 2 windows
+- `m_transferablemarking` (datatransferapp): 1 own top-level items; ancestor `m_multi_entry`; used by 1 windows
+- `m_transfermenu` (patientcomponents): 1 own top-level items; ancestor `m_single_entry`; used by 1 windows
+- `m_transferrequisition` (transfer): 1 own top-level items; ancestor `m_multi_entry`; used by 1 windows
+- `m_vaccinefollowupmenu` (patientvaccinecomp): 1 own top-level items; ancestor `menu`; used by 1 windows
+- `m_vaccineshedulemenu` (patientvaccinecomp): 1 own top-level items; ancestor `m_multi_entry`; used by 1 windows
+- `m_visit_appointment` (patientvisitcomp): 1 own top-level items; ancestor `m_single_entry`; used by 1 windows
+- `m_visitmenu` (patientvisitcomp): 1 own top-level items; ancestor `m_multi_entry`; used by 2 windows
+- `m_voucher` (accounts): 1 own top-level items; ancestor `m_multi_entry`; used by 3 windows
+- `m_vouchercatmenu` (accounts): 0 own top-level items; ancestor `m_multi_entry`; used by 1 windows
+- `m_workorder_menu` (saleorder): 1 own top-level items; ancestor `m_entry`; used by 1 windows
+- `m_zonemenu` (custcomponents): 1 own top-level items; ancestor `m_multi_entry`; used by 1 windows

@@ -1,0 +1,28 @@
+# w_transfer
+
+- title: Transfer
+- library: transfer (Application shell & settings)
+- ancestor: `w_multi_entry`
+- size: 2971 x 1996 PBU
+- reached from: Basic Data > InterGodown Transfer; Maintenance > InterGodown Transfer; Maintenance > Godown Preferences > InterGodown Transfer
+- script size: 4233 lines; 29 events, 68 functions
+
+## Controls (3)
+
+- `tab_retrieve` (tab_retrieve)
+- `dw_saleinvrep` (u_dwstandard) dataobject `d_transferinvreport_full`
+- `dw_saleinvdetail` (u_dwstandard) dataobject `d_batchtransfer_detail`
+
+## Data
+
+- DataWindows: `d_IssueReqdetail_temp`, `d_OpenWholeSaleReturnDetail`, `d_WholeSaleDetail`, `d_batchtransfer_detail`, `d_godownwise_consumption`, `d_godownwise_itemreorder`, `d_greorderdetail`, `d_greorderdetail_and`, `d_groupallowedmoduleheader`, `d_item_transferqty`, `d_itemstockinfo`, `d_loosepurchasedetail`, `d_normalpurchasedetail`, `d_populatepurorder`, `d_populatesaleorder`, `d_quotationdetail`, `d_quotationheader`, `d_saletemplate_detail`, `d_sourcebasedtransfer`, `d_sourcebasedtransfer_and`, `d_transfer_approx_batchallocation_detail`, `d_transfer_detail`, `d_transferinfo`, `d_transferinvreport_full`, `d_transferrequisition_detail`, `d_transferrequisition_header`, `ddd_sourcegodownitems`, `ddd_sourcegodownitems_cat`
+- tables touched by embedded SQL: accountgodown, customer, godown, godowndetail, godownitemsetting, groupallowedgodown, groups, into, item, itemalert, itemcategory, itemsgroupcategory, saledetail, saleledger, supplier, theader, usergroups, workorder
+- stored procedures: deleteitemstockbatch, getitemavgprice, getitemreqqtyfortransfer, getitemstockbatch, getitemstocktotal, getmaxutn, locksaleinvoice, saleupdateitemstockbatch, updateactivitymonitor, updategodowndetail, updateitemstockbatch
+- global functions: f_drilldown_itemsearch, f_generateheaderinvcode, f_get_colprecision, f_getgroupcode, f_groupallowedgodowncount, f_groupgodownstrategy, f_newtableid, f_numberpreferences, f_rightexists, f_setcolumnstyle, f_stringpreferences, f_validatedw
+- windows opened: w_arg_account_godown, w_arg_categories_transfer, w_arg_cust, w_arg_customer_godown, w_arg_item_populate2, w_arg_item_populate_all_withoutgodown, w_arg_sdate, w_arg_sinvcode_linvcode, w_copysaleinvoicefrom, w_editpurchaseorderform, w_editquotation_posted_form, w_editsaleorder_form, w_itemtransferhistory, w_popup_itempriority_settings, w_popup_responsivesearch_selection, w_preview_invoices, w_preview_invoices2, w_printer_copies, w_salesmanpassword, w_savesaleastemplate, w_sourcebasedtransfer_stockperc, w_transfer_itemlist
+
+## Events and functions
+
+`w_transfer.ue_generate`, `w_transfer.ue_generate_godownreorderlevel`, `w_transfer.ue_generate_godownwise_consumption`, `w_transfer.ue_enableprint`, `w_transfer.ue_generate_sourcebased`, `w_transfer.ue_selectfirstrow`, `w_transfer.ue_enforcedefaultfocussettings`, `w_transfer.ue_setitemfocus`, `w_transfer.create`, `w_transfer.destroy`, `w_transfer.ue_save`, `w_transfer.ue_newform`, `w_transfer.ue_detail`, `w_transfer.ue_newitem`, `w_transfer.ue_deleteitem`, `w_transfer.close`, `w_transfer.ue_list`, `w_transfer.ue_print`, `w_transfer.ue_refreshddw`, `w_transfer.ue_new`, `w_transfer.ue_postopen`, `dw_detail.itemchanged`, `dw_detail.ue_dwnkey`, `dw_itemsdetail.ue_focusgodown`, `dw_itemsdetail.itemchanged`, `dw_itemsdetail.clicked`, `dw_itemsdetail.ue_focusqty`, `dw_itemsdetail.ue_dwnkey`, `dw_itemsdetail.ue_enterkey`, `w_transfer.duplicategodown`, `w_transfer.wf_visible`, `w_transfer.wf_locksaleinvoice`, `w_transfer.wf_locktransferinvoices`, `w_transfer.wf_setsaletype`, `w_transfer.wf_setsuppinfo`, `w_transfer.wf_updatesaleprice`, `w_transfer.wf_validatefullcode`, `w_transfer.wf_validategodown`, `w_transfer.wf_protectdw`, `w_transfer.wf_savastemplate`, `w_transfer.wf_setgodownoption`, `w_transfer.wf_getmaxdate`, `w_transfer.wf_grandtotal`, `w_transfer.wf_initmodify`, `w_transfer.wf_returnsaleinvoice`, `w_transfer.wf_validateitemnew`, `w_transfer.wf_iseditable`, `w_transfer.wf_selectprintreport`, `w_transfer.wf_print`, `w_transfer.wf_cleanupdetailrows`, `w_transfer.wf_assigndatawindowobjects`, `w_transfer.wf_customerinfo`, `w_transfer.wf_deleterows`, `w_transfer.wf_deletesaleinvoice`, `w_transfer.wf_fetchitemlist`, `w_transfer.wf_findfullcode`, `w_transfer.wf_genfullcode`, `w_transfer.wf_settransfertype`, `w_transfer.wf_inititeminfo`, `w_transfer.wf_validateitem`, `w_transfer.wf_allowtransfermodification`, `w_transfer.wf_getsalesstockinfo`, `w_transfer.wf_setiteminfo`, `w_transfer.wf_selectitembatches`, `w_transfer.wf_copyinvoice`, `w_transfer.wf_populate_transferrequisition`, `w_transfer.wf_show_itemalert`, `w_transfer.wf_is_postable`, `w_transfer.wf_retrievelistall`, `w_transfer.wf_retrievelist`, `w_transfer.wf_retrievelist_datelimit`, `w_transfer.wf_show_itemtransferhistory`, `w_transfer.wf_use_customer_associated_godown`, `w_transfer.wf_get_customer_associated_godown`, `w_transfer.wf_approximate_selectitembatches`, `w_transfer.wf_show_approx_batchallocation_detail`, `w_transfer.wf_validate_pcs`, `w_transfer.wf_populate_posted_quotation`, `w_transfer.wf_validateworkorder`, `w_transfer.wf_validatebatch`, `w_transfer.wf_set_batchinfo`, `w_transfer.wf_populate_purchaseorder`, `w_transfer.wf_populate_saleorder`, `w_transfer.wf_post_transfer`, `w_transfer.wf_post`, `w_transfer.wf_saveandpost`, `tab_retrieve.selectionchanged`, `dw_footer.losefocus`, `dw_footer.itemfocuschanged`, `dw_footer.itemerror`, `dw_detail.itemerror`, `dw_detail.itemfocuschanged`, `dw_itemsdetail.itemfocuschanged`, `dw_itemsdetail.rowfocuschanged`, `dw_itemsdetail.losefocus`, `dw_itemsdetail.itemerror`, `dw_itemsdetail.getfocus`
+
+Source: `recovered/scripts/transfer/w_transfer.pbs`

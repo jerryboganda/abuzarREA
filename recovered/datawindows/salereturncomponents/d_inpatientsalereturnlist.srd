@@ -1,0 +1,72 @@
+release 12.5;
+datawindow ( units=0 timer_interval=0 processing=1 color=80263581 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.documentname=""  print.orientation=0 print.margin.left=110 print.margin.right=110 print.margin.top=97 print.margin.bottom=97 print.paper.size=0 print.paper.source=0 grid.lines=0 selected.mouse=yes hidegrayline=no showbackcoloronxp=no)
+header(height=76 color="536870912" )
+summary(height=12 color="536870912" )
+footer(height=0 color="536870912" )
+detail(height=72 color="536870912" )
+table(column=(type=long updatewhereclause=yes name=code dbname="SRLedger.srinvcode"  )
+column=(type=char(60) updatewhereclause=yes name=customer dbname="Accounts.name"  )
+column=(type=datetime updatewhereclause=yes name=date dbname="SRLedger.date"  )
+column=(type=char(1) updatewhereclause=yes name=posted dbname="posted"  )
+column=(type=char(50) updatewhereclause=yes name=regno dbname="regno"  )
+column=(type=char(60) updatewhereclause=yes name=patient dbname="patient"  )
+column=(type=long updatewhereclause=yes name=admissioncode dbname="SRLedger.admissioncode"  )
+column=(type=char(60) updatewhereclause=yes name=postedby dbname="PostedBy"  )
+column=(type=char(60) updatewhereclause=yes name=modifiedby dbname="ModifiedBy"  )
+ retrieve="SELECT
+	srledger.srinvcode , 
+	accounts.name , 
+	srledger.date,     
+	posted = srledger.posted,
+	regno= patient.regno,
+	patient=patient.name,
+	srledger.admissioncode,
+	PostedBy = IsNull((Select username from users 
+					where dbo.srledger.postedby = dbo.users.usercode), ''),
+	ModifiedBy = IsNull((Select username from users 
+					where dbo.srledger.modifiedby = dbo.users.usercode), '')  
+FROM  srledger, 
+	 accounts,
+	 patientadmission,
+	 patient
+			
+WHERE ( dbo.srledger.admissioncode IS NOT NULL ) and
+	( dbo.srledger.srcatcode = 7 ) and
+	( dbo.srledger.saleinvcode IS NULL) and 
+	( srledger.custcode = accounts.acccode ) and 
+	( srledger.Posted IN (:as_Posted)) AND
+	( dbo.srledger.HeaderNo IS NULL OR
+		( dbo.srledger.HeaderNo IN 
+			(SELECT HeaderCode FROM GroupAllowedHeader 
+			WHERE GroupCode = :ai_GroupCode AND Module=:ai_Module)))  and
+	( dbo.srledger.admissioncode = dbo.patientadmission.admissioncode ) and
+	( dbo.patientadmission.patientcode = patient.patientcode )"
+  arguments=(("ai_srCatCode", number), ("as_Posted", stringlist), ("ai_groupcode", number), ("ai_module", number))
+)
+column(name=srledger_date band=header id=3 x="9" y="136" height="60" width="265" color="0" border="0" alignment="0" format="[shortdate] [time]" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+text(name=t_1 band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80263581" color="0" alignment="2" border="6" x="9" y="8" height="60" width="265" text="Code" )
+text(name=obj_3152685 band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80263581" color="0" alignment="2" border="6" x="283" y="8" height="60" width="325" text="Date" )
+text(name=obj_15983760 band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80263581" color="0" alignment="2" border="6" x="617" y="8" height="60" width="178" text="Posted" )
+text(name=t_4 band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80263581" color="0" alignment="2" border="6" x="805" y="8" height="60" width="361" text="Reg. No." )
+text(name=t_5 band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80263581" color="0" alignment="2" border="6" x="1175" y="8" height="60" width="1371" text="Patient" )
+text(name=customer_t band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80263581" color="0" alignment="2" border="6" x="2555" y="8" height="60" width="1006" text="customer" )
+text(name=t_2 band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80263581" color="0" alignment="2" border="6" x="3570" y="8" height="60" width="658" text="Posted By" )
+text(name=t_3 band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="2" background.color="80263581" color="0" alignment="2" border="6" x="4238" y="8" height="60" width="617" text="Modified By" )
+column(name=customer band=detail id=2 x="2555" y="4" height="64" width="1006" color="0" border="0" alignment="0" format="[general]" protect="0	1" edit.focusrectangle=no edit.autohscroll=yes edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=30 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=30 )
+column(name=code band=detail id=1 x="9" y="4" height="64" width="265" color="0" border="0" alignment="1" format="[general]" protect="0	1" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=10 )
+column(name=postedby band=detail id=8 x="3570" y="4" height="64" width="658" color="0" border="0" alignment="0" format="[general]" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=modifiedby band=detail id=9 x="4238" y="4" height="64" width="617" color="0" border="0" alignment="0" format="[general]" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=date band=detail id=3 x="283" y="4" height="64" width="325" color="0" border="0" alignment="0" format="dd/mm/yy" protect="0	1" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=20 )
+column(name=posted band=detail id=4 x="617" y="4" height="64" width="178" color="0" border="0" alignment="2" format="[general]" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=regno band=detail id=5 x="805" y="4" height="60" width="361" color="0" border="0" alignment="0" format="[general]" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=patient band=detail id=6 x="1175" y="4" height="60" width="1371" color="0" border="0" alignment="0" format="[general]" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+htmltable(border="0" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" generateJavaScript="1" pagingMethod=0 )
+xhtmlgen() cssgen()
+xmlgen()
+xsltgen()
+jsgen()
+export.xml(metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 )
+export.xhtml()

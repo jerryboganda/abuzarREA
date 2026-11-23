@@ -1,0 +1,107 @@
+release 12.5;
+datawindow ( units=0 timer_interval=0 processing=1 color=80263581 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.printername=""  print.documentname=""  print.orientation=0 print.margin.left=110 print.margin.right=110 print.margin.top=97 print.margin.bottom=97 print.paper.size=0 print.paper.source=0 print.canusedefaultprinter=yes grid.lines=0 selected.mouse=yes hidegrayline=no showbackcoloronxp=no)
+header(height=80 color="536870912" )
+summary(height=0 color="536870912" )
+footer(height=0 color="536870912" )
+detail(height=68 color="536870912" )
+table(column=(type=long updatewhereclause=yes name=code dbname="ServiceOHeader.serviceocode"  )
+column=(type=datetime updatewhereclause=yes name=date dbname="ServiceOHeader.date"  )
+column=(type=char(1) updatewhereclause=yes name=posted dbname="ServiceOHeader.posted"  )
+column=(type=char(100) updatewhereclause=yes name=remarks dbname="ServiceOHeader.remarks"  )
+column=(type=long updatewhereclause=yes name=acccode dbname="acccode"  )
+column=(type=char(60) updatewhereclause=yes name=customer_name dbname="Accounts.name"  )
+column=(type=char(1) updatewhereclause=yes name=posted dbname="posted"  )
+column=(type=char(1) updatewhereclause=yes name=cancelled dbname="cancelled" 
+ values="Yes	Y/No	N/"  )
+column=(type=long updatewhereclause=yes name=patientcode dbname="patientcode"  )
+column=(type=char(50) updatewhereclause=yes name=regno dbname="RegNo"  )
+column=(type=char(60) updatewhereclause=yes name=patientname dbname="PatientName"  )
+column=(type=char(100) updatewhereclause=yes name=status dbname="Status"  )
+column=(type=char(25) updatewhereclause=yes name=invoiceno dbname="InvoiceNo"  )
+column=(type=char(60) updatewhereclause=yes name=postedby dbname="PostedBy"  )
+column=(type=char(60) updatewhereclause=yes name=modifiedby dbname="ModifiedBy"  )
+column=(type=decimal(2) updatewhereclause=yes name=estamt dbname="NetAmt"  )
+column=(type=decimal(2) updatewhereclause=yes name=receiptamt dbname="ReceiptAmt"  )
+column=(type=decimal(2) updatewhereclause=yes name=advance dbname="Advance"  )
+ retrieve="SELECT  
+	serviceoheader.serviceocode , 
+	serviceoheader.date , 
+	serviceoheader.posted, 	
+	serviceoheader.remarks , 
+	acccode = accounts.acccode,
+	accounts.name,
+	posted = serviceoheader.posted,
+	cancelled = serviceoheader.cancelled,
+	patientcode = serviceoheader.PatientCode,
+	RegNo = (SELECT P.Regno FROM Patient P WHERE P.PatientCode=serviceoheader.PatientCode),
+	PatientName = (SELECT P.Name FROM Patient P WHERE P.PatientCode=serviceoheader.PatientCode),
+	Status=(SELECT SS.Name FROM ServiceOrderStatus SS WHERE SS.ServiceOrderStatusCode = serviceoheader.ServiceOrderStatusCode),
+	InvoiceNo = ISNULL(LTRIM(RTRIM(STR(serviceoheader.ServiceInvCode, 12))), '') + ISNULL('-' + LTRIM(RTRIM(STR(serviceoheader.SaleInvCode, 12))), ''),
+	PostedBy = IsNull((Select username from users 
+				where dbo.serviceoheader.postedby = dbo.users.usercode), ''),
+	ModifiedBy = IsNull((Select username from users 
+				where dbo.serviceoheader.modifiedby = dbo.users.usercode), ''),
+	NetAmt = 
+		ISNULL((SELECT NetAmt=Round(SUM(D.Qty * (D.Price - D.ServiceFlatDisc) * (1 - D.DiscPerc * 0.01) * (1 - H.DiscPerc * 0.01)) - H.FlatDisc + H.MiscCharges, 0) + 
+			Round(
+			Sum((D.qty * (D.price - D.ServiceFlatDisc) * (1 - D.discperc * 0.01)) * 0.01* D.servicegstPerc ) 			+
+			Sum(D.qty * D.serviceflattax ) +
+			Round((Sum(D.qty * (D.price - D.ServiceFlatDisc) * (1 - D.discperc * 0.01) * (1 - H.discperc * 0.01)) - H.flatdisc )*0.01*H.serviceinvgstperc,2), 0)
+		FROM ServiceODetail D, ServiceOHeader H 
+		WHERE H.ServiceOCode = serviceoheader.ServiceOCode AND H.ServiceOCode = D.ServiceOCode
+		GROUP BY H.ServiceOCode, H.FlatDisc, H.MiscCharges, H.serviceinvgstperc), 0) + 
+		CASE WHEN (SELECT COUNT(IH.IssueInvCode) FROM IssueHeader IH WHERE IH.ServiceOCode = serviceoheader.ServiceOCode) > 0 THEN
+			ISNULL((SELECT NetAmt=SUM(D.Qty * D.Price)
+				FROM IssueDetail D, IssueHeader H 
+				WHERE H.ServiceOCode = serviceoheader.ServiceOCode AND H.IssueInvCode = D.IssueInvCode), 0)
+		ELSE
+			ISNULL((SELECT NetAmt=SUM(D.Qty * D.SalePrice)
+				FROM IssueReqDetail D, IssueReqHeader H 
+				WHERE H.ServiceOCode = serviceoheader.ServiceOCode AND H.IssueReqInvCode = D.IssueReqInvCode), 0)
+		END,
+	ReceiptAmt = ISNULL((SELECT SUM(R.ReceiptAmt) FROM SOReceipt R WHERE ServiceOCode = serviceoheader.ServiceOCode), 0),
+	Advance=ISNULL((SELECT Adv=SUM(D.CashReceived) + H.CashReceived FROM ServiceODetail D, ServiceOHeader H WHERE H.ServiceOCode = serviceoheader.ServiceOCode AND H.ServiceOCode = D.ServiceOCode GROUP BY H.ServiceOCode, H.CashReceived), 0)
+FROM  
+	accounts , 
+	serviceoheader
+WHERE  
+	serviceOheader.custcode = accounts.acccode
+Order By 
+	serviceocode desc"
+ )
+text(name=c_sno_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="0" alignment="2" border="6" x="9" y="12" height="64" width="119" text="No" html.valueishtml="0" )
+text(name=code_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="2" background.color="80269524" color="0" alignment="2" border="6" x="137" y="12" height="64" width="288" text="Code" html.valueishtml="0" )
+text(name=invoiceno_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="2" background.color="67108864" color="0" alignment="2" border="6" x="434" y="12" height="64" width="347" text="Invoice No" html.valueishtml="0" )
+text(name=date_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="2" background.color="80269524" color="0" alignment="2" border="6" x="791" y="12" height="64" width="375" text="Date" html.valueishtml="0" )
+text(name=posted_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="2" background.color="80269524" color="0" alignment="2" border="6" x="1175" y="12" height="64" width="201" text="Posted" html.valueishtml="0" )
+text(name=cancelled_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="2" background.color="67108864" color="0" alignment="2" border="6" x="1385" y="12" height="64" width="288" text="Cancelled" html.valueishtml="0" )
+text(name=customer_name_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="2" background.color="80269524" color="0" alignment="2" border="6" x="1682" y="12" height="64" width="974" text="Customer Name" html.valueishtml="0" )
+text(name=estamt_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="2" background.color="80263581" color="0" alignment="2" border="6" x="2665" y="12" height="64" width="375" text="EST. Amount" html.valueishtml="0" )
+text(name=receiptamt_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="2" background.color="67108864" color="0" alignment="2" border="6" x="3049" y="12" height="64" width="462" text="Receipt Amount" html.valueishtml="0" )
+text(name=regno_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="2" background.color="67108864" color="0" alignment="2" border="6" x="3520" y="12" height="64" width="443" text="Reg. No." html.valueishtml="0" )
+text(name=patientname_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="2" background.color="67108864" color="0" alignment="2" border="6" x="3973" y="12" height="64" width="919" text="	f_StringPreferences('patientcaptioninsale')" html.valueishtml="0" )
+text(name=status_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="2" background.color="67108864" color="0" alignment="2" border="6" x="4901" y="12" height="64" width="485" text="Status" html.valueishtml="0" )
+text(name=modifiedby_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-10" font.pitch="2" font.weight="400" background.mode="2" background.color="67108864" color="0" alignment="2" border="6" x="5394" y="12" height="64" width="667" text="Modified By" html.valueishtml="0" )
+column(name=code visible="1" band=detail id=1 x="137" y="4" height="60" width="288" color="0" border="0" alignment="0" format="[general]" protect="0	1" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="0" background.color="16777215	if(posted='Y', if(receiptamt >= estamt, RGB(75,200,75), RGB(150,100,100)), if(receiptamt > 0, RGB(150,150,150), RGB(255,255,255)))" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+compute(name=c_sno visible="1" band=detail font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="0" background.color="16777215	if(posted='Y', if(receiptamt >= estamt, RGB(75,200,75), RGB(150,100,100)), if(receiptamt > 0, RGB(150,150,150), RGB(255,255,255)))" color="0" x="9" y="4" height="60" width="119" format="[GENERAL]" expression="GetRow()" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+column(name=date visible="1" band=detail id=2 x="791" y="4" height="60" width="375" color="0" border="0" alignment="0" format="dd/mm/yyyy" protect="0	1" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="0" background.color="16777215	if(posted='Y', if(receiptamt >= estamt, RGB(75,200,75), RGB(150,100,100)), if(receiptamt > 0, RGB(150,150,150), RGB(255,255,255)))" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=customer_name visible="1" band=detail id=6 x="1682" y="4" height="60" width="974" color="0" border="0" alignment="0" format="[general]" protect="0	1" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="0" background.color="16777215	if(posted='Y', if(receiptamt >= estamt, RGB(75,200,75), RGB(150,100,100)), if(receiptamt > 0, RGB(150,150,150), RGB(255,255,255)))" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=posted visible="1" band=detail id=3 x="1175" y="4" height="60" width="201" color="0" border="0" alignment="2" format="[general]" protect="0	1" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="0" background.color="16777215	if(posted='Y', if(receiptamt >= estamt, RGB(75,200,75), RGB(150,100,100)), if(receiptamt > 0, RGB(150,150,150), RGB(255,255,255)))" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=regno visible="1" band=detail id=10 x="3520" y="4" height="60" width="443" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="0" background.color="16777215	if(posted='Y', if(receiptamt >= estamt, RGB(75,200,75), RGB(150,100,100)), if(receiptamt > 0, RGB(150,150,150), RGB(255,255,255)))" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=patientname visible="1" band=detail id=11 x="3973" y="4" height="60" width="919" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="0" background.color="16777215	if(posted='Y', if(receiptamt >= estamt, RGB(75,200,75), RGB(150,100,100)), if(receiptamt > 0, RGB(150,150,150), RGB(255,255,255)))" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=status visible="1" band=detail id=12 x="4901" y="4" height="60" width="485" color="0" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="0" background.color="16777215	if(posted='Y', if(receiptamt >= estamt, RGB(75,200,75), RGB(150,100,100)), if(receiptamt > 0, RGB(150,150,150), RGB(255,255,255)))" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=estamt visible="1" band=detail id=16 x="2665" y="4" height="60" width="375" color="0" border="0" alignment="1" format="###,###,##0.00" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="0" background.color="16777215	if(posted='Y', if(receiptamt >= estamt, RGB(75,200,75), RGB(150,100,100)), if(receiptamt > 0, RGB(150,150,150), RGB(255,255,255)))" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=invoiceno visible="1" band=detail id=13 x="434" y="4" height="60" width="347" color="0" border="0" alignment="2" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="0" background.color="16777215	if(posted='Y', if(receiptamt >= estamt, RGB(75,200,75), RGB(150,100,100)), if(receiptamt > 0, RGB(150,150,150), RGB(255,255,255)))" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=receiptamt visible="1" band=detail id=17 x="3049" y="4" height="60" width="462" color="0" border="0" alignment="1" format="###,###,##0.00" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="0" background.color="16777215	if(posted='Y', if(receiptamt >= estamt, RGB(75,200,75), RGB(150,100,100)), if(receiptamt > 0, RGB(150,150,150), RGB(255,255,255)))" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=modifiedby visible="1" band=detail id=15 x="5394" y="4" height="60" width="667" color="0" border="0" alignment="0" format="[general]" protect="0	1" html.valueishtml="0" edit.autohscroll=no edit.autoselect=yes edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="0" background.color="16777215	if(posted='Y', if(receiptamt >= estamt, RGB(75,200,75), RGB(150,100,100)), if(receiptamt > 0, RGB(150,150,150), RGB(255,255,255)))" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=cancelled visible="1" band=detail id=8 x="1385" y="4" height="60" width="288" color="0" border="0" alignment="2" format="[general]" html.valueishtml="0" ddlb.allowedit=no ddlb.autohscroll=no ddlb.imemode=0 ddlb.limit=0 ddlb.showlist=no ddlb.sorted=no ddlb.useasborder=no ddlb.vscrollbar=no ddlb.nilisnull=no ddlb.required=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="0" background.color="16777215	if(posted='Y', if(receiptamt >= estamt, RGB(75,200,75), RGB(150,100,100)), if(receiptamt > 0, RGB(150,150,150), RGB(255,255,255)))" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+htmltable(border="0" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" encodeSelfLinkArgs="1" generateJavaScript="1" netscapeLayers="0" pagingMethod=0 )
+xhtmlgen() cssgen(sessionSpecific="0" )
+xmlgen(inline="0" )
+xsltgen()
+jsgen()
+export.xml(headGroups="1" includewhitespace="0" metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 distill.customPostScript="0" xslfop.print="0" )
+export.xhtml()

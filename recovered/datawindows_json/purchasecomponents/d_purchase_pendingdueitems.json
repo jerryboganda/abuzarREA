@@ -1,0 +1,455 @@
+{
+ "release": "12.5",
+ "datawindow": {
+  "units": "0",
+  "timer_interval": "0",
+  "processing": "1",
+  "color": "67108864",
+  "brushmode": "0",
+  "transparency": "0",
+  "gradient.color": "8421504",
+  "gradient.transparency": "0",
+  "gradient.angle": "0",
+  "gradient.repetition.mode": "0",
+  "gradient.repetition.count": "0",
+  "gradient.repetition.length": "100",
+  "gradient.focus": "0",
+  "gradient.scale": "100",
+  "gradient.spread": "100",
+  "picture.mode": "0",
+  "picture.scale.x": "100",
+  "picture.scale.y": "100",
+  "picture.clip.left": "0",
+  "picture.clip.right": "0",
+  "picture.clip.top": "0",
+  "picture.clip.bottom": "0",
+  "picture.blur": "0",
+  "picture.transparency": "0",
+  "print.printername": "",
+  "print.documentname": "",
+  "print.orientation": "0",
+  "print.margin.left": "110",
+  "print.margin.right": "110",
+  "print.margin.top": "96",
+  "print.margin.bottom": "96",
+  "print.paper.size": "0",
+  "print.paper.source": "0",
+  "print.canusedefaultprinter": "yes",
+  "grid.lines": "0",
+  "selected.mouse": "yes",
+  "hidegrayline": "no",
+  "showbackcoloronxp": "no"
+ },
+ "bands": {
+  "header": {
+   "height": "80",
+   "color": "536870912"
+  },
+  "summary": {
+   "height": "0",
+   "color": "536870912"
+  },
+  "footer": {
+   "height": "0",
+   "color": "536870912"
+  },
+  "detail": {
+   "height": "92",
+   "color": "536870912"
+  }
+ },
+ "table": {
+  "columns": [
+   {
+    "type": "long",
+    "key": "yes",
+    "update": "yes",
+    "updatewhereclause": "yes",
+    "name": "icode",
+    "dbname": "ICode"
+   },
+   {
+    "type": "char(60)",
+    "update": "yes",
+    "updatewhereclause": "yes",
+    "name": "itemname",
+    "dbname": "ItemName"
+   },
+   {
+    "type": "long",
+    "update": "yes",
+    "updatewhereclause": "yes",
+    "name": "gcode",
+    "dbname": "GCode"
+   },
+   {
+    "type": "decimal(4)",
+    "update": "yes",
+    "updatewhereclause": "yes",
+    "name": "qty",
+    "dbname": "Qty"
+   }
+  ],
+  "retrieve": "SELECT \n\tICode = T.icode, \n\tItemName = I.name, \n\tGCode = T.gcode, \n\tQty = ISNULL(SUM(T.looseqty - T.SatisfiedQty), 0)\nFROM\n\t(SELECT \n\t\tSl.SaleInvcode, \n\t\tSd.icode, \n\t\tSd.gcode, \n\t\tSd.RowId, \n\t\tSd.looseqty,\n\t\tSatisfiedQty = IsNull ( (select sum(dsd.duesatisfyqty) from duesatisfyheader dsh, duesatisfydetail dsd where dsh.saleinvcode = sl.saleinvcode And dsh.duesatisfycode = dsd.duesatisfycode And dsd.icode = sd.icode And dsd.salerowid = sd.rowid )  ,  0  )\n\tFROM\n\t\tSaleLedger Sl,\n\t\tSaleDetail Sd\n\tWHERE\n\t\tsl.saleinvcode = sd.saleinvcode And  \n\t\tsl.Posted = 'Y'  And\n\t\tsl.Date Between :ad_startdate And :ad_enddate And\n\t\tsd.Due = 'D') T,\n\tItem I\nWHERE\n\tI.ICode = T.ICode\nGROUP BY\n\tT.icode, \n\tI.name, \n\tT.gcode\nHAVING \n\tISNULL(SUM(T.looseqty - T.SatisfiedQty), 0) > 0\nORDER BY \n\tItemName",
+  "update": "Item",
+  "updatewhere": "1",
+  "updatekeyinplace": "no",
+  "arguments": {
+   "_items": [
+    {
+     "_items": [
+      "ad_startdate",
+      "datetime"
+     ]
+    },
+    {
+     "_items": [
+      "ad_enddate",
+      "datetime"
+     ]
+    }
+   ]
+  }
+ },
+ "objects": [
+  {
+   "name": "icode_t",
+   "visible": "1",
+   "band": "header",
+   "font.charset": "0",
+   "font.face": "Arial",
+   "font.family": "2",
+   "font.height": "-10",
+   "font.pitch": "2",
+   "font.weight": "400",
+   "background.mode": "1",
+   "background.color": "536870912",
+   "color": "33554432",
+   "alignment": "2",
+   "border": "0",
+   "x": "9",
+   "y": "8",
+   "height": "64",
+   "width": "329",
+   "text": "Icode",
+   "html.valueishtml": "0",
+   "type": "text"
+  },
+  {
+   "name": "itemname_t",
+   "visible": "1",
+   "band": "header",
+   "font.charset": "0",
+   "font.face": "Arial",
+   "font.family": "2",
+   "font.height": "-10",
+   "font.pitch": "2",
+   "font.weight": "400",
+   "background.mode": "1",
+   "background.color": "536870912",
+   "color": "33554432",
+   "alignment": "2",
+   "border": "0",
+   "x": "347",
+   "y": "8",
+   "height": "64",
+   "width": "1673",
+   "text": "Itemname",
+   "html.valueishtml": "0",
+   "type": "text"
+  },
+  {
+   "name": "gcode_t",
+   "visible": "1",
+   "band": "header",
+   "font.charset": "0",
+   "font.face": "Arial",
+   "font.family": "2",
+   "font.height": "-10",
+   "font.pitch": "2",
+   "font.weight": "400",
+   "background.mode": "1",
+   "background.color": "536870912",
+   "color": "33554432",
+   "alignment": "2",
+   "border": "0",
+   "x": "2030",
+   "y": "8",
+   "height": "64",
+   "width": "329",
+   "text": "Gcode",
+   "html.valueishtml": "0",
+   "type": "text"
+  },
+  {
+   "name": "qty_t",
+   "visible": "1",
+   "band": "header",
+   "font.charset": "0",
+   "font.face": "Arial",
+   "font.family": "2",
+   "font.height": "-10",
+   "font.pitch": "2",
+   "font.weight": "400",
+   "background.mode": "1",
+   "background.color": "536870912",
+   "color": "33554432",
+   "alignment": "2",
+   "border": "0",
+   "x": "2368",
+   "y": "8",
+   "height": "64",
+   "width": "329",
+   "text": "Qty",
+   "html.valueishtml": "0",
+   "type": "text"
+  },
+  {
+   "name": "icode",
+   "visible": "1",
+   "band": "detail",
+   "id": "1",
+   "x": "9",
+   "y": "8",
+   "height": "76",
+   "width": "329",
+   "color": "33554432",
+   "border": "0",
+   "alignment": "1",
+   "format": "[general]",
+   "html.valueishtml": "0",
+   "edit.focusrectangle": "no",
+   "edit.autohscroll": "yes",
+   "edit.autoselect": "yes",
+   "edit.autovscroll": "no",
+   "edit.case": "any",
+   "edit.codetable": "no",
+   "edit.displayonly": "no",
+   "edit.hscrollbar": "no",
+   "edit.imemode": "0",
+   "edit.limit": "0",
+   "edit.password": "no",
+   "edit.vscrollbar": "no",
+   "edit.validatecode": "no",
+   "edit.nilisnull": "no",
+   "edit.required": "no",
+   "edit.useellipsis": "no",
+   "criteria.required": "no",
+   "criteria.override_edit": "no",
+   "crosstab.repeat": "no",
+   "background.mode": "1",
+   "background.color": "536870912",
+   "font.charset": "0",
+   "font.face": "Arial",
+   "font.family": "2",
+   "font.height": "-10",
+   "font.pitch": "2",
+   "font.weight": "400",
+   "tabsequence": "0",
+   "type": "column"
+  },
+  {
+   "name": "itemname",
+   "visible": "1",
+   "band": "detail",
+   "id": "2",
+   "x": "347",
+   "y": "8",
+   "height": "76",
+   "width": "1673",
+   "color": "33554432",
+   "border": "0",
+   "alignment": "0",
+   "format": "[general]",
+   "html.valueishtml": "0",
+   "edit.focusrectangle": "no",
+   "edit.autohscroll": "yes",
+   "edit.autoselect": "yes",
+   "edit.autovscroll": "no",
+   "edit.case": "any",
+   "edit.codetable": "no",
+   "edit.displayonly": "no",
+   "edit.hscrollbar": "no",
+   "edit.imemode": "0",
+   "edit.limit": "60",
+   "edit.password": "no",
+   "edit.vscrollbar": "no",
+   "edit.validatecode": "no",
+   "edit.nilisnull": "no",
+   "edit.required": "no",
+   "edit.useellipsis": "no",
+   "criteria.required": "no",
+   "criteria.override_edit": "no",
+   "crosstab.repeat": "no",
+   "background.mode": "1",
+   "background.color": "536870912",
+   "font.charset": "0",
+   "font.face": "Arial",
+   "font.family": "2",
+   "font.height": "-10",
+   "font.pitch": "2",
+   "font.weight": "400",
+   "tabsequence": "0",
+   "type": "column"
+  },
+  {
+   "name": "gcode",
+   "visible": "1",
+   "band": "detail",
+   "id": "3",
+   "x": "2030",
+   "y": "8",
+   "height": "76",
+   "width": "329",
+   "color": "33554432",
+   "border": "0",
+   "alignment": "1",
+   "format": "[general]",
+   "html.valueishtml": "0",
+   "edit.focusrectangle": "no",
+   "edit.autohscroll": "yes",
+   "edit.autoselect": "yes",
+   "edit.autovscroll": "no",
+   "edit.case": "any",
+   "edit.codetable": "no",
+   "edit.displayonly": "no",
+   "edit.hscrollbar": "no",
+   "edit.imemode": "0",
+   "edit.limit": "0",
+   "edit.password": "no",
+   "edit.vscrollbar": "no",
+   "edit.validatecode": "no",
+   "edit.nilisnull": "no",
+   "edit.required": "no",
+   "edit.useellipsis": "no",
+   "criteria.required": "no",
+   "criteria.override_edit": "no",
+   "crosstab.repeat": "no",
+   "background.mode": "1",
+   "background.color": "536870912",
+   "font.charset": "0",
+   "font.face": "Arial",
+   "font.family": "2",
+   "font.height": "-10",
+   "font.pitch": "2",
+   "font.weight": "400",
+   "tabsequence": "0",
+   "type": "column"
+  },
+  {
+   "name": "qty",
+   "visible": "1",
+   "band": "detail",
+   "id": "4",
+   "x": "2368",
+   "y": "8",
+   "height": "76",
+   "width": "329",
+   "color": "33554432",
+   "border": "0",
+   "alignment": "1",
+   "format": "[general]",
+   "html.valueishtml": "0",
+   "edit.focusrectangle": "no",
+   "edit.autohscroll": "yes",
+   "edit.autoselect": "yes",
+   "edit.autovscroll": "no",
+   "edit.case": "any",
+   "edit.codetable": "no",
+   "edit.displayonly": "no",
+   "edit.hscrollbar": "no",
+   "edit.imemode": "0",
+   "edit.limit": "0",
+   "edit.password": "no",
+   "edit.vscrollbar": "no",
+   "edit.validatecode": "no",
+   "edit.nilisnull": "no",
+   "edit.required": "no",
+   "edit.useellipsis": "no",
+   "criteria.required": "no",
+   "criteria.override_edit": "no",
+   "crosstab.repeat": "no",
+   "background.mode": "1",
+   "background.color": "536870912",
+   "font.charset": "0",
+   "font.face": "Arial",
+   "font.family": "2",
+   "font.height": "-10",
+   "font.pitch": "2",
+   "font.weight": "400",
+   "tabsequence": "0",
+   "type": "column"
+  }
+ ],
+ "extras": [
+  {
+   "type": "htmltable",
+   "props": {
+    "border": "1"
+   }
+  },
+  {
+   "type": "htmlgen",
+   "props": {
+    "clientComputedFields": "1",
+    "clientEvents": "1",
+    "clientFormatting": "0",
+    "clientScriptable": "0",
+    "clientValidation": "1",
+    "encodeSelfLinkArgs": "1",
+    "generateJavaScript": "1",
+    "netscapeLayers": "0",
+    "pagingMethod": "0"
+   }
+  },
+  {
+   "type": "xhtmlgen",
+   "props": {}
+  },
+  {
+   "type": "cssgen",
+   "props": {
+    "sessionSpecific": "0"
+   }
+  },
+  {
+   "type": "xmlgen",
+   "props": {
+    "inline": "0"
+   }
+  },
+  {
+   "type": "xsltgen",
+   "props": {}
+  },
+  {
+   "type": "jsgen",
+   "props": {}
+  },
+  {
+   "type": "export.xml",
+   "props": {
+    "headGroups": "1",
+    "includewhitespace": "0",
+    "metadatatype": "0",
+    "savemetadata": "0"
+   }
+  },
+  {
+   "type": "import.xml",
+   "props": {}
+  },
+  {
+   "type": "export.pdf",
+   "props": {
+    "method": "0",
+    "distill.customPostScript": "0",
+    "xslfop.print": "0"
+   }
+  },
+  {
+   "type": "export.xhtml",
+   "props": {}
+  }
+ ]
+}

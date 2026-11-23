@@ -1,0 +1,124 @@
+CREATE  PROCEDURE SP_GodownItemOpeningStock 
+	@l_date datetime, 
+	@l_gcode INT, 
+	@l_icode INT, 
+	@l_godownqty  NUMERIC(15, 4) output  AS
+
+Declare @l_purqty NUMERIC(15, 4), @l_purretqty NUMERIC(15, 4),
+	@l_saleqty NUMERIC(15, 4), @l_saleretqty NUMERIC(15, 4),
+	@l_satisfyqty NUMERIC(15, 4), @l_transferqty_increase NUMERIC(15, 4),
+	@l_transferqty_decrease NUMERIC(15, 4), @l_issueqty NUMERIC(15, 4),
+	@l_Receiptqty NUMERIC(15, 4), @l_Adjqty NUMERIC(15, 4)
+	
+/*************************** Purchase *********************************/
+select @l_purqty  = /*(select IsNull(sum(purdetail.looseqty + purdetail.packqty * purdetail.packunits + (Case When purledger.purcatcode IN (3, 7, 8) Then purdetail.bonusqty Else purdetail.bonusqty * purdetail.packunits End)), 0)*/
+			(Select IsNull(sum(Case When purledger.purcatcode IN (3, 7, 8)  THEN purdetail.looseqty + (purdetail.packqty * purdetail.packunits) + purdetail.bonusqty
+			Else  purdetail.looseqty + (purdetail.packqty * purdetail.packunits) + (purdetail.bonusqty * purdetail.packunits) END),0)
+		     from   purledger, 
+			    purdetail
+		     where  purledger.purinvcode = purdetail.purinvcode and
+			    purdetail.gcode = @l_gcode and 
+	 	   	    purdetail.icode = @l_icode and 
+			    purledger.posted = 'Y' and 		
+	 	   	    purledger.postdate < @l_date ) 
+
+	
+
+/**************************** Purchase Return *********************************/
+Select @l_purretqty = (select	IsNull(sum(prdetail.looseqty + prdetail.packqty * prdetail.packunits + prdetail.bonusqty), 0)
+		       from	prledger, 
+				prdetail  
+		       where	prledger.prinvcode = prdetail.prinvcode and
+	             		prdetail.gcode = @l_gcode and 
+	             		prdetail.icode = @l_icode and 
+				prledger.posted = 'Y' and
+	 	     		prledger.postdate < @l_date )
+
+/***************************** Sale from Godown *************************************/
+select @l_saleqty = (select 	IsNull( Sum( saledetail.looseqty + saledetail.bonusqty + saledetail.packqty * saledetail.packunits), 0)
+				/*date = case when saledetail.Due = 'S' then saledetail.satisfieddate else saleledger.date end*/
+		     from   	saleledger, 
+				saledetail
+		     where  	saleledger.saleinvcode = saledetail.saleinvcode and
+		   		saledetail.gcode = @l_gcode and 
+	 	   		saledetail.icode = @l_icode and 
+				saledetail.Due IS Null and 
+				/*saleledger.posted = 'Y' and*/
+	 	   		saleledger.date < @l_date) 
+	 
+/******************************* Sale Return to Godown **********************************/
+Select @l_saleretqty = (select  IsNull( Sum( srdetail.looseqty + srdetail.bonusqty + srdetail.packqty * srdetail.packunits), 0) 
+		     	from    srledger, 
+				srdetail  
+
+		     	where   srledger.srinvcode = srdetail.srinvcode and
+				srdetail.gcode = @l_gcode and 
+	             		srdetail.icode = @l_icode and 
+				srledger.posted = 'Y' and
+				srledger.postdate < @l_date )
+
+/********************************** Satisfy Due *****************************************/
+Select @l_satisfyqty = (select IsNull(sum(DueSatisfydetail.duesatisfyqty), 0)
+			from   DueSatisfyHeader,
+			       DueSatisfydetail
+			where  DueSatisfyHeader.DueSatisfyCode = DueSatisfyDetail.DueSatisfyCode and	
+			       DueSatisfyDetail.gcode = @l_gcode and 
+			       DueSatisfyDetail.icode = @l_icode and 	
+			       DueSatisfyHeader.DueSatisfydate < @l_date )
+
+/*============Increase in Qty due to Transfer===================*/
+Select @l_transferqty_increase = (select IsNull(sum(tdetail.qty), 0)
+			from   THeader,
+			       Tdetail
+			where  THeader.TransCode = TDetail.TransCode and	
+			       THeader.Dgcode = @l_gcode and 	
+			       TDetail.icode = @l_icode and 
+			       THeader.date < @l_date and
+			       THeader.Posted = 'Y' )
+
+/************************** Decrease in Qty due to Transfer ****************************/
+Select @l_transferqty_decrease = (select IsNull(sum(tdetail.qty), 0)
+			from   THeader,
+			       Tdetail
+			where  THeader.TransCode = TDetail.TransCode and	
+			       THeader.Sgcode = @l_gcode and 	
+			       TDetail.icode = @l_icode and 	
+			       THeader.date < @l_date and
+			       THeader.Posted = 'Y' )
+ 
+/************************************** Issue *********************************************/
+Select @l_issueqty = (select IsNull(sum(Issuedetail.qty), 0)
+			from   IssueHeader,
+			       IssueDetail
+			where  IssueHeader.date < @l_date and
+                               IssueHeader.IssueInvCode = IssueDetail.IssueinvCode and	
+			       IssueDetail.gcode = @l_gcode and
+			       IssueDetail.icode = @l_icode) 
+
+
+/************************************* Receipt *****************************************/
+Select @l_receiptqty = (select IsNull(sum(Receiptdetail.qty), 0)
+			from   ReceiptHeader,
+			       ReceiptDetail
+			where  ReceiptHeader.date < @l_date and
+                               ReceiptHeader.ReceiptInvCode = ReceiptDetail.ReceiptinvCode and	
+			       ReceiptDetail.gcode = @l_gcode and 
+			       ReceiptDetail.icode = @l_icode AND
+				ReceiptHeader.posted = 'Y')
+
+/************************************* Stock Adjustments *************************************/
+Select @l_adjqty = (select IsNull(sum(	CASE AdjCatCode 
+					WHEN 1 THEN Adjdetail.Looseqty
+					ELSE -Adjdetail.Looseqty END), 0)
+			from   AdjHeader,
+			       AdjDetail
+			where  AdjHeader.date < @l_date and
+                               AdjHeader.AdjCode = AdjDetail.AdjCode and
+			       AdjDetail.gcode = @l_gcode and 
+			       AdjDetail.icode = @l_icode AND
+				AdjHeader.posted = 'Y')
+
+/********************************* Get the sum up value ********************************/
+Select @l_godownqty  = @l_purqty  + @l_saleretqty  - @l_issueqty - @l_purretqty - @l_saleqty - @l_satisfyqty + @l_Receiptqty + @l_Adjqty + @l_transferqty_Increase - @l_transferqty_decrease
+/*---------end-------------------------*/
+--Select balance = @l_godownqty, purchase = @l_purqty,salereturn = @l_saleretqty, purchasereturn = @l_purretqty, sale = @l_saleqty, satisfy = @l_satisfyqty

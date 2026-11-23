@@ -1,0 +1,65 @@
+// window w_visitstatus_form (eprescriptionbasics)  ancestor: w_single_entry
+
+// w_visitstatus_form.wf_duplicatename(string as_name) returns boolean
+	long ll_count
+	boolean b_flag
+	as_name = trim(as_name)
+	SQL SELECT count ( *) INTO :ll_count FROM Symptom WHERE Symptom.name =:as_name USING sqlca;
+	if ll_count > 0 then
+		b_flag = true
+	end if
+	return b_flag
+
+// w_visitstatus_form.create() returns 0 [event]
+	call super::create
+
+// w_visitstatus_form.destroy() returns 0 [event]
+	call super::destroy
+	if isvalid(this.menuid) then
+		destroy this.menuid
+	end if
+
+// w_visitstatus_form.activate() returns long [event]
+	long ancestorreturnvalue
+	ancestorreturnvalue = super::activate()
+	this.windowstate = maximized!
+	setredraw(true)
+	return ::message.returnvalue
+
+// w_visitstatus_form.open() returns long [event]
+	long ancestorreturnvalue
+	ancestorreturnvalue = super::open()
+	this.is_tablename = "VisitStatus"
+	return ::message.returnvalue
+
+// dw_detail.itemchanged(long row, dwobject dwo, string data) returns long [event]
+	long ancestorreturnvalue
+	ancestorreturnvalue = super::itemchanged(row, dwo, data)
+	choose case dwo.name
+	case "name"
+		if wf_duplicatename(data) then
+			messagebox("Name Validation", "Duplication Name Error~n~rPlease Choose Some Other Name")
+			return 1
+		end if
+	end choose
+	return ::message.returnvalue
+
+// dw_detail.itemerror(long row, dwobject dwo, string data) returns long [event]
+	long ancestorreturnvalue
+	ancestorreturnvalue = super::itemerror(row, dwo, data)
+	choose case dwo.name
+	case "regno"
+		messagebox("ItemNo Validation", "Item Duplication Error~r~nPlease enter some other Reg No")
+	case "dob"
+		messagebox("Birth Date Validation", "Please enter some valid date")
+	case "age"
+		messagebox("Age Validation", "Please enter some valid age in years")
+	end choose
+	return 1
+
+// dw_detail.ue_enterkey() returns long [event]
+	if id_detail.getcolumnname() <> "description" then
+		send(handle(this), 256, 9, long(90))
+		return 1
+	end if
+	return ::message.returnvalue

@@ -1,0 +1,73 @@
+release 12.5;
+datawindow ( units=0 timer_interval=0 processing=1 color=67108864 brushmode=0 transparency=0 gradient.color=8421504 gradient.transparency=0 gradient.angle=0 gradient.repetition.mode=0 gradient.repetition.count=0 gradient.repetition.length=100 gradient.focus=0 gradient.scale=100 gradient.spread=100 picture.mode=0 picture.scale.x=100 picture.scale.y=100 picture.clip.left=0 picture.clip.right=0 picture.clip.top=0 picture.clip.bottom=0 picture.blur=0 picture.transparency=0 print.printername=""  print.documentname=""  print.orientation=0 print.margin.left=110 print.margin.right=110 print.margin.top=96 print.margin.bottom=96 print.paper.size=0 print.paper.source=0 print.canusedefaultprinter=yes grid.lines=0 selected.mouse=yes hidegrayline=no showbackcoloronxp=no)
+header(height=72 color="536870912" )
+summary(height=68 color="536870912" )
+footer(height=0 color="536870912" )
+detail(height=72 color="536870912" )
+table(column=(type=long update=yes updatewhereclause=yes name=code dbname="InstallmentCode"  )
+column=(type=char(52) updatewhereclause=yes name=installment dbname="Installment"  )
+column=(type=datetime update=yes updatewhereclause=yes initial="today" name=date dbname="Date"  )
+column=(type=decimal(2) updatewhereclause=yes initial="0" name=amtreceived dbname="AmtReceived"  )
+column=(type=decimal(2) updatewhereclause=yes initial="0" name=discount dbname="Discount"  )
+column=(type=decimal(2) updatewhereclause=yes initial="0" name=fine dbname="Fine"  )
+column=(type=decimal(2) update=yes updatewhereclause=yes initial="0" name=amount dbname="Amount"  )
+column=(type=long identity=yes updatewhereclause=yes name=rowid dbname="RowID"  )
+column=(type=char(1) updatewhereclause=yes name=cancelled dbname="Cancelled"  )
+ retrieve="SELECT 
+	InstallmentCode = InstallmentDetail.InstallmentCode,
+	Installment = 'SI-' + LTRIM(RTRIM(STR(InstallmentHeader.SaleInvCode,10))) + '-IN-' + LTRIM(RTRIM(STR(InstallmentDetail.InstallmentCode,10))) + '-DT-' + CONVERT(VARCHAR(10), InstallmentDetail.Date, 103) + '-' + LTRIM(RTRIM(STR(InstallmentDetail.rowid,10))),
+	Date=InstallmentDetail.Date,
+	AmtReceived=InstallmentDetail.AmtReceived,
+	Discount=InstallmentDetail.Discount,
+	Fine=InstallmentDetail.Fine,
+	Amount=InstallmentDetail.Amount,
+	RowID=InstallmentDetail.RowID,
+	Cancelled = InstallmentDetail.Cancelled
+FROM
+	InstallmentDetail, InstallmentHeader
+WHERE 
+	InstallmentHeader.SaleInvCode = :ai_code AND
+	InstallmentHeader.Approved = 'Y' AND
+	InstallmentHeader.Posted = 'Y' AND
+	InstallmentHeader.InstallmentCode = InstallmentDetail.InstallmentCode AND
+	InstallmentDetail.Amount - InstallmentDetail.Discount - InstallmentDetail.AmtReceived > 0 AND
+	InstallmentDetail.Cancelled = 'N'
+ORDER BY
+	InstallmentDetail.InstallmentCode,
+	InstallmentDetail.Date,
+	InstallmentDetail.RowID
+"
+  arguments=(("ai_code", number))
+)
+text(name=t_1 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="700" background.mode="2" background.color="67108864" color="8388608" alignment="2" border="6" x="9" y="8" height="60" width="174" text="Sr. No." html.valueishtml="0" )
+text(name=installment_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="700" background.mode="2" background.color="67108864" color="8388608" alignment="2" border="6" x="192" y="8" height="60" width="1019" text="Installment" html.valueishtml="0" )
+text(name=date_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="700" background.mode="2" background.color="67108864" color="8388608" alignment="2" border="6" x="1221" y="8" height="60" width="297" text="Date" html.valueishtml="0" )
+text(name=amount_t visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="700" background.mode="2" background.color="67108864" color="8388608" alignment="2" border="6" x="1527" y="8" height="60" width="443" text="Amount" html.valueishtml="0" )
+text(name=amtreceived_t visible="1" band=header font.charset="0" font.face="Tahoma" font.family="2" font.height="-9" font.pitch="2" font.weight="700" background.mode="2" background.color="67108864" color="8388608" alignment="2" border="6" x="1979" y="8" height="60" width="393" text="Received" html.valueishtml="0" )
+text(name=discount_t visible="1" band=header font.charset="0" font.face="Tahoma" font.family="2" font.height="-9" font.pitch="2" font.weight="700" background.mode="2" background.color="67108864" color="8388608" alignment="2" border="6" x="2382" y="8" height="60" width="379" text="Discount" html.valueishtml="0" )
+text(name=t_3 visible="1" band=header font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="700" background.mode="2" background.color="67108864" color="8388608" alignment="2" border="6" x="2770" y="8" height="60" width="389" text="Balance" html.valueishtml="0" )
+text(name=fine_t visible="1" band=header font.charset="0" font.face="Tahoma" font.family="2" font.height="-9" font.pitch="2" font.weight="700" background.mode="2" background.color="67108864" color="8388608" alignment="2" border="6" x="3168" y="8" height="60" width="407" text="Fine" html.valueishtml="0" )
+compute(name=c_installmenttotal visible="1" band=summary font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="700" background.mode="2" background.color="67108864" color="8388608" x="1527" y="4" height="60" width="443" format="###,###,##0.00" expression="sum(amount for all)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+text(name=t_2 visible="1" band=summary font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="700" background.mode="2" background.color="67108864" color="8388608" alignment="0" border="0" x="1221" y="4" height="60" width="297" text="Total: " html.valueishtml="0" )
+compute(name=compute_3 visible="1" band=summary font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="700" background.mode="2" background.color="67108864" color="8388608" x="1979" y="4" height="60" width="393" format="##,###,##0.00" expression="sum(amtreceived for all)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_4 visible="1" band=summary font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="700" background.mode="2" background.color="67108864" color="8388608" x="2382" y="4" height="60" width="379" format="##,###,##0.00" expression="sum(discount for all)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_5 visible="1" band=summary font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="700" background.mode="2" background.color="67108864" color="8388608" x="2770" y="4" height="60" width="389" format="##,###,##0.00" expression="sum(if( amount - discount - amtreceived < 0, 0, amount - discount - amtreceived) for all)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+compute(name=compute_6 visible="1" band=summary font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="700" background.mode="2" background.color="67108864" color="8388608" x="3168" y="4" height="60" width="407" format="##,###,##0.00" expression="sum(fine for all)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+column(name=date visible="1" band=detail id=3 x="1221" y="4" height="64" width="297" color="33554432" border="0" alignment="0" format="[shortdate] [time]" html.valueishtml="0" editmask.focusrectangle=yes editmask.autoskip=no editmask.required=yes editmask.readonly=no editmask.codetable=no editmask.ddcalendar=no editmask.spin=no editmask.useformat=no editmask.mask="dd/mm/yyyy" editmask.imemode=0 editmask.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=amount visible="1" band=detail id=7 x="1527" y="4" height="64" width="443" color="33554432" border="0" alignment="1" format="###,###,##0.00" html.valueishtml="0" editmask.focusrectangle=yes editmask.autoskip=no editmask.required=yes editmask.readonly=no editmask.codetable=no editmask.ddcalendar=no editmask.spin=no editmask.useformat=no editmask.mask="##,###,##0.00" editmask.imemode=0 editmask.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="16777215" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+column(name=amtreceived visible="1" band=detail id=4 x="1979" y="4" height="64" width="393" color="33554432" border="0" alignment="1" format="##,###,##0.00" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="67108864" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="700" tabsequence=0 )
+column(name=discount visible="1" band=detail id=5 x="2382" y="4" height="64" width="379" color="33554432" border="0" alignment="1" format="##,###,##0.00" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="67108864" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="700" tabsequence=0 )
+compute(name=compute_2 visible="1" band=detail font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="700" background.mode="2" background.color="67108864" color="33554432" x="2770" y="4" height="64" width="389" format="##,###,##0.00" expression="if( amount - discount - amtreceived < 0, 0, amount - discount - amtreceived)" alignment="1" border="0" html.valueishtml="0" crosstab.repeat=no )
+column(name=fine visible="1" band=detail id=6 x="3168" y="4" height="64" width="407" color="33554432" border="0" alignment="1" format="##,###,##0.00" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="67108864" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="700" tabsequence=0 )
+compute(name=compute_1 visible="1" band=detail font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" background.mode="1" background.color="536870912" color="33554432" x="9" y="4" height="64" width="174" format="[GENERAL]" expression="getrow()" alignment="0" border="0" html.valueishtml="0" crosstab.repeat=no )
+column(name=installment visible="1" band=detail id=2 x="192" y="4" height="64" width="1019" color="33554432" border="0" alignment="0" format="[general]" html.valueishtml="0" edit.focusrectangle=no edit.autohscroll=no edit.autoselect=no edit.autovscroll=no edit.case=any edit.codetable=no edit.displayonly=no edit.hscrollbar=no edit.imemode=0 edit.limit=0 edit.password=no edit.vscrollbar=no edit.validatecode=no edit.nilisnull=no edit.required=no edit.useellipsis=no criteria.required=no criteria.override_edit=no crosstab.repeat=no background.mode="2" background.color="67108864" font.charset="0" font.face="Arial" font.family="2" font.height="-9" font.pitch="2" font.weight="400" tabsequence=0 )
+htmltable(border="1" )
+htmlgen(clientComputedFields="1" clientEvents="1" clientFormatting="0" clientScriptable="0" clientValidation="1" encodeSelfLinkArgs="1" generateJavaScript="1" netscapeLayers="0" pagingMethod=0 )
+xhtmlgen() cssgen(sessionSpecific="0" )
+xmlgen(inline="0" )
+xsltgen()
+jsgen()
+export.xml(headGroups="1" includewhitespace="0" metadatatype=0 savemetadata=0 )
+import.xml()
+export.pdf(method=0 distill.customPostScript="0" xslfop.print="0" )
+export.xhtml()
