@@ -47,10 +47,14 @@ Never push this repo (`origin` is public). Never put the app login in tracked fi
 - No DB backups wanted for this work.
 - Save/post tests go into the **live DB and test entries are kept**; FBR blocked during tests.
 
-## REMAINING toward 100%
-1. **Save/post test of every entry screen** (just started; blocked on desktop-control permission —
-   the computer-use prompt for abuzar.exe was denied twice; ask the owner to allow it, or get approval to
-   drive it with script automation like `walk\walker.py`). Scope (~45 screens, from the menu walk):
+## UPDATE (later on 2026-11-23): save/post test mostly done — see `deploy\SAVE-POST-TEST-2026-11-23.md`
+Desktop control for `abuzar.exe` was granted (request_access with the exact process name `abuzar.exe`, not "Trader").
+Done with **no unexpected DB errors and nothing to patch**: all Purchase screens except Purchase Return (12277/12278/12279 posted, PO 6656), Adjustment Increase/Decrease/Stock Adjustment (buffer), Priority, Lock Batches, Update Item Suppliers, Interface Setting, Preferences (unchanged saves), and every Basic Data master (Customer, Supplier, Item, Item Basic Data, Price Policy, classes, categories, alerts, tax, PCT, templates, …), plus edits of existing records (customer 326, PO 6656) and print preview.
+**Blocked on the owner**: every sale/return/quotation/refused-sale/purchase-return save opens the salesman password prompt (w_salesmanpassword; Claude does not type credentials). The Cash Sale draft is left open in the app ready for the owner (File > Save And Post, enter salesman code + password). **FBR must stay off until those sale tests are finished**, then restore it with the commands above, restart the app and confirm 9111 listens. Also left for the owner: Manage > Groups/Users/Group-wise settings and Cashier Job (security/workflow settings), the bulk tools, real printing (Print Spooler is stopped).
+The XE session `waseela_walk_errors` is running again — drop it when testing ends.
+
+## (original list) REMAINING toward 100%
+1. **Save/post test of every entry screen** (the part still open is the list above). Scope (~45 screens, from the menu walk):
    - Purchase: Purchases, Purchase Return, Opening Purchase, Purchases (Loose), Purchase Orders
    - Sales: Cash Sale, Credit Sale, Cash/Credit Sale Return, Open Cash/Credit Sale Return, Quotation, Refused Sales
    - Basic Data: Customer, Customer Category, Sale Promotion, Customer Sector, Supplier, Supplier Category, Item, Manufacturer, Item Class, Item Category, Generic Item, Item Basic Data, Price Policy, Item Alert, Sales Tax Schedule, PCT Codes, Generic Item Type, Item Thickness, Lock Reason, Category Segment, Manufacturer Type, Sale Template, Tax Category
