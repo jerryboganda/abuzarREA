@@ -64,6 +64,17 @@ recovered data and compiled with PowerBuilder 2022 (build 1878) through the free
   `w_sale.tab_retrieve.selectionchanging`). A compiled `and` is one instruction, two jumps are always two ifs: kept
   apart in PowerScript mode now (`pcode_struct.py`). `recovered/scripts` (the rebuild's dialect) still has the merged
   form; whether that matters there depends on how the rebuild's interpreter evaluates `and` (not checked).
+- **Found on 2026-11-24 by running the program:** (a) eight non-visual classes are **auto-instantiated** in the
+  original (`n_winsock` used by fiscalization through the socket, `n_smtp`, `u_deleted_saleitemlog`, `nv_qrcode`,
+  `n_dwr_string`, `nv_retreival_arg`): the flag was not in any export; the generator now infers it from use (a local
+  whose members are used and that is never assigned or created), report key `autoinstantiate`. (b) The decompiler
+  shortened PowerBuilder's event epilogue `if not isvalid(::message) then return 0` / `return ::message.returnvalue`
+  to its second line; it matters when an event runs before the application's message object exists (the auto-
+  instantiated `n_smtp` global at start-up stopped the program). The generator restores the guard (12,179 events).
+- The rebuild's dialect, decompiled again with the corrected tools, differs from `recovered/scripts` in 307 objects
+  and 3,079 lines (1,007 stray `return` lines, the inverted conditions, the constant numbering); the merged
+  `if A and B` form does not matter there because the rebuild's interpreter short-circuits `and`
+  (`rebuild/web/src/runtime/interp.ts`). Proposed to the owner as a separate task; the rebuild is not changed.
 - **Initial values of global variables** were not recovered before: the application's version number
   (`gl_appversion = 3567`, equal to `Sequence.AppVersion` of the database; with 0 the program refuses to start), the
   default godown, the names of the SQL Agent jobs, the temporary folder: 60 values, read from the compiled application

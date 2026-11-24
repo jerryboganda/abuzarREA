@@ -112,6 +112,31 @@ PATCHES.append(('traderappv1', 'sra', 'start the self test when asked for on the
                 r'(?m)^(af_launch_dashboard\(\))[ \t]*(\r?\n)',
                 r'\1\2if pos(lower(commandline), "/selftest") > 0 then\2\topen(w_selftest)\2end if\2', 1))
 
+# --- run-time errors are written to a log (roadmap I4) ------------------------------------------------------------------
+# Without a systemerror script PowerBuilder shows "Application terminated" and stops.  The script keeps that for users
+# (same box, then halt) and first appends the error to errors.log in the program folder.  During the self test the
+# error is handed to the test window instead, which goes on with the next window.
+PATCHES.append(('traderappv1', 'sra', 'systemerror: log run-time errors; the self test continues after one',
+                r'(?m)^(event close;)',
+                'event systemerror;string ls_text\r\n'
+                'integer li_file\r\n'
+                'ls_text = "Error: " + error.text + " at line " + string(error.line) + " in " + error.objectevent '
+                '+ " event of object " + error.object + "."\r\n'
+                'li_file = fileopen("errors.log", linemode!, write!, lockwrite!, append!)\r\n'
+                'if li_file > 0 then\r\n'
+                '\tfilewrite(li_file, string(today(), "yyyy-mm-dd") + " " + string(now(), "hh:mm:ss") + " " + gs_localcomputername '
+                '+ " user " + string(gl_usercode) + " | (R" + string(error.number, "0000") + ") " + ls_text)\r\n'
+                '\tfileclose(li_file)\r\n'
+                'end if\r\n'
+                'if isvalid(w_selftest) then\r\n'
+                '\tw_selftest.wf_error(ls_text)\r\n'
+                '\treturn\r\n'
+                'end if\r\n'
+                'messagebox("PowerBuilder application execution error (R" + string(error.number, "0000") + ")", '
+                '"Application terminated.~r~n~r~n" + ls_text, stopsign!)\r\n'
+                'halt\r\n'
+                'end event\r\n\r\n\\1', 1))
+
 # this one has no Packing branch
 PATCHES.append(('w_arg_stockinbackdate', 'srw', _WHAT, _HEAD,
                 r'\1if isnull(this.is_stringparam) or (this.is_stringparam <> "C" and this.is_stringparam <> "L") then\2', 1))

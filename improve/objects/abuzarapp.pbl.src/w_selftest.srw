@@ -22,6 +22,7 @@ function unsignedlong FindWindowExW (unsignedlong hparent, unsignedlong hafter, 
 function unsignedlong GetWindowThreadProcessId (unsignedlong hwnd, ref unsignedlong lpid) library "user32.dll"
 function unsignedlong GetCurrentProcessId () library "kernel32.dll"
 function boolean PostMessageW (unsignedlong hwnd, unsignedinteger msg, unsignedlong wparam, long lparam) library "user32.dll" alias for "PostMessageW"
+function unsignedlong GetActiveWindow () library "user32.dll"
 end prototypes
 
 type variables
@@ -32,14 +33,23 @@ long il_index
 long il_stuck
 long il_dialogs
 boolean ib_busy
+boolean ib_failed
 window iw_current
 end variables
 
 forward prototypes
 public subroutine wf_log (string as_text)
-public subroutine wf_dismiss ()
+public function boolean wf_dismiss ()
 public function long wf_resume ()
+public subroutine wf_error (string as_text)
 end prototypes
+
+public subroutine wf_error (string as_text);// called by the application's systemerror event: the script that failed has been stopped; what it opened is
+// closed by the next timer events
+wf_log("ERROR " + string(il_index) + " " + is_names[il_index] + " | " + as_text)
+ib_failed = true
+ib_busy = true
+end subroutine
 
 public subroutine wf_log (string as_text);// one line, written and closed at once: the log is complete even when the program stops
 integer li_file
@@ -50,11 +60,12 @@ if li_file > 0 then
 end if
 end subroutine
 
-public subroutine wf_dismiss ();// called while a window under test keeps control (a message box, or a response window): answer the box with
-// No / Cancel / OK in turn (never Yes), or close the response window
+public function boolean wf_dismiss ();// called while a window under test keeps control (a message box, or a response window): answer the box with
+// No / Cancel / OK in turn (never Yes), or close the window that is active.  False = nothing was left to close.
 unsignedlong lul_window
 unsignedlong lul_pid
 unsignedlong lul_me
+unsignedlong lul_main
 long ll_answer
 lul_me = getcurrentprocessid()
 lul_window = findwindowexw(0, 0, "#32770", 0)
@@ -71,14 +82,25 @@ do while lul_window <> 0
 		end choose
 		il_dialogs = il_dialogs + 1
 		postmessagew(lul_window, 273, ll_answer, 0)
-		return
+		return true
 	end if
 	lul_window = findwindowexw(0, lul_window, "#32770", 0)
 loop
 if isvalid(iw_current) then
 	close(iw_current)
+	return true
 end if
-end subroutine
+// a response window opened by the window under test (or the window itself while its open() has not returned)
+if isvalid(w_main) then
+	lul_main = handle(w_main)
+end if
+lul_window = getactivewindow()
+if lul_window <> 0 and lul_window <> handle(this) and lul_window <> lul_main then
+	postmessagew(lul_window, 16, 0, 0)
+	return true
+end if
+return false
+end function
 
 public function long wf_resume ();// the entry after the last one the log names; an entry without a result line stopped the program
 integer li_file
@@ -141,13 +163,18 @@ end event
 
 event timer;string ls_name
 long ll_start
+long ll_yield
 if ib_busy then
 	il_stuck = il_stuck + 1
 	if il_stuck > 150 then
 		wf_log("STOPPED " + string(il_index) + " " + is_names[il_index] + " | no way out of the window after 45 seconds")
 		halt
 	end if
-	wf_dismiss()
+	if not wf_dismiss() and ib_failed then
+		// after a run-time error nothing of the failed window is left open: go on with the next one
+		ib_failed = false
+		ib_busy = false
+	end if
 	return
 end if
 if il_index >= upperbound(is_names) then
@@ -165,6 +192,14 @@ wf_log("OPEN " + string(il_index) + " " + ls_name)
 try
 	setnull(iw_current)
 	open(iw_current, ls_name)
+	// let the events the window posts to itself run (ue_postopen connects to the database, retrieves ...): closing
+	// before them is not what a user can do
+	for ll_yield = 1 to 20
+		yield()
+	next
+	if ib_failed then
+		return                                  // reported by the systemerror event; the next timer events clean up
+	end if
 	if isvalid(iw_current) then
 		close(iw_current)
 	end if

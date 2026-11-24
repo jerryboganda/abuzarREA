@@ -231,7 +231,7 @@ class Project:
                        'events_mapped': 0, 'events_without_signature': [], 'external_functions_missing': 0,
                        'external_functions': 0, 'local_structures': 0, 'bounded_arrays': 0, 'catch_types': 0, 'binary_sections': 0,
                        'inherited_flag_dropped': 0, 'event_names_resolved': [], 'local_types_inferred': [], 'functions_without_value': [],
-                       'uo_instance_controls': 0, 'uo_instance_scripts_left_out': 0, 'global_initial_values': 0,
+                       'uo_instance_controls': 0, 'uo_instance_scripts_left_out': 0, 'global_initial_values': 0, 'message_guards': 0,
                        'array_values_placed': [], 'array_values_by_order': [],
                        'array_values_unplaced': [], 'array_values_undecoded': [],
                        'structures_without_member_order': [], 'cursor_declares': 0,
@@ -913,6 +913,19 @@ class Project:
                 lines[decl] = None
                 self.report['catch_types'] += 1
         lines = [x for x in lines if x is not None]
+        if r.event and r.ret != '0':
+            # the compiler's event epilogue is `if not isvalid(::message) then return 0` + `return ::message.returnvalue`;
+            # the decompiler shortens it to the second line.  The guard matters before the application's message object
+            # exists (constructor of an auto-instantiated variable declared in the application: n_smtp)
+            res = []
+            for x in lines:
+                if x.strip() == 'return ::message.returnvalue' and not (len(res) >= 3 and res[-1].strip() == 'end if'
+                                                                         and res[-3].strip() == 'if not isvalid(::message) then'):
+                    ind = x[:len(x) - len(x.lstrip())]
+                    res += [f'{ind}if not isvalid(::message) then', f'{ind}\treturn 0', f'{ind}end if']
+                    self.report['message_guards'] += 1
+                res.append(x)
+            lines = res
         return '\r\n'.join(lines)
 
     CURSOR_OP = re.compile(r'^(\s*)(EXECUTE|OPEN|FETCH|CLOSE)\s+(\w+)(.*?)(?:\s+USING\s+([\w.]+))?\s*;\s*(?:/\*\s*args:\s*(.*?)\s*\*/)?\s*$',

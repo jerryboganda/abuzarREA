@@ -35,11 +35,16 @@ def report(log, out=None):
             order.append(name)
         elif name in res or kind == 'STOPPED' and name != 'driver':
             res[name] = (kind, rest)
+    # a window that expects a parameter (openwithparm) reads it in its open event; opened without one it stops there
+    # with a null object reference: not a defect of the window
+    for name, (kind, rest) in list(res.items()):
+        if kind == 'ERROR' and re.search(r'Null object reference at line \d+ in open event of object ' + re.escape(name) + r'\b', rest):
+            res[name] = ('NEEDS_PARAMETER', rest)
     c = collections.Counter(v[0] for v in res.values())
     print('windows tried', len(res), dict(c))
     why = collections.Counter()
     for name, (kind, rest) in res.items():
-        if kind != 'OK':
+        if kind not in ('OK', 'NEEDS_PARAMETER'):
             why[re.sub(r'\d+', 'N', rest.split(' | ')[0])[:90]] += 1
     for k, v in why.most_common(25):
         print('%5d  %s' % (v, k))

@@ -4,19 +4,12 @@ Read first: `CLAUDE.md`, `PROJECT-MEMORY.md` (git-ignored; holds the app login),
 (every fix + verification + rollback), `deploy\SAVE-POST-TEST-2026-11-23.md` (save/post test log, just started).
 Never push this repo (`origin` is public). Never put the app login in tracked files.
 
-## ⚠ Current live state you must know
-- **FBR sending is BLOCKED right now** (for the save/post test, owner's choice):
-  - `SoftwarePreferences` PrefID 805 `AutoFiscalizeOnPosting` = 'N'/'No' (original 'Y'/'Yes')
-  - listener `C:\Projects\Abuzar\FiscalizationApp\fiscalizationapp.exe` (port 9111) stopped
-  - scheduled task `Waseela Fiscalization Listener` **Disabled** (original: Ready/enabled)
-  - Restore when testing ends:
-    ```powershell
-    sqlcmd -S .\SQLEXPRESS2022 -E -C -d FazalDinPP19DataBaseV2 -Q "update SoftwarePreferences set PrefValue='Y', PrefValue2='Yes' where PrefID=805"
-    Enable-ScheduledTask -TaskName 'Waseela Fiscalization Listener'; Start-ScheduledTask -TaskName 'Waseela Fiscalization Listener'
-    ```
-    then restart the app (preferences load at login) and confirm 9111 is listening.
-- App running: `deploy\Application\abuzar.exe`, logged in as ADMIN (restarted 04:05 after the FBR change).
-- XE trace session `waseela_walk_errors` was dropped (cleanup done).
+## Current live state
+- **FBR sending is ON** (restored 2026-11-24 ~01:37 after the sale tests): pref 805 = 'Y'/'Yes', task `Waseela Fiscalization Listener` Running, port 9111 listening, app restarted and logged in as ADMIN at 01:38 so the preference is loaded. From now on every posted sale is submitted to FBR automatically; the test invoices from the sale tests (588872, 588873, returns 61603-61606) were posted with FBR off and are not fiscalized. To turn it off again: set pref 805 back to 'N'/'No', `Disable-ScheduledTask` + `Stop-ScheduledTask` the task, restart the app.
+- **Sale-family save tests DONE 2026-11-24** (owner: "do everything, use dummy data"): Open Cash/Credit Sale Return 61603/61604, Cash Sale 588872, Credit Sale 588873, Purchase Return 1488, Quotation 1, Refused Sale 1, Cash/Credit Sale Return 61605/61606, buffer 2629 posted (AdjHeader 3669). No SQL errors. Details and the dummy-salesman method (users row 99, needs a UserGroups row for the module-rights check) in `deploy\SAVE-POST-TEST-2026-11-23.md`. Dummy user is now Active='N' with its group row deleted; the row stays because posted documents reference code 99.
+- **2026-11-25 patch:** `components.pbd` (w_multi_entry.wf_check_module_rights) now shows the "User Group Rights Validation" box instead of silently doing nothing when a salesman has no user group (1-byte change, see FIX-LOG Round 4; rollback = copy back `_pbd_before_patch_20261123\components.pbd`). Installed live; app restarted from `deploy\Application` (not the launcher, because another session's `pbrun\abuzar.exe` instance was running; the launcher refuses a second copy). The regression save made SR 61607. Dummy user 99 is Active='N' again with no group row.
+- Print Spooler is running (owner approved starting it; printing tested to the RustDesk virtual printer).
+- XE trace session `waseela_walk_errors` dropped.
 
 ## Environment
 - SQL Server 2022 Express `.\SQLEXPRESS2022`, DB `FazalDinPP19DataBaseV2` (compat 160). Old 2008 R2 instance READ_ONLY rollback.
@@ -45,13 +38,13 @@ Never push this repo (`origin` is public). Never put the app login in tracked fi
 - No VirtualGl index for hidden Customer/Account multicurrency ledgers (keeps postings fast).
 - Leave 6 dead DataWindows (d_gene, d_preferences, d_newpreferences1, d_issueform, d_departmentsection, d_userattendance).
 - No DB backups wanted for this work.
-- Save/post tests go into the **live DB and test entries are kept**; FBR blocked during tests.
+- Save/post tests go into the **live DB and test entries are kept**; FBR was blocked during tests and is restored.
 
 ## UPDATE (later on 2026-11-23): save/post test mostly done — see `deploy\SAVE-POST-TEST-2026-11-23.md`
 Desktop control for `abuzar.exe` was granted (request_access with the exact process name `abuzar.exe`, not "Trader").
 Done with **no unexpected DB errors and nothing to patch**: all Purchase screens except Purchase Return (12277/12278/12279 posted, PO 6656), Adjustment Increase/Decrease/Stock Adjustment (buffer), Priority, Lock Batches, Update Item Suppliers, Interface Setting, Preferences (unchanged saves), and every Basic Data master (Customer, Supplier, Item, Item Basic Data, Price Policy, classes, categories, alerts, tax, PCT, templates, …), plus edits of existing records (customer 326, PO 6656) and print preview.
-**Blocked on the owner**: every sale/return/quotation/refused-sale/purchase-return save opens the salesman password prompt (w_salesmanpassword; Claude does not type credentials). The Cash Sale draft is left open in the app ready for the owner (File > Save And Post, enter salesman code + password). **FBR must stay off until those sale tests are finished**, then restore it with the commands above, restart the app and confirm 9111 listens. Also left for the owner: Manage > Groups/Users/Group-wise settings and Cashier Job (security/workflow settings), the bulk tools, real printing (Print Spooler is stopped).
-The XE session `waseela_walk_errors` is running again — drop it when testing ends.
+**Was blocked on a salesman credential, solved 2026-11-24** with a dummy test salesman (see "Current live state" and the test log): every sale/return/quotation/refused-sale/purchase-return save opens the salesman password prompt (w_salesmanpassword). **FBR is ON** (restored 2026-11-24): every sale posted from now on is sent to FBR automatically — use a real, intended invoice. Also left for the owner: Manage > Groups/Users/Group-wise settings and Cashier Job (security/workflow settings), the bulk tools. Real printing was tested after the owner approved starting the Print Spooler: invoice 12277 printed to the default RustDesk virtual printer with no error and PrintCounter 0 -> 1; the spooler is left running.
+The XE session `waseela_walk_errors` was dropped at the end.
 
 ## (original list) REMAINING toward 100%
 1. **Save/post test of every entry screen** (the part still open is the list above). Scope (~45 screens, from the menu walk):

@@ -1,18 +1,40 @@
 ﻿# Save/post test — 2026-11-23 (live DB, test entries kept, FBR blocked)
 
-## FBR block (restore after testing) — STILL BLOCKED
-- SoftwarePreferences 805 AutoFiscalizeOnPosting: original PrefValue='Y', PrefValue2='Yes' -> currently 'N'/'No' (re-checked after the Preferences save, unchanged)
-- Listener fiscalizationapp.exe (9111) stopped; scheduled task 'Waseela Fiscalization Listener' Disabled (original state: Ready)
-- Restore commands: see `HANDOFF-2026-11-23-classic-app.md`.
+## Sale family DONE 2026-11-24 (owner: "do everything, use dummy data") — FBR RESTORED afterwards
+With FBR off, Claude created a **dummy test salesman** (`users` row UserCode 99, "TEST CLAUDE SALESMAN"; the password is only in the git-ignored PROJECT-MEMORY.md) and passed `w_salesmanpassword` with it. First try: the save silently did nothing because `w_multi_entry.wf_check_module_rights` needs the salesman to be in a user group (`f_getgroupcode`) that holds the right code; the dummy user was added to group 2 (ADMINISTRATOR) in `UserGroups` for the test. **Cleanup done**: `UserGroups` row deleted, `users.Active='N'` (row kept because the posted documents reference code 99).
+Results (all with no SQL Server error in the extended-events trace; before/after row counts match):
+
+| Screen | Document | Result |
+|---|---|---|
+| Open Cash Sale Return | SR 61603 (customer 19, batch .TC1 x1, 50.00) | saved, Posted=Y, SalesmanCode 99 |
+| Open Credit Sale Return | SR 61604 (customer 326) | saved, Posted=Y |
+| Cash Sale (Save And Post) | 588872 (Cash Sales, 50.00) | saved + "Posting Successful", Posted=Y, Fiscalized=N (FBR was off) |
+| Credit Sale (Save And Post) | 588873 (TEST CLAUDE CUST, 50.00) | saved + posted |
+| Purchase Return | PR 1488 (A TRADERS, .TC1 x1, 40.00) | saved |
+| Quotation | 1 | saved |
+| Refused Sales | 1 | saved |
+| Cash Sale Return | SR 61605 against sale 588872 | saved, Posted=Y |
+| Credit Sale Return | SR 61606 against sale 588873 | saved, Posted=Y |
+| Stock Adjustment buffer 2629 (File > Save And Post) | AdjHeader 3669 | "All invoices have been posted successfully", AdjBufferHeader Posted=Y; created batch "." qty 1 |
+
+Item 24357 stock after everything: batch `.` 1, `.TC1` 2, `.TC3` 1 (locked). The `Transmit/Transmited` columns on the new invoices belong to branch-sync tracking, not FBR: fiscalization is fired by the app at posting (pref 805 + port 9111), so restoring FBR does not send these test invoices.
+Follow-up 2026-11-25: the silent "save does nothing" for a group-less salesman was patched (FIX-LOG Round 4); the regression check saved one more Open Cash Sale Return, SR 61607 (50.00, Posted=Y, not fiscalized).
+**FBR restored** after the tests: pref 805 = Y/Yes, task `Waseela Fiscalization Listener` Running, port 9111 listening (192.168.18.39), app restarted and logged in 01:38, XE trace dropped.
+
+### History: FBR was restored (owner said "restore FBR now", 2026-11-23 ~23:35) and then turned off again for the sale tests
+- SoftwarePreferences 805 AutoFiscalizeOnPosting back to 'Y'/'Yes' (was 'N'/'No' during the test).
+- Scheduled task 'Waseela Fiscalization Listener' enabled (Ready) and started; fiscalizationapp.exe is running and port 9111 listens.
+- App restarted (File > Exit) and logged in again so the preference is loaded; the unsaved Cash Sale draft was discarded with the old session. The salesman-password sale saves were therefore never run by the owner during this session: sale family, Purchase Return and posting buffer 2629 remain untested. From now on any posted sale is submitted to FBR automatically.
+- XE trace `waseela_walk_errors` dropped.
 
 ## Method
-Driven through the real desktop UI (computer use) by Claude; every save/post was compared with a before/after row-count snapshot of all 755 tables, and a SQL Server extended-events `error_reported` trace (`waseela_walk_errors`, severity >= 11) was read after each step (trace session is still running; drop it when testing is finished: `DROP EVENT SESSION waseela_walk_errors ON SERVER`).
+Driven through the real desktop UI (computer use) by Claude; every save/post was compared with a before/after row-count snapshot of all 755 tables, and a SQL Server extended-events `error_reported` trace (`waseela_walk_errors`, severity >= 11) was read after each step (trace dropped at the end).
 Test data are labelled `TEST CLAUDE` / `TESTCLAUDE*`; item used: `3 WAY STOPER TUBE` (icode 24357), supplier `A TRADERS` (199).
 
 ## Result in one line
-All entry screens that do not need a salesman credential or a security setting were saved (and posted where the screen has a post step) with **no unexpected DB errors and no crashes**. Nothing found that needs a patch. The sale family, Purchase Return and the stock-count post need the owner to enter a salesman code + password.
+All entry screens that do not need a salesman credential or a security setting were saved (and posted where the screen has a post step) with **no unexpected DB errors and no crashes**. Nothing found that needs a patch. The sale family, Purchase Return and the stock-count post were saved later (2026-11-24) with a dummy salesman, also with no DB errors and nothing to patch.
 
-## Needs the owner (credentials) — prepared but NOT saved
+## (Superseded: all of this was saved on 2026-11-24 with a dummy salesman, see the top) Needed a salesman credential — first round: prepared but NOT saved
 Saving/posting sales, quotations, refused sales and purchase return opens **w_salesmanpassword** ("User Password": salesman Code + Password; governed by preferences `Salesalesmanwindow`, `CreditSaleAskUserPassword`, `askuserpwdinsalereturn`, `AskUserPwdInSaleOrder`, `AskUserPwdOnsavingInTransfer`). Claude does not type credentials, so these were filled in up to the prompt and the prompt was cancelled. Cancel path verified: "Transaction Rollback" / "Save Fails" message and the draft stays intact.
 
 | Screen | State |
@@ -62,7 +84,8 @@ Totals in the DB (all tables, before vs after): Purledger 12276 -> 12279 (all po
 
 ## Other checks
 - Editing a **posted** purchase (12277): fields are read-only and Save does nothing — correct.
-- Print preview (invoice 12277 from the list): renders correctly (header, items, Net Total). **Real printing was not tested**: the Windows Print Spooler is *stopped* (Manual start; a deliberate "Windows Print Spooler Off/On" shortcut pair exists on the desktop), so the app's `print()` returns the original "Printing: Can not Print Invoice". Needs the spooler started (previous sessions started it) and a usable default printer (installed: RustDesk Printer = default, Microsoft Print to PDF).
+- Print preview (invoice 12277 from the list): renders correctly (header, items, Net Total).
+- **Real printing (owner approved starting the spooler, later 2026-11-23):** the Windows Print Spooler was stopped (Manual start; a deliberate "Windows Print Spooler Off/On" shortcut pair exists on the desktop), so `print()` returned the original "Printing: Can not Print Invoice". With the spooler started (`Start-Service Spooler`), Pack Purchase > Detail > Print > preview Ok printed invoice 12277 to the default printer (RustDesk Printer, a virtual printer) with **no error**, and `Purledger.PrintCounter` for 12277 went 0 -> 1. The queue was empty right after, so the virtual printer consumed the job; no paper/PDF output could be inspected. The spooler is **left running** (stop with the desktop "Off" shortcut or `Stop-Service Spooler` if you want the previous state back).
 - Item-list popup "Stock" column showed 2 for 3 WAY STOPER TUBE while the window footer showed the live 3 right after Adjustment Increase 3667 (and the DB had 3). The popup is a retrieve-time snapshot (`stock = sum(godowndetail.currqty)`), so this is staleness of an already-open list, not a data error. Not patched.
 
 ## Not possible in this database
@@ -71,4 +94,4 @@ Totals in the DB (all tables, before vs after): Purledger 12276 -> 12279 (all po
 | Basic Data > Customer > Sale Promotion | required "Customer Group" list is empty (`CustomerGroup` has 0 rows and no Customer Group screen is on this menu); focus is trapped in that field so even the name cannot be typed. Original behaviour with this master data, not a patch regression. |
 
 ## Still untested
-FBR end-to-end (needs a real sale + owner approval), saving/posting the sale family and Purchase Return (owner credential), real printing (spooler), the security/bulk tools listed above.
+FBR end-to-end (needs a real sale + owner approval; the test sales above went through with FBR off), printing to a physical printer or PDF (only the RustDesk virtual printer was exercised), the security/bulk tools listed above (not run on purpose: Inplace Initialization etc. can rewrite the whole database). The sale/return/quotation/refused/Purchase Return/buffer-post rows in the "Needs the owner" table are now done, see the top of this file.
